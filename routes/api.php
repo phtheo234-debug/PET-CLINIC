@@ -6,6 +6,9 @@ use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\PetController;
 use App\Http\Controllers\Api\BoardingController;
+use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\MedicalController;
+use App\Http\Controllers\Api\PaymentController;
 
 // Public Endpoint
 Route::post('/v1/auth/login', [AuthController::class, 'login']);
@@ -17,6 +20,17 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     Route::get('/analytics/dashboard', [DashboardController::class, 'getOverview']);
+
+    // --- CÁC ROUTE MỚI CỦA TV 3 (PHONG) ---
+    // Module 4: Kho & Xuất kho FEFO
+    Route::post('/inventory/export', [InventoryController::class, 'exportMedicineFEFO']);
+
+    // Module 5: Khám bệnh & Kê đơn mg/kg
+    Route::post('/medical/prescriptions', [MedicalController::class, 'createPrescription']);
+
+    // Module 7: Thanh toán POS & Xuất viện
+    Route::post('/payment/checkout', [PaymentController::class, 'createInvoiceAndCheckout']);
+    // ----------------------------------------
 
     Route::prefix('admin')->group(function () {
         Route::get('/users', [AdminUserController::class, 'index']);
