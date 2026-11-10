@@ -1,0 +1,27 @@
+### 1. Thêm thú cưng (POST)
+POST http://127.0.0.1:8000/api/pets
+Content-Type: application/json
+Accept: application/json
+
+{
+"owner_id": 1,
+"name": "Mimi",
+"species": "Mèo",
+"breed": "Mèo Anh",
+"weight": 3.5
+}
+
+### 2. Xem danh sách thú cưng (GET)
+GET http://127.0.0.1:8000/api/pets
+Accept: application/json
+
+### 3. Test xếp lồng hợp lệ (BR-03)
+POST http://127.0.0.1:8000/api/boarding/assign
+Content-Type: application/json
+Accept: application/json
+
+{
+"pet_id": 1,
+"cage_id": 1,
+"check_in": "2026-11-10 10:00:00"
+}

@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PetController;
+use App\Http\Controllers\Api\BoardingController;
 
 // Public Endpoint
 Route::post('/v1/auth/login', [AuthController::class, 'login']);
@@ -23,3 +25,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus']);
     });
 });
+
+// CRUD Thú cưng
+Route::apiResource('pets', PetController::class);
+
+// Quản lý lưu trú & Xếp lồng
+Route::post('/boarding/assign', [BoardingController::class, 'assignCage']);
