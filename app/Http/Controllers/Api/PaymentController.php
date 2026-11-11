@@ -3,71 +3,79 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
-    private $pdo;
-
-    public function __construct()
-    {
-        // Khởi tạo kết nối PDO từ Laravel Database Manager
-        $this->pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
-    }
-
-    // API Lập hóa đơn POS và Thanh toán xuất viện
+    /**
+     * Thanh toán POS: gom các đơn thuốc chưa thanh toán của thú cưng thành 1 hóa đơn,
+     * sau đó cho thú cưng xuất viện và trả lồng.
+     */
     public function createInvoiceAndCheckout(Request $request)
     {
-        $data = $request->all();
-        $pet_id = $data['pet_id'] ?? null;
-        $items = $data['items'] ?? []; // Mảng danh sách các khoản phí (thuốc, dịch vụ, lồng, phẫu thuật...)
-        $payment_method = $data['payment_method'] ?? 'Cash'; // Tiền mặt / Chuyển khoản
-        $discount = $data['discount'] ?? 0;
+        $request->validate([
+            'pet_id' => 'required|integer|exists:pets,pet_id',
+            'payment_method' => 'required|in:TIEN_MAT,CHUYEN_KHOAN,THE',
+        ]);
 
         try {
-            $this->pdo->beginTransaction();
+            return DB::transaction(function () use ($request) {
+                $pet = DB::table('pets')->where('pet_id', $request->pet_id)->lockForUpdate()->first();
 
-            $total_amount = 0;
-            foreach ($items as $item) {
-                $total_amount += $item['quantity'] * $item['unit_price'];
-            }
-            
-            // Sửa lỗi cú pháp tính tiền tại đây:
-            $final_amount = $total_amount - $discount;
+                $lines = DB::table('prescriptions as rx')
+                    ->join('medical_records as mr', 'mr.record_id', '=', 'rx.record_id')
+                    ->join('inventory as i', 'i.item_id', '=', 'rx.item_id')
+                    ->where('mr.pet_id', $pet->pet_id)
+                    ->whereNull('rx.invoice_id')
+                    ->select('rx.prescription_id', DB::raw('rx.soluong * i.dongia as thanh_tien'))
+                    ->get();
 
-            // 1. Lưu hóa đơn chính
-            $stmtInv = $this->pdo->prepare("INSERT INTO invoices (pet_id, total_amount, discount, final_amount, payment_method, status, created_at) VALUES (?, ?, ?, ?, ?, 'Paid', NOW())");
-            $stmtInv->execute([$pet_id, $total_amount, $discount, $final_amount, $payment_method]);
-            $invoice_id = $this->pdo->lastInsertId();
+                if ($lines->isEmpty()) {
+                    return response()->json(['status' => false, 'message' => 'Thú cưng này chưa có khoản nào cần thanh toán.'], 422);
+                }
 
-            // 2. Lưu chi tiết các khoản phí vào invoice_details
-            foreach ($items as $item) {
-                $stmtDetail = $this->pdo->prepare("INSERT INTO invoice_details (invoice_id, item_type, item_id, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmtDetail->execute([
-                    $invoice_id,
-                    $item['type'], // 'Medicine', 'Service', 'Surgery', 'Boarding'
-                    $item['id'],
-                    $item['quantity'],
-                    $item['unit_price'],
-                    $item['quantity'] * $item['unit_price']
+                $total = $lines->sum(fn ($l) => (float) $l->thanh_tien);
+
+                $invoiceId = DB::table('invoices')->insertGetId([
+                    'mahoadon' => 'TMP' . uniqid(),
+                    'pet_id' => $pet->pet_id,
+                    'owner_id' => $pet->owner_id,
+                    'tongtien' => $total,
+                    'phuongthucthanhtoan' => $request->payment_method,
+                    'trangthai' => 'DA_THANH_TOAN',
                 ]);
-            }
+                $code = sprintf('HD%05d', $invoiceId);
+                DB::table('invoices')->where('invoice_id', $invoiceId)->update(['mahoadon' => $code]);
 
-            // 3. Cập nhật trạng thái thú cưng thành DISCHARGED (Đã xuất viện)
-            $updatePet = $this->pdo->prepare("UPDATE pets SET status = 'DISCHARGED' WHERE id = ?");
-            $updatePet->execute([$pet_id]);
+                DB::table('prescriptions')
+                    ->whereIn('prescription_id', $lines->pluck('prescription_id'))
+                    ->update(['invoice_id' => $invoiceId]);
 
-            // 4. Giải phóng lồng lưu trú (Cập nhật lồng về AVAILABLE)
-            $updateCage = $this->pdo->prepare("UPDATE cages SET status = 'AVAILABLE', current_pet_id = NULL WHERE current_pet_id = ?");
-            $updateCage->execute([$pet_id]);
+                // Xuất viện: trả lồng
+                if ($pet->cage_id) {
+                    DB::table('pet_boardings')
+                        ->where('pet_id', $pet->pet_id)->where('trangthai', 'DANG_O')
+                        ->update(['check_out' => now(), 'trangthai' => 'DA_RA']);
+                    DB::table('cages')->where('cage_id', $pet->cage_id)
+                        ->update(['soluonghientai' => DB::raw('GREATEST(soluonghientai - 1, 0)')]);
+                    DB::table('cages')->where('cage_id', $pet->cage_id)
+                        ->where('soluonghientai', 0)->where('trangthai', 'DA_CO_THU')
+                        ->update(['trangthai' => 'CON_TRONG']);
+                }
+                DB::table('pets')->where('pet_id', $pet->pet_id)
+                    ->update(['cage_id' => null, 'trangthai' => 'DA_XUAT_VIEN']);
 
-            $this->pdo->commit();
-            return response()->json(['status' => true, 'invoice_id' => $invoice_id, 'message' => 'Thanh toán và xuất viện thành công!']);
-
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Thanh toán thành công, thú cưng đã xuất viện!',
+                    'invoice_id' => $invoiceId,
+                    'data' => ['invoice_id' => $invoiceId, 'mahoadon' => $code, 'tongtien' => $total],
+                ]);
+            });
         } catch (Exception $e) {
-            $this->pdo->rollBack();
-            return response()->json(['status' => false, 'message' => 'Lỗi thanh toán: ' . $e->getMessage()], 500);
+            return response()->json(['status' => false, 'message' => 'Thanh toán thất bại: ' . $e->getMessage()], 500);
         }
     }
 }

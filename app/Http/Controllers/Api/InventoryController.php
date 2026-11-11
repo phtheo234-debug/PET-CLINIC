@@ -1,50 +1,78 @@
 <?php
-class InventoryController {
-    private $pdo;
 
-    public function __construct($pdo) {
-        $this->pdo = $pdo;
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class InventoryController extends Controller
+{
+    /**
+     * Xuất kho theo FEFO (hết hạn trước, xuất trước). Bỏ qua lô đã hết hạn.
+     * medicine_id = inventory.item_id
+     */
+    public function exportMedicineFEFO(Request $request)
+    {
+        $request->validate([
+            'medicine_id' => 'required|integer|exists:inventory,item_id',
+            'required_qty' => 'required|integer|min:1',
+        ]);
+
+        try {
+            $details = DB::transaction(
+                fn () => $this->fefoDeduct((int) $request->medicine_id, (int) $request->required_qty)
+            );
+
+            return response()->json(['status' => true, 'message' => 'Xuất kho FEFO thành công!', 'data' => $details], 200);
+        } catch (Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 400);
+        }
     }
 
-    // Hàm xuất kho tự động theo nguyên tắc FEFO (First Expired, First Out)
-    public function exportMedicineFEFO($medicine_id, $required_qty) {
-        // Lấy danh sách các lô còn hàng, sắp xếp hạn sử dụng tăng dần (gần hết hạn lên đầu)
-        $stmt = $this->pdo->prepare("SELECT * FROM inventory_batches WHERE medicine_id = ? AND quantity > 0 ORDER BY expiry_date ASC");
-        $stmt->execute([$medicine_id]);
-        $batches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    /**
+     * Trừ kho theo FEFO. Phải gọi bên trong DB::transaction.
+     * Ném Exception nếu kho không đủ, để giao dịch bên ngoài (ví dụ kê đơn) cũng được hoàn tác.
+     */
+    public function fefoDeduct(int $itemId, int $qty): array
+    {
+        $batches = DB::table('inventory_batches')
+            ->where('item_id', $itemId)
+            ->where('soluong', '>', 0)
+            ->where('trangthai', 'DANG_SU_DUNG')
+            ->whereDate('ngayhethan', '>=', now()->toDateString())
+            ->orderBy('ngayhethan')
+            ->orderBy('batch_id')
+            ->lockForUpdate()
+            ->get();
 
-        $remaining_qty = $required_qty;
-        $export_details = [];
+        $remaining = $qty;
+        $details = [];
 
         foreach ($batches as $batch) {
-            if ($remaining_qty <= 0) break;
-
-            if ($batch['quantity'] >= $remaining_qty) {
-                $take_qty = $remaining_qty;
-                $new_batch_qty = $batch['quantity'] - $required_qty;
-                $remaining_qty = 0;
-            } else {
-                $take_qty = $batch['quantity'];
-                $new_batch_qty = 0;
-                $remaining_qty -= $batch['quantity'];
+            if ($remaining <= 0) {
+                break;
             }
+            $take = min($batch->soluong, $remaining);
 
-            // Cập nhật lại số lượng lô trong CSDL
-            $update = $this->pdo->prepare("UPDATE inventory_batches SET quantity = ? WHERE id = ?");
-            $update->execute([$new_batch_qty, $batch['id']]);
+            DB::table('inventory_batches')
+                ->where('batch_id', $batch->batch_id)
+                ->update(['soluong' => $batch->soluong - $take]);
 
-            $export_details[] = [
-                'batch_id' => $batch['id'],
-                'batch_code' => $batch['batch_code'],
-                'taken_quantity' => $take_qty
+            $details[] = [
+                'batch_id' => $batch->batch_id,
+                'batch_code' => $batch->solo,
+                'expiry_date' => $batch->ngayhethan,
+                'taken_quantity' => $take,
             ];
+            $remaining -= $take;
         }
 
-        if ($remaining_qty > 0) {
-            throw new Exception("Kho không đủ số lượng thuốc yêu cầu! Còn thiếu: " . $remaining_qty);
+        if ($remaining > 0) {
+            throw new Exception('Kho không đủ số lượng yêu cầu! Còn thiếu: ' . $remaining);
         }
 
-        return $export_details;
+        return $details;
     }
 }
-?>

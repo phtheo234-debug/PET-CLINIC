@@ -1,63 +1,73 @@
 <?php
-require_once 'InventoryController.php';
 
-class MedicalController {
-    private $pdo;
-    private $inventoryController;
+namespace App\Http\Controllers\Api;
 
-    public function __construct($pdo) {
-        $this->pdo = $pdo;
-        $this->inventoryController = new InventoryController($pdo);
+use App\Http\Controllers\Controller;
+use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class MedicalController extends Controller
+{
+    public function __construct(protected InventoryController $inventory)
+    {
     }
 
-    // API Kê đơn thuốc tính theo mg/kg
-    public function createPrescription($data) {
-        $pet_id = $data['pet_id'];
-        $medical_record_id = $data['medical_record_id'];
-        $medicine_id = $data['medicine_id'];
-        $doses_per_day = $data['doses_per_day']; // Số lần uống/ngày
-        $total_days = $data['total_days'];       // Số ngày uống
-
-        // 1. Lấy cân nặng thực tế của thú cưng từ phiếu khám
-        $stmtRecord = $this->pdo->prepare("SELECT weight FROM medical_records WHERE id = ?");
-        $stmtRecord->execute([$medical_record_id]);
-        $record = $stmtRecord->fetch(PDO::FETCH_ASSOC);
-        $weight = $record['weight']; // Ví dụ: 10 kg
-
-        // 2. Lấy thông tin cấu hình liều chuẩn của thuốc (mg/kg và mg/viên)
-        $stmtMed = $this->pdo->prepare("SELECT * FROM medicines WHERE id = ?");
-        $stmtMed->execute([$medicine_id]);
-        $medicine = $stmtMed->fetch(PDO::FETCH_ASSOC);
-        
-        $mg_per_kg = $medicine['standard_dosage_mg_per_kg']; // Ví dụ: 5mg cho mỗi 1kg
-        $mg_per_unit = $medicine['mg_per_unit'];             // Ví dụ: 1 viên chứa 25mg
-
-        // 3. Tính toán công thức
-        $total_mg_per_dose = $weight * $mg_per_kg; // Tổng mg cho 1 lần uống
-        $total_units_needed = ceil(($total_mg_per_dose / $mg_per_unit) * $doses_per_day * $total_days);
+    /**
+     * Kê đơn tính theo mg/kg và tự động xuất kho FEFO.
+     * medicine_id = inventory.item_id, medical_record_id = medical_records.record_id
+     */
+    public function createPrescription(Request $request)
+    {
+        $request->validate([
+            'pet_id' => 'required|integer|exists:pets,pet_id',
+            'medical_record_id' => 'required|integer|exists:medical_records,record_id',
+            'medicine_id' => 'required|integer|exists:inventory,item_id',
+            'doses_per_day' => 'required|integer|min:1',
+            'total_days' => 'required|integer|min:1',
+        ]);
 
         try {
-            $this->pdo->beginTransaction();
+            return DB::transaction(function () use ($request) {
+                $record = DB::table('medical_records')->where('record_id', $request->medical_record_id)->first();
+                if ((int) $record->pet_id !== (int) $request->pet_id) {
+                    return response()->json(['status' => false, 'message' => 'Hồ sơ khám này không thuộc thú cưng đã chọn!'], 422);
+                }
 
-            // 4. Trừ kho tự động theo FEFO
-            $this->inventoryController->exportMedicineFEFO($medicine_id, $total_units_needed);
+                $item = DB::table('inventory')->where('item_id', $request->medicine_id)->first();
 
-            // 5. Lưu vào bảng đơn thuốc (prescriptions)
-            $insert = $this->pdo->prepare("INSERT INTO prescriptions (medical_record_id, medicine_id, quantity, usage_instruction) VALUES (?, ?, ?, ?)");
-            $insert->execute([
-                $medical_record_id,
-                $medicine_id,
-                $total_units_needed,
-                "Uống {$doses_per_day} lần/ngày, mỗi lần " . ($total_mg_per_dose / $mg_per_unit) . " viên"
-            ]);
+                $weight = (float) $record->cannangkhi_kham;
+                $mgPerKg = (float) ($item->lieu_mg_kg ?? 5);        // mặc định 5 mg/kg
+                $mgPerUnit = (float) ($item->mg_moi_don_vi ?? 25);  // mặc định 25 mg/đơn vị
 
-            $this->pdo->commit();
-            return ['status' => true, 'message' => 'Kê đơn thành công!', 'total_units' => $total_units_needed];
+                $mgPerDose = $weight * $mgPerKg;
+                $unitsPerDose = $mgPerDose / $mgPerUnit;
+                $totalUnits = (int) ceil(round($unitsPerDose * $request->doses_per_day * $request->total_days, 6));
 
+                // Trừ kho FEFO; thiếu hàng sẽ ném lỗi và hoàn tác cả đơn thuốc
+                $deductions = $this->inventory->fefoDeduct((int) $item->item_id, $totalUnits);
+
+                $prescriptionId = DB::table('prescriptions')->insertGetId([
+                    'record_id' => $record->record_id,
+                    'item_id' => $item->item_id,
+                    'soluong' => $totalUnits,
+                    'huongdan' => "{$request->doses_per_day} lần/ngày, mỗi lần " . round($unitsPerDose, 2)
+                        . " {$item->donvitinh} (liều " . round($mgPerDose, 1) . "mg), dùng {$request->total_days} ngày",
+                ]);
+
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Kê đơn thuốc thành công!',
+                    'data' => [
+                        'prescription_id' => $prescriptionId,
+                        'dose_mg' => round($mgPerDose, 1),
+                        'total_units' => $totalUnits,
+                        'fefo_deductions' => $deductions,
+                    ],
+                ], 200);
+            });
         } catch (Exception $e) {
-            $this->pdo->rollBack();
-            return ['status' => false, 'message' => $e->getMessage()];
+            return response()->json(['status' => false, 'message' => 'Kê đơn thất bại: ' . $e->getMessage()], 400);
         }
     }
 }
-?>

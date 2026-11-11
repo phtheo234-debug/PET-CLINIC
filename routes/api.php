@@ -13,35 +13,36 @@ use App\Http\Controllers\Api\PaymentController;
 // Public Endpoint
 Route::post('/v1/auth/login', [AuthController::class, 'login']);
 
-// Authenticated Endpoints
-Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
-    Route::get('/users/me', [AuthController::class, 'me']);
-    Route::put('/users/change-password', [AuthController::class, 'changePassword']);
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
+// Tất cả endpoint còn lại yêu cầu đăng nhập (Sanctum)
+Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/analytics/dashboard', [DashboardController::class, 'getOverview']);
+    Route::prefix('v1')->group(function () {
+        Route::get('/users/me', [AuthController::class, 'me']);
+        Route::put('/users/change-password', [AuthController::class, 'changePassword']);
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    // --- CÁC ROUTE MỚI CỦA TV 3 (PHONG) ---
-    // Module 4: Kho & Xuất kho FEFO
-    Route::post('/inventory/export', [InventoryController::class, 'exportMedicineFEFO']);
+        Route::get('/analytics/dashboard', [DashboardController::class, 'getOverview']);
 
-    // Module 5: Khám bệnh & Kê đơn mg/kg
-    Route::post('/medical/prescriptions', [MedicalController::class, 'createPrescription']);
+        // Module 4: Kho & Xuất kho FEFO
+        Route::post('/inventory/export', [InventoryController::class, 'exportMedicineFEFO']);
 
-    // Module 7: Thanh toán POS & Xuất viện
-    Route::post('/payment/checkout', [PaymentController::class, 'createInvoiceAndCheckout']);
-    // ----------------------------------------
+        // Module 5: Khám bệnh & Kê đơn mg/kg
+        Route::post('/medical/prescriptions', [MedicalController::class, 'createPrescription']);
 
-    Route::prefix('admin')->group(function () {
-        Route::get('/users', [AdminUserController::class, 'index']);
-        Route::post('/users', [AdminUserController::class, 'store']);
-        Route::put('/users/{id}/reset-password', [AdminUserController::class, 'resetPassword']);
-        Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus']);
+        // Module 7: Thanh toán POS & Xuất viện
+        Route::post('/payment/checkout', [PaymentController::class, 'createInvoiceAndCheckout']);
+
+        Route::prefix('admin')->group(function () {
+            Route::get('/users', [AdminUserController::class, 'index']);
+            Route::post('/users', [AdminUserController::class, 'store']);
+            Route::put('/users/{id}/reset-password', [AdminUserController::class, 'resetPassword']);
+            Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus']);
+        });
     });
+
+    // CRUD Thú cưng
+    Route::apiResource('pets', PetController::class);
+
+    // Quản lý lưu trú & Xếp lồng
+    Route::post('/boarding/assign', [BoardingController::class, 'assignCage']);
 });
-
-// CRUD Thú cưng
-Route::apiResource('pets', PetController::class);
-
-// Quản lý lưu trú & Xếp lồng
-Route::post('/boarding/assign', [BoardingController::class, 'assignCage']);
