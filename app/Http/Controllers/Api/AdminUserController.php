@@ -26,7 +26,10 @@ class AdminUserController extends Controller
             'trangthai',
             'phai_doimatkhau',
             'ngaytao'
-        )->orderBy('user_id', 'desc')->get();
+        )
+            ->where('vaitro', '!=', 'QUAN_TRI')
+            ->orderBy('user_id', 'desc')
+            ->get();
 
         return response()->json([
             'status' => 'success',
