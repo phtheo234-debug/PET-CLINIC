@@ -44,6 +44,12 @@ async function apiRequest(endpoint, options = {}) {
 
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
+        if (result.code === "PASSWORD_CHANGE_REQUIRED") {
+            if (window.location.pathname !== "/change-password") {
+                window.location.href = "/change-password";
+            }
+            throw new Error(result.message);
+        }
         if (result.errors) {
             const firstError = Object.values(result.errors).flat()[0];
             throw new Error(firstError || result.message);
@@ -88,11 +94,15 @@ async function initPage() {
         }
     }
 
+    if (user && user.phai_doimatkhau) {
+        window.location.href = "/change-password";
+        return;
+    }
+
     const nameEl = document.getElementById("navUserName");
     const roleEl = document.getElementById("navUserRole");
     if (nameEl) {
-        nameEl.innerText =
-            (user && (user.ho_ten || user.username)) || "Tài khoản";
+        nameEl.innerText = (user && (user.ho_ten || user.username)) || "Tài khoản";
     }
     if (roleEl && user && user.vaitro) {
         roleEl.innerText = roleMap[user.vaitro] || user.vaitro;
