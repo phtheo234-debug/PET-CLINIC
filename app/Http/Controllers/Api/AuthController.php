@@ -58,9 +58,9 @@ class AuthController extends Controller
         // Luôn trả cùng thông báo để không tiết lộ email có đăng ký hay không.
         if ($user && $user->trangthai === 'HOAT_DONG') {
             $code = (string) random_int(100000, 999999);
-            Cache::put('password_reset:' . strtolower($user->email), Hash::make($code), now()->addMinutes(10));
+            Cache::put('password_reset:' . strtolower($user->email), Hash::make($code), now()->addMinute());
 
-            Mail::raw("Mã xác nhận đặt lại mật khẩu Pet Clinic của bạn là: {$code}. Mã có hiệu lực trong 10 phút.", function ($message) use ($user) {
+            Mail::raw("Mã xác nhận đặt lại mật khẩu Pet Clinic của bạn là: {$code}. Mã có hiệu lực trong 1 phút.", function ($message) use ($user) {
                 $message->to($user->email)->subject('Mã xác nhận đặt lại mật khẩu - Pet Clinic');
             });
         }
