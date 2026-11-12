@@ -180,7 +180,6 @@ class MedicalController extends Controller
 
         $cages = DB::table('cages')
             ->whereNotIn('trangthai', ['DANG_VE_SINH', 'BAO_TRI'])
-            ->whereColumn('soluonghientai', '<', 'succhua')
             ->when($hasMaxWeightCol, function ($q) use ($weight) {
                 $q->where(function ($sub) use ($weight) {
                     $sub->whereNull('tai_trong_toi_da')
@@ -190,8 +189,18 @@ class MedicalController extends Controller
             ->lockForUpdate()
             ->get();
 
-        // Lọc lồng phù hợp với đặc điểm loài/giống, giới tính & kích cỡ cân nặng
+        // Đếm thú thực tế để không bị ảnh hưởng bởi số lượng cũ đang lệch.
+        foreach ($cages as $cage) {
+            $cage->soluonghientai = DB::table('pets')
+                ->where('cage_id', $cage->cage_id)
+                ->count();
+        }
+
+        // Lọc lồng phù hợp với đặc điểm loài/giống, giới tính, cân nặng và sức chứa.
         $suitable = $cages->filter(function ($cage) use ($pet, $weight, $hasMaxWeightCol) {
+            if ((int) $cage->soluonghientai >= (int) $cage->succhua) {
+                return false;
+            }
             // Nếu bảng cages chưa có cột tai_trong_toi_da, kiểm tra theo tên/kích thước lồng
             if (!$hasMaxWeightCol) {
                 $cageLabel = mb_strtolower(($cage->ten_long ?? '') . ' ' . ($cage->malong ?? ''));
