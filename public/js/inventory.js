@@ -1,17 +1,22 @@
 let inventoryItems = [];
 let isAdminInventory = false;
+let isAdminSpa = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
     await initPage();
     const user = getCurrentUser();
     isAdminInventory = !!user && user.vaitro === "QUAN_TRI";
+    isAdminSpa = isAdminInventory;
 
     if (isAdminInventory) {
+        document.getElementById("btnAddSpaService")?.classList.remove("d-none");
+        document.getElementById("spaActionHeader")?.classList.remove("d-none");
         document.getElementById("btnAddInventory")?.classList.remove("d-none");
         document.getElementById("inventoryActionHeader")?.classList.remove("d-none");
     }
 
     document.getElementById("inventoryForm")?.addEventListener("submit", saveInventoryItem);
+    document.getElementById("spaServiceForm")?.addEventListener("submit", saveSpaService);
     document.getElementById("inventory_category")?.addEventListener("change", toggleMedicineDosageFields);
     toggleMedicineDosageFields();
     await loadInventory();
@@ -80,13 +85,25 @@ function renderInventory(items) {
 
     const services = items.filter((item) => item.danhmuc === "DICH_VU_SPA");
     document.getElementById("spaTableBody").innerHTML = services.length
-        ? services.map((service) => `
-            <tr>
-                <td><code>${escapeInventoryHtml(service.masanpham)}</code></td>
-                <td><strong>${escapeInventoryHtml(service.ten_sanpham || service.name)}</strong></td>
-                <td class="text-primary font-weight-bold">${formatCurrency(service.dongia)}</td>
-            </tr>`).join("")
-        : '<tr><td colspan="3" class="text-center text-muted">Chưa có dịch vụ Spa</td></tr>';
+        ? services.map((service) => {
+            const actions = isAdminSpa ? `
+                <td class="text-nowrap">
+                    <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editSpaService(${Number(service.item_id)})">
+                        <i class="fas fa-edit"></i> Sửa
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSpaService(${Number(service.item_id)})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </td>` : "";
+            return `
+                <tr>
+                    <td><code>${escapeInventoryHtml(service.masanpham)}</code></td>
+                    <td><strong>${escapeInventoryHtml(service.ten_sanpham || service.name)}</strong></td>
+                    <td class="text-primary font-weight-bold">${formatCurrency(service.dongia)}</td>
+                    ${actions}
+                </tr>`;
+        }).join("")
+        : `<tr><td colspan="${isAdminSpa ? 4 : 3}" class="text-center text-muted">Chưa có dịch vụ Spa</td></tr>`;
 }
 
 function toggleMedicineDosageFields() {
@@ -179,5 +196,81 @@ async function deleteInventoryItem(itemId) {
         alert("Đã xóa mặt hàng.");
     } catch (error) {
         alert("Không thể xóa mặt hàng: " + error.message);
+    }
+}
+
+
+function openSpaServiceForm(service = null) {
+    if (!isAdminSpa) return;
+    document.getElementById("spaServiceForm").reset();
+    document.getElementById("spa_service_form_id").value = service ? service.item_id : "";
+    document.getElementById("spaServiceFormTitle").innerText = service ? "Cập nhật dịch vụ Spa" : "Thêm dịch vụ Spa";
+    document.getElementById("spa_service_code").value = service?.masanpham || "";
+    document.getElementById("spa_service_name").value = service?.ten_sanpham || "";
+    document.getElementById("spa_service_unit").value = service?.donvitinh || "lần";
+    document.getElementById("spa_service_price").value = service?.dongia ?? "";
+    $("#spaServiceFormModal").modal("show");
+}
+
+function editSpaService(serviceId) {
+    if (!isAdminSpa) return;
+    const service = inventoryItems.find((item) =>
+        Number(item.item_id) === Number(serviceId) && item.danhmuc === "DICH_VU_SPA"
+    );
+    if (!service) {
+        alert("Không tìm thấy dịch vụ Spa.");
+        return;
+    }
+    openSpaServiceForm(service);
+}
+
+async function saveSpaService(event) {
+    event.preventDefault();
+    if (!isAdminSpa) {
+        alert("Chỉ quản trị viên được quản lý dịch vụ Spa.");
+        return;
+    }
+
+    const id = document.getElementById("spa_service_form_id").value;
+    const payload = {
+        masanpham: document.getElementById("spa_service_code").value.trim(),
+        ten_sanpham: document.getElementById("spa_service_name").value.trim(),
+        donvitinh: document.getElementById("spa_service_unit").value.trim(),
+        dongia: Number(document.getElementById("spa_service_price").value),
+    };
+
+    const button = document.getElementById("btnSaveSpaService");
+    button.disabled = true;
+    button.innerText = "Đang lưu...";
+    try {
+        await apiRequest(id ? `/admin/spa-services/${id}` : "/admin/spa-services", {
+            method: id ? "PUT" : "POST",
+            body: JSON.stringify(payload),
+        });
+        $("#spaServiceFormModal").modal("hide");
+        await loadInventory();
+        alert(id ? "Đã cập nhật dịch vụ Spa." : "Đã thêm dịch vụ Spa.");
+    } catch (error) {
+        alert("Không thể lưu dịch vụ Spa: " + error.message);
+    } finally {
+        button.disabled = false;
+        button.innerText = "Lưu dịch vụ";
+    }
+}
+
+async function deleteSpaService(serviceId) {
+    if (!isAdminSpa) return;
+    const service = inventoryItems.find((item) =>
+        Number(item.item_id) === Number(serviceId) && item.danhmuc === "DICH_VU_SPA"
+    );
+    if (!service) return;
+
+    if (!confirm(`Bạn có chắc muốn xóa dịch vụ "${service.masanpham} - ${service.ten_sanpham}"?`)) return;
+    try {
+        await apiRequest(`/admin/spa-services/${serviceId}`, { method: "DELETE" });
+        await loadInventory();
+        alert("Đã xóa dịch vụ Spa.");
+    } catch (error) {
+        alert("Không thể xóa dịch vụ Spa: " + error.message);
     }
 }
