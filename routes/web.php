@@ -8,6 +8,9 @@ Route::get('/', function () {
 
 Route::view('/login', 'auth.login')->name('login');
 Route::view('/change-password', 'auth.change-password')->name('change-password');
+Route::view('/forgot-password', 'auth.forgot-password')->name('forgot-password');
+Route::view('/profile', 'profile')->name('profile');
+Route::view('/admin/users', 'admin.users')->name('admin.users');
 Route::view('/dashboard', 'dashboard')->name('dashboard');
 Route::view('/pets', 'pets')->name('pets');
 Route::view('/cages', 'cages')->name('cages');
