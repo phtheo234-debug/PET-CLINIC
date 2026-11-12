@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 
 class AuthController extends Controller
 {
@@ -45,6 +47,89 @@ class AuthController extends Controller
                 'phai_doimatkhau' => $user->phai_doimatkhau,
                 'token'           => $token,
             ]
+        ]);
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        $user = User::where('email', $request->email)->first();
+
+        // Luôn trả cùng thông báo để không tiết lộ email có đăng ký hay không.
+        if ($user && $user->trangthai === 'HOAT_DONG') {
+            $code = (string) random_int(100000, 999999);
+            Cache::put('password_reset:' . strtolower($user->email), Hash::make($code), now()->addMinutes(10));
+
+            Mail::raw("Mã xác nhận đặt lại mật khẩu Pet Clinic của bạn là: {$code}. Mã có hiệu lực trong 10 phút.", function ($message) use ($user) {
+                $message->to($user->email)->subject('Mã xác nhận đặt lại mật khẩu - Pet Clinic');
+            });
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Nếu email tồn tại và đang hoạt động, mã xác nhận đã được gửi. Vui lòng kiểm tra hộp thư.',
+        ]);
+    }
+
+    public function resetForgottenPassword(Request $request)
+    {
+        $fields = $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string|size:6',
+            'mat_khau_moi' => 'required|string|min:6|confirmed',
+        ]);
+
+        $key = 'password_reset:' . strtolower($fields['email']);
+        $hashedCode = Cache::get($key);
+        $user = User::where('email', $fields['email'])->where('trangthai', 'HOAT_DONG')->first();
+
+        if (!$user || !$hashedCode || !Hash::check($fields['code'], $hashedCode)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mã xác nhận không đúng hoặc đã hết hạn.',
+            ], 422);
+        }
+
+        $user->mat_khau = Hash::make($fields['mat_khau_moi']);
+        $user->phai_doimatkhau = false;
+        $user->save();
+        Cache::forget($key);
+
+        // Thu hồi các phiên đăng nhập cũ sau khi đặt lại mật khẩu.
+        $user->tokens()->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.',
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        $fields = $request->validate([
+            'ho_ten' => 'required|string|max:100',
+            'email' => 'required|email|max:100|unique:users,email,' . $user->user_id . ',user_id',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $user->ho_ten = $fields['ho_ten'];
+        $user->email = $fields['email'];
+        $user->phone = $fields['phone'] ?? null;
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Cập nhật thông tin cá nhân thành công.',
+            'data' => [
+                'user_id' => $user->user_id,
+                'username' => $user->username,
+                'ho_ten' => $user->ho_ten,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'vaitro' => $user->vaitro,
+                'phai_doimatkhau' => (bool) $user->phai_doimatkhau,
+            ],
         ]);
     }
 
