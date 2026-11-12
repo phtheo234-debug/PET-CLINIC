@@ -69,6 +69,24 @@ async function logout() {
     }
 }
 
+function togglePassword(inputId, button) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const isHidden = input.type === "password";
+    input.type = isHidden ? "text" : "password";
+
+    const icon = button.querySelector("i");
+    if (icon) {
+        icon.classList.toggle("fa-eye", !isHidden);
+        icon.classList.toggle("fa-eye-slash", isHidden);
+    }
+
+    const label = isHidden ? "Ẩn mật khẩu" : "Hiện mật khẩu";
+    button.setAttribute("aria-label", label);
+    button.setAttribute("title", label);
+}
+
 function formatCurrency(amount) {
     return Number(amount || 0).toLocaleString("vi-VN") + " đ";
 }
