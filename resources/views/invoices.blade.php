@@ -6,69 +6,62 @@
 @section('content')
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white font-weight-bold text-success">
-        <i class="fas fa-cash-register mr-1"></i> LẬP HÓA ĐƠN THANH TOÁN TỔNG HỢP (POS)
+        <i class="fas fa-cash-register mr-1"></i> THANH TOÁN VÀ DUYỆT XUẤT VIỆN
     </div>
     <div class="card-body">
         <form id="invoiceForm">
             <div class="form-row">
-                <div class="form-group col-md-4">
-                    <label>Thú cưng</label>
-                    <input type="text" id="inv_pet" class="form-control" placeholder="PET-001" required>
+                <div class="form-group col-md-6">
+                    <label for="pet_select">Thú cưng nội trú <span class="text-danger">*</span></label>
+                    <select id="pet_select" class="form-control" required>
+                        <option value="">-- Đang tải danh sách thú cưng --</option>
+                    </select>
+                    <small class="form-text text-muted">
+                        Chỉ chọn thú cưng đang nội trú. Backend sẽ kiểm tra hồ sơ khám và điều kiện xuất viện trước khi thanh toán.
+                    </small>
                 </div>
-                <div class="form-group col-md-4">
-                    <label>Chủ nuôi</label>
-                    <input type="text" id="inv_owner" class="form-control" placeholder="Nguyễn Văn An" required>
+                <div class="form-group col-md-6">
+                    <label for="inv_owner">Chủ nuôi</label>
+                    <input type="text" id="inv_owner" class="form-control bg-light" placeholder="Tự động hiển thị theo thú cưng" readonly>
                 </div>
-                <div class="form-group col-md-4">
-                    <label>Phương thức thanh toán</label>
-                    <select id="phuongthucthanhtoan" class="form-control">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="phuongthucthanhtoan">Phương thức thanh toán <span class="text-danger">*</span></label>
+                    <select id="phuongthucthanhtoan" class="form-control" required>
                         <option value="TIEN_MAT">Tiền mặt</option>
-                        <option value="CHUYEN_KHOAN">Chuyển khoản QR</option>
-                        <option value="THE">Quẹt thẻ</option>
+                        <option value="CHUYEN_KHOAN">Chuyển khoản</option>
+                        <option value="THE">Thẻ</option>
                     </select>
                 </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group col-md-3">
-                    <label>Tiền khám / Phẫu thuật (đ)</label>
-                    <input type="number" id="fee_medical" class="form-control"
-                        value="150000" min="0">
-                </div>
-
-                <div class="form-group col-md-3">
-                    <label>Tiền thuốc / Vắc-xin (đ)</label>
-                    <input type="number" id="fee_medicine" class="form-control"
-                        value="0" min="0">
-                </div>
-
-                <div class="form-group col-md-3">
-                    <label>Tiền lồng lưu trú (đ)</label>
-                    <input type="number" id="fee_cage" class="form-control"
-                        value="0" min="0">
-                </div>
-
-                <div class="form-group col-md-3">
-                    <label>Dịch vụ Spa / Hạt mua kèm (đ)</label>
-                    <input type="number" id="fee_spa" class="form-control"
-                        value="0" min="0">
+                <div class="form-group col-md-6">
+                    <label>Chi phí thanh toán</label>
+                    <div class="form-control bg-light text-muted" aria-live="polite">
+                        Backend tự tính tiền thuốc chưa thanh toán và phí lưu trú theo số ngày thực tế.
+                    </div>
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-2">
-                <h5 class="mb-0">Tổng thanh toán: <span id="tongtien_display" class="text-danger font-weight-bold">150.000 đ</span></h5>
-                <button type="submit" class="btn btn-success font-weight-bold">
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle mr-1"></i>
+                Không nhập tổng tiền thủ công. Hóa đơn và chi tiết từng khoản phí sẽ được Backend tính toán, lưu lại khi thanh toán thành công.
+            </div>
+
+            <div class="d-flex justify-content-end">
+                <button type="submit" id="btnCheckout" class="btn btn-success font-weight-bold">
                     <i class="fas fa-check-circle mr-1"></i> Thanh toán & Duyệt Xuất viện
                 </button>
             </div>
         </form>
+        <div id="checkoutResult" class="mt-3" aria-live="polite"></div>
     </div>
 </div>
 
 <div class="card shadow-sm">
     <div class="card-header bg-white font-weight-bold">Danh sách Hóa đơn đã xuất</div>
     <div class="card-body table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover mb-0">
             <thead class="thead-light">
                 <tr>
                     <th>Mã HĐ</th>
@@ -80,7 +73,9 @@
                     <th>Ngày tạo</th>
                 </tr>
             </thead>
-            <tbody id="invoicesTableBody"></tbody>
+            <tbody id="invoicesTableBody">
+                <tr><td colspan="7" class="text-center text-muted">Đang tải danh sách hóa đơn...</td></tr>
+            </tbody>
         </table>
     </div>
 </div>
