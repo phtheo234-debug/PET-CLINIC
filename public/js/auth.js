@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     if (getToken()) {
+        setWebAuthCookie(getToken());
         const user = getCurrentUser();
         window.location.href = user && user.phai_doimatkhau
             ? "/change-password"
@@ -38,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const payload = result.data || result;
             localStorage.setItem("access_token", payload.token);
+            setWebAuthCookie(payload.token);
             localStorage.setItem("current_user", JSON.stringify({
                 user_id: payload.user_id,
                 username: payload.username,
