@@ -5,8 +5,11 @@
 
 @section('content')
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white font-weight-bold text-primary">
-        Kho Thuốc, Vắc-xin & Thức ăn (Kiểm soát Lô & Hạn sử dụng FEFO)
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong class="text-primary">Kho Thuốc, Vắc-xin, Thức ăn & Vật tư (Kiểm soát Lô & Hạn sử dụng FEFO)</strong>
+        <button type="button" id="btnAddInventory" class="btn btn-primary btn-sm d-none" onclick="openInventoryForm()">
+            <i class="fas fa-plus mr-1"></i> Thêm mặt hàng
+        </button>
     </div>
     <div class="card-body table-responsive">
         <table class="table table-hover">
@@ -20,6 +23,7 @@
                     <th>Hạn sử dụng</th>
                     <th>Đơn giá</th>
                     <th>Trạng thái</th>
+                    <th id="inventoryActionHeader" class="d-none">Thao tác</th>
                 </tr>
             </thead>
             <tbody id="inventoryTableBody"></tbody>
@@ -42,6 +46,71 @@
             </thead>
             <tbody id="spaTableBody"></tbody>
         </table>
+    </div>
+</div>
+
+<div class="modal fade" id="inventoryFormModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form id="inventoryForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inventoryFormTitle">Thêm mặt hàng kho</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="inventory_form_id">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="inventory_code">Mã sản phẩm</label>
+                            <input id="inventory_code" class="form-control" maxlength="20" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="inventory_name">Tên mặt hàng</label>
+                            <input id="inventory_name" class="form-control" maxlength="100" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="inventory_category">Danh mục</label>
+                            <select id="inventory_category" class="form-control" required>
+                                <option value="THUOC">Thuốc</option>
+                                <option value="VAC_XIN">Vắc-xin</option>
+                                <option value="THUC_AN">Thức ăn</option>
+                                <option value="VAT_TU">Vật tư</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="inventory_unit">Đơn vị tính</label>
+                            <input id="inventory_unit" class="form-control" maxlength="20" placeholder="Viên, lọ, kg, cái..." required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="inventory_price">Đơn giá (VNĐ)</label>
+                            <input id="inventory_price" type="number" class="form-control" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="inventory_minimum">Tồn kho tối thiểu</label>
+                            <input id="inventory_minimum" type="number" class="form-control" min="0" step="1" value="10">
+                        </div>
+                    </div>
+                    <div id="medicineDosageFields" class="border rounded p-3">
+                        <strong class="d-block mb-2">Cấu hình liều dùng (chỉ áp dụng cho thuốc)</strong>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-0">
+                                <label for="inventory_dose">Liều dùng (mg/kg)</label>
+                                <input id="inventory_dose" type="number" class="form-control" min="0.01" step="0.01">
+                            </div>
+                            <div class="form-group col-md-6 mb-0">
+                                <label for="inventory_mg_unit">Hàm lượng (mg/đơn vị)</label>
+                                <input id="inventory_mg_unit" type="number" class="form-control" min="0.01" step="0.01">
+                            </div>
+                        </div>
+                        <small class="text-muted">Hai thông số này cần được khai báo để hệ thống tính liều và kê đơn thuốc.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="submit" id="btnSaveInventory" class="btn btn-primary">Lưu mặt hàng</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 @endsection
