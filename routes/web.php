@@ -21,8 +21,8 @@ Route::middleware('web.token')->group(function () {
     Route::view('/invoices', 'invoices')->name('invoices');
 
     // Chỉ quản trị viên được mở trang quản lý tài khoản.
-    Route::middleware('web.role:QUAN_TRI')
-        ->view('/admin/users', 'admin.users')
+    Route::view('/admin/users', 'admin.users')
+        ->middleware('web.role:QUAN_TRI')
         ->name('admin.users');
 });
 
