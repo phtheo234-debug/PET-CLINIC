@@ -17,7 +17,9 @@ use App\Http\Controllers\Api\PaymentController;
 |--------------------------------------------------------------------------
 */
 
-Route::post('/v1/auth/login', [AuthController::class, 'login']);
+Route::post('/v1/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/v1/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
+Route::post('/v1/auth/reset-password', [AuthController::class, 'resetForgottenPassword'])->middleware('throttle:5,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +32,7 @@ Route::post('/v1/auth/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->group(function () {
     Route::get('/users/me', [AuthController::class, 'me']);
+    Route::put('/users/profile', [AuthController::class, 'updateProfile']);
     Route::put('/users/change-password', [AuthController::class, 'changePassword']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
