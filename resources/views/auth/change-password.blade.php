@@ -24,16 +24,31 @@
                         <form id="changePasswordForm">
                             <div class="form-group">
                                 <label class="font-weight-bold" for="mat_khau_cu">Mật khẩu hiện tại (mật khẩu tạm)</label>
-                                <input type="password" id="mat_khau_cu" class="form-control" autocomplete="current-password" required>
+                                <div class="input-group">
+                                    <input type="password" id="mat_khau_cu" class="form-control" autocomplete="current-password" required>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('mat_khau_cu', this)" aria-label="Hiện mật khẩu" title="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="font-weight-bold" for="mat_khau_moi">Mật khẩu mới</label>
-                                <input type="password" id="mat_khau_moi" class="form-control" minlength="6" autocomplete="new-password" required>
+                                <div class="input-group">
+                                    <input type="password" id="mat_khau_moi" class="form-control" minlength="6" autocomplete="new-password" required>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('mat_khau_moi', this)" aria-label="Hiện mật khẩu" title="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
                                 <small class="form-text text-muted">Mật khẩu phải có ít nhất 6 ký tự.</small>
                             </div>
                             <div class="form-group">
                                 <label class="font-weight-bold" for="mat_khau_moi_confirmation">Nhập lại mật khẩu mới</label>
-                                <input type="password" id="mat_khau_moi_confirmation" class="form-control" minlength="6" autocomplete="new-password" required>
+                                <div class="input-group">
+                                    <input type="password" id="mat_khau_moi_confirmation" class="form-control" minlength="6" autocomplete="new-password" required>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('mat_khau_moi_confirmation', this)" aria-label="Hiện mật khẩu" title="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
                             </div>
                             <button type="submit" id="btnChangePassword" class="btn btn-primary btn-block font-weight-bold">
                                 <i class="fas fa-save mr-1"></i> Xác nhận đổi mật khẩu
