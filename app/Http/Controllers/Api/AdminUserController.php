@@ -94,7 +94,6 @@ class AdminUserController extends Controller
             'vaitro' => [
                 'required',
                 Rule::in([
-                    'QUAN_TRI',
                     'BAC_SI',
                     'NHAN_VIEN'
                 ])
@@ -178,6 +177,14 @@ class AdminUserController extends Controller
         ]);
 
         $user = User::findOrFail($id);
+
+        // Hệ thống chỉ sử dụng một tài khoản quản trị; không cho khóa tài khoản quản trị.
+        if ($user->vaitro === 'QUAN_TRI' && $fields['trangthai'] !== 'HOAT_DONG') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể khóa hoặc tạm ngưng tài khoản quản trị viên.'
+            ], 400);
+        }
 
         // Không cho phép quản trị viên tự khóa hoặc tạm ngưng tài khoản.
         if ((int) $user->user_id === (int) $request->user()->user_id
