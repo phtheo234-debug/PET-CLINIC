@@ -48,6 +48,7 @@
                     <label>Trạng thái</label>
                     <select id="cage_trangthai" class="form-control">
                         <option value="CON_TRONG">Còn trống</option>
+                        <option value="DA_CO_THU">Đang có thú (tự động)</option>
                         <option value="DANG_VE_SINH">Đang vệ sinh</option>
                         <option value="BAO_TRI">Bảo trì</option>
                     </select>
