@@ -125,4 +125,8 @@ async function initPage() {
     if (roleEl && user && user.vaitro) {
         roleEl.innerText = roleMap[user.vaitro] || user.vaitro;
     }
+    const adminNav = document.getElementById('adminUsersNav');
+    if (adminNav && user && user.vaitro === 'QUAN_TRI') {
+        adminNav.classList.remove('d-none');
+    }
 }
