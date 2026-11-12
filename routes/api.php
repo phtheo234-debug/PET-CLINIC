@@ -48,6 +48,10 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::put('/cages/{id}', [AdminCageController::class, 'update']);
         Route::delete('/cages/{id}', [AdminCageController::class, 'destroy']);
 
+        Route::post('/inventory', [AdminInventoryController::class, 'store']);
+        Route::put('/inventory/{id}', [AdminInventoryController::class, 'update']);
+        Route::delete('/inventory/{id}', [AdminInventoryController::class, 'destroy']);
+
         Route::post('/cages', [AdminCageController::class, 'store']);
         Route::put('/cages/{id}', [AdminCageController::class, 'update']);
         Route::delete('/cages/{id}', [AdminCageController::class, 'destroy']);
