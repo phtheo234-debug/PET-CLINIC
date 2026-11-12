@@ -19,6 +19,13 @@ function extractList(res) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     initPage();
+    const currentUser = getCurrentUser();
+    const isAdmin = currentUser && currentUser.vaitro === "QUAN_TRI";
+    if (isAdmin) {
+        document.getElementById("adminCageToolbar").classList.remove("d-none");
+    }
+
+    document.getElementById("cageForm").addEventListener("submit", saveCage);
     await Promise.all([loadCages(), loadPetsForSelect()]);
 
     document
@@ -183,12 +190,100 @@ function renderCagesGrid() {
                             onclick="openAssignModal(${cageId}, '${cageCode}')">
                             <i class="fas fa-plus-circle mr-1"></i> Xếp thú vào lồng
                         </button>
+                        ${isAdmin ? `
+                            <hr>
+                            <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editCage(${cageId})">
+                                <i class="fas fa-edit mr-1"></i> Sửa
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCage(${cageId})">
+                                <i class="fas fa-trash mr-1"></i> Xóa
+                            </button>
+                        ` : ""}
                     </div>
                 </div>
             </div>
         `;
         })
         .join("");
+}
+
+function openCageForm(cage = null) {
+    if (!isAdminCageUser()) return;
+
+    document.getElementById("cageForm").reset();
+    document.getElementById("cage_form_id").value = cage ? cage.cage_id : "";
+    document.getElementById("cageFormTitle").innerText = cage ? "Cập nhật lồng lưu trú" : "Thêm lồng lưu trú";
+    document.getElementById("cage_malong").value = cage ? cage.malong : "";
+    document.getElementById("cage_ten_long").value = cage ? cage.ten_long : "";
+    document.getElementById("cage_loailong").value = cage ? cage.loailong : "THUONG";
+    document.getElementById("cage_succhua").value = cage ? cage.succhua : 1;
+    document.getElementById("cage_trangthai").value = cage ? cage.trangthai : "CON_TRONG";
+    $("#cageFormModal").modal("show");
+}
+
+function isAdminCageUser() {
+    const user = getCurrentUser();
+    return !!user && user.vaitro === "QUAN_TRI";
+}
+
+function editCage(cageId) {
+    const cage = cagesList.find((item) => Number(item.cage_id) === Number(cageId));
+    if (!cage) {
+        alert("Không tìm thấy thông tin lồng.");
+        return;
+    }
+    openCageForm(cage);
+}
+
+async function saveCage(event) {
+    event.preventDefault();
+    if (!isAdminCageUser()) {
+        alert("Chỉ quản trị viên được quản lý danh mục lồng.");
+        return;
+    }
+
+    const id = document.getElementById("cage_form_id").value;
+    const payload = {
+        malong: document.getElementById("cage_malong").value.trim(),
+        ten_long: document.getElementById("cage_ten_long").value.trim(),
+        loailong: document.getElementById("cage_loailong").value,
+        succhua: Number(document.getElementById("cage_succhua").value),
+        trangthai: document.getElementById("cage_trangthai").value,
+    };
+    const button = document.getElementById("btnSaveCage");
+    button.disabled = true;
+    button.innerText = "Đang lưu...";
+
+    try {
+        await apiRequest(id ? `/admin/cages/${id}` : "/admin/cages", {
+            method: id ? "PUT" : "POST",
+            body: JSON.stringify(payload),
+        });
+        $("#cageFormModal").modal("hide");
+        await loadCages();
+        alert(id ? "Đã cập nhật lồng lưu trú." : "Đã thêm lồng lưu trú.");
+    } catch (error) {
+        alert("Không thể lưu lồng: " + error.message);
+    } finally {
+        button.disabled = false;
+        button.innerText = "Lưu lồng";
+    }
+}
+
+async function deleteCage(cageId) {
+    if (!isAdminCageUser()) return;
+    const cage = cagesList.find((item) => Number(item.cage_id) === Number(cageId));
+    if (!cage) return;
+
+    if (!confirm(`Bạn có chắc muốn xóa lồng ${cage.malong} - ${cage.ten_long}?`)) return;
+
+    try {
+        await apiRequest(`/admin/cages/${cageId}`, { method: "DELETE" });
+        await loadCages();
+        alert("Đã xóa lồng lưu trú.");
+    } catch (error) {
+        alert("Không thể xóa lồng: " + error.message);
+    }
 }
 
 function openAssignModal(cageId, cageCode) {
