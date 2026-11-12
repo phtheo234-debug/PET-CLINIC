@@ -183,9 +183,28 @@ class PetController extends Controller
 
     public function show($id)
     {
+        $pet = $this->findOrFail($id);
+
+        // Lịch sử lưu trú được giữ nguyên qua mỗi lần trả lồng.
+        $boardingHistory = DB::table('pet_boardings')
+            ->leftJoin('cages', 'pet_boardings.cage_id', '=', 'cages.cage_id')
+            ->where('pet_boardings.pet_id', $id)
+            ->select(
+                'pet_boardings.id',
+                'pet_boardings.check_in',
+                'pet_boardings.check_out',
+                'pet_boardings.status',
+                'cages.malong',
+                'cages.ten_long'
+            )
+            ->orderByDesc('pet_boardings.check_in')
+            ->get();
+
         return response()->json([
             'status' => 'success',
-            'data'   => $this->format($this->findOrFail($id))
+            'data'   => array_merge($this->format($pet), [
+                'boarding_history' => $boardingHistory,
+            ]),
         ], 200);
     }
 
