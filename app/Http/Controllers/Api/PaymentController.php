@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\CageOccupancyService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,10 @@ use Carbon\Carbon;
 
 class PaymentController extends Controller
 {
+    public function __construct(private CageOccupancyService $cageOccupancy)
+    {
+    }
+
     /**
      * FR-BILL-03: Tra cứu danh sách & Chi tiết Hóa đơn thanh toán
      */
@@ -321,20 +326,13 @@ class PaymentController extends Controller
                         'updated_at' => now(),
                     ]);
 
-                $newCount = max(0, $cage->soluonghientai - 1);
-
-                DB::table('cages')
-                    ->where('cage_id', $cage->cage_id)
-                    ->update([
-                        'soluonghientai' => $newCount,
-                        'trangthai'      => $newCount > 0 ? 'DA_CO_THU' : 'CON_TRONG',
-                    ]);
-
-                // 7. Cập nhật trạng thái Thú cưng xuất viện
+                // 7. Cập nhật trạng thái thú cưng trước, sau đó đồng bộ lồng
                 DB::table('pets')->where('pet_id', $pet->pet_id)->update([
                     'cage_id'   => null,
                     'trangthai' => 'DA_XUAT_VIEN'
                 ]);
+
+                $updatedCage = $this->cageOccupancy->sync((int) $cage->cage_id);
 
                 return response()->json([
                     'status'  => 'success',
