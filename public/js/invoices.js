@@ -1,6 +1,6 @@
-// Endpoint chuẩn theo routes/api.php (Module 7)
-let invoiceListEndpoint = "/payment/invoices";
-let checkoutEndpoint = "/payment/checkout";
+// Các endpoint tương ứng routes/api.php
+const invoiceListEndpoint = "/payment/invoices";
+const checkoutEndpoint = "/payment/checkout";
 
 function extractList(res) {
     if (Array.isArray(res)) return res;
@@ -9,182 +9,166 @@ function extractList(res) {
     return [];
 }
 
+function escapeInvoiceHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+    })[char]);
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat("vi-VN", {
+        maximumFractionDigits: 0,
+    }).format(Number(value) || 0) + " đ";
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     initPage();
-
-    // Tải danh sách thú cưng (nếu có dropdown) và danh sách hóa đơn
     await Promise.all([loadPetsForInvoice(), loadInvoices()]);
 
-    // Các ô nhập chi phí dự tính (nếu có trên form)
-    const feeInputs = ["fee_medical", "fee_medicine", "fee_cage", "fee_spa"];
-    feeInputs.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener("input", calculateTotal);
-    });
-
-    // Xử lý lập hóa đơn & duyệt xuất viện (POST /payment/checkout)
-    const form = document.getElementById("invoiceForm");
-    if (form) {
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const petEl =
-                document.getElementById("pet_select") ||
-                document.getElementById("inv_pet");
-            const rawPetVal = petEl ? petEl.value.trim() : "";
-            const petId = Number(rawPetVal.replace(/^#/, ""));
-
-            if (!petId || isNaN(petId)) {
-                alert(
-                    "Vui lòng chọn hoặc nhập đúng ID thú cưng cần thanh toán!",
-                );
-                if (petEl) petEl.focus();
-                return;
-            }
-
-            const paymentMethodEl =
-                document.getElementById("phuongthucthanhtoan") ||
-                document.getElementById("payment_method");
-            const paymentMethod = paymentMethodEl
-                ? paymentMethodEl.value
-                : "TIEN_MAT";
-
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalBtnHtml = submitBtn ? submitBtn.innerHTML : "";
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML =
-                    '<i class="fas fa-spinner fa-spin mr-1"></i> Đang thanh toán...';
-            }
-
-            // Payload khớp với validation của PaymentController::createInvoiceAndCheckout
-            const payload = {
-                pet_id: petId,
-                payment_method: paymentMethod,
-            };
-
-            try {
-                const res = await apiRequest(checkoutEndpoint, {
-                    method: "POST",
-                    body: JSON.stringify(payload),
-                });
-
-                e.target.reset();
-                calculateTotal();
-                await loadInvoices();
-                await loadPetsForInvoice();
-
-                const detail = res?.data;
-                if (detail && detail.mahoadon) {
-                    alert(
-                        `Thanh toán thành công (${detail.mahoadon})!\n` +
-                            `- Tiền thuốc: ${formatCurrency(detail.tien_thuoc || 0)}\n` +
-                            `- Tiền lồng lưu trú: ${formatCurrency(detail.tien_long || 0)}\n` +
-                            `- Tổng thanh toán: ${formatCurrency(detail.tong_thanhtoan || 0)}\n` +
-                            `Đã duyệt xuất viện và giải phóng lồng lưu trú (BR-05).`,
-                    );
-                } else {
-                    alert(
-                        res?.message ||
-                            "Thanh toán thành công! Đã duyệt xuất viện và giải phóng lồng lưu trú.",
-                    );
-                }
-            } catch (err) {
-                alert("Lỗi lập hóa đơn: " + err.message);
-            } finally {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalBtnHtml;
-                }
-            }
-        });
+    const petSelect = document.getElementById("pet_select");
+    if (petSelect) {
+        petSelect.addEventListener("change", updateSelectedOwner);
     }
+
+    const form = document.getElementById("invoiceForm");
+    if (!form) return;
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const petId = Number(document.getElementById("pet_select").value);
+        const paymentMethod = document.getElementById("phuongthucthanhtoan").value;
+        const resultBox = document.getElementById("checkoutResult");
+        const submitBtn = document.getElementById("btnCheckout");
+
+        if (!petId) {
+            alert("Vui lòng chọn thú cưng đang nội trú!");
+            document.getElementById("pet_select").focus();
+            return;
+        }
+
+        // Payload chỉ gửi đúng hai trường Backend yêu cầu.
+        const payload = {
+            pet_id: petId,
+            payment_method: paymentMethod,
+        };
+
+        const originalButton = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Đang thanh toán...';
+        resultBox.innerHTML = "";
+
+        try {
+            const response = await apiRequest(checkoutEndpoint, {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+
+            const detail = response?.data?.data || response?.data || {};
+            resultBox.innerHTML = `
+                <div class="alert alert-success mb-0">
+                    <strong><i class="fas fa-check-circle mr-1"></i> ${escapeInvoiceHtml(response?.message || "Thanh toán thành công!")}</strong>
+                    <hr>
+                    <div>Mã hóa đơn: <strong>${escapeInvoiceHtml(detail.mahoadon || "-")}</strong></div>
+                    <div>Tiền thuốc: <strong>${formatCurrency(detail.tien_thuoc)}</strong></div>
+                    <div>Phí lưu trú: <strong>${formatCurrency(detail.tien_long)}</strong></div>
+                    <div class="mt-1">Tổng thanh toán: <strong class="text-danger">${formatCurrency(detail.tong_thanhtoan)}</strong></div>
+                    <small class="d-block mt-2">Thú cưng đã được xuất viện và lồng lưu trú đã được giải phóng.</small>
+                </div>
+            `;
+
+            form.reset();
+            await Promise.all([loadPetsForInvoice(), loadInvoices()]);
+        } catch (err) {
+            resultBox.innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    <strong>Không thể thanh toán:</strong> ${escapeInvoiceHtml(err.message)}
+                </div>
+            `;
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalButton;
+        }
+    });
 });
 
-// Tự động đổ danh sách thú cưng nếu phần tử chọn thú cưng là thẻ <select>
+// Chỉ đưa thú cưng nội trú vào danh sách có thể thanh toán.
 async function loadPetsForInvoice() {
-    const petEl =
-        document.getElementById("pet_select") ||
-        document.getElementById("inv_pet");
-    if (!petEl || petEl.tagName !== "SELECT") return;
+    const petSelect = document.getElementById("pet_select");
+    const ownerInput = document.getElementById("inv_owner");
 
     try {
-        const res = await apiRequest("/pets");
-        const pets = extractList(res);
-        if (!pets.length) {
-            petEl.innerHTML =
-                '<option value="">-- Chưa có thú cưng trong CSDL --</option>';
+        const response = await apiRequest("/pets");
+        const pets = extractList(response);
+        const inpatientPets = pets.filter((pet) => pet.trangthai === "NOI_TRU");
+
+        if (!inpatientPets.length) {
+            petSelect.innerHTML = '<option value="">-- Không có thú cưng đang nội trú --</option>';
+            ownerInput.value = "";
             return;
         }
-        petEl.innerHTML =
-            '<option value="">-- Chọn thú cưng cần thanh toán --</option>' +
-            pets
-                .map((p) => {
-                    const id = p.pet_id ?? p.id;
-                    const code = p.mathucung || `PET-${id}`;
-                    const name = p.ten_thucung || p.name || "";
-                    const owner = p.owner?.ho_ten || p.owner?.name || "";
-                    return `<option value="${id}">${code} - ${name}${owner ? ` (Chủ: ${owner})` : ""}</option>`;
-                })
-                .join("");
+
+        petSelect.innerHTML = '<option value="">-- Chọn thú cưng cần thanh toán --</option>' +
+            inpatientPets.map((pet) => {
+                const id = pet.pet_id ?? pet.id;
+                const code = escapeInvoiceHtml(pet.mathucung || `PET-${id}`);
+                const name = escapeInvoiceHtml(pet.ten_thucung || pet.name || "");
+                return `<option value="${id}">${code} - ${name}</option>`;
+            }).join("");
+
+        updateSelectedOwner();
     } catch (err) {
-        petEl.innerHTML = `<option value="">Lỗi tải thú cưng: ${err.message}</option>`;
+        petSelect.innerHTML = `<option value="">Lỗi tải thú cưng: ${escapeInvoiceHtml(err.message)}</option>`;
+        ownerInput.value = "";
     }
 }
 
-// Tính tổng tiền tạm tính trên giao diện
-function calculateTotal() {
-    const m1 = Number(document.getElementById("fee_medical")?.value) || 0;
-    const m2 = Number(document.getElementById("fee_medicine")?.value) || 0;
-    const m3 = Number(document.getElementById("fee_cage")?.value) || 0;
-    const m4 = Number(document.getElementById("fee_spa")?.value) || 0;
+function updateSelectedOwner() {
+    const petSelect = document.getElementById("pet_select");
+    const ownerInput = document.getElementById("inv_owner");
+    const selectedOption = petSelect.options[petSelect.selectedIndex];
+    const petId = Number(petSelect.value);
 
-    const total = m1 + m2 + m3 + m4;
-    const displayEl = document.getElementById("tongtien_display");
-    if (displayEl) {
-        displayEl.innerText = formatCurrency(total);
+    if (!petId || !selectedOption) {
+        ownerInput.value = "";
+        return;
     }
-    return total;
+
+    // Tải thông tin chi tiết để lấy chủ nuôi theo dữ liệu API.
+    apiRequest(`/pets/${petId}`)
+        .then((response) => {
+            const pet = response?.data?.data || response?.data || {};
+            ownerInput.value = pet.owner?.name || pet.owner_name || "";
+        })
+        .catch(() => {
+            ownerInput.value = "";
+        });
 }
 
-// Tải danh sách hóa đơn (GET /payment/invoices)
+// Tải danh sách hóa đơn từ GET /payment/invoices
 async function loadInvoices() {
-    const candidates = ["/payment/invoices", "/payments/invoices", "/invoices"];
-    let lastError = null;
-
-    for (const ep of candidates) {
-        try {
-            const res = await apiRequest(ep);
-            invoiceListEndpoint = ep;
-            renderInvoices(extractList(res));
-            return;
-        } catch (err) {
-            lastError = err;
-            if (!err.message.includes("could not be found")) {
-                break;
-            }
-        }
-    }
-
     const tbody = document.getElementById("invoicesTableBody");
-    if (tbody) {
+
+    try {
+        const response = await apiRequest(invoiceListEndpoint);
+        renderInvoices(extractList(response));
+    } catch (err) {
         tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="text-danger text-center">
-                    ${lastError?.message || "Lỗi tải danh sách hóa đơn"}
-                </td>
-            </tr>`;
+            <tr><td colspan="7" class="text-danger text-center">
+                ${escapeInvoiceHtml(err.message || "Lỗi tải danh sách hóa đơn")}
+            </td></tr>
+        `;
     }
 }
 
-// Hiển thị danh sách hóa đơn
 function renderInvoices(invoices) {
     const tbody = document.getElementById("invoicesTableBody");
-    if (!tbody) return;
-
     if (!invoices.length) {
-        tbody.innerHTML =
-            '<tr><td colspan="7" class="text-center text-muted">Chưa có hóa đơn thanh toán</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Chưa có hóa đơn thanh toán</td></tr>';
         return;
     }
 
@@ -196,42 +180,29 @@ function renderInvoices(invoices) {
 
     const statusMap = {
         DA_THANH_TOAN: '<span class="badge badge-success">Đã thanh toán</span>',
-        CHO_THANH_TOAN:
-            '<span class="badge badge-warning">Chờ thanh toán</span>',
+        CHO_THANH_TOAN: '<span class="badge badge-warning">Chờ thanh toán</span>',
         DA_HUY: '<span class="badge badge-danger">Đã hủy</span>',
     };
 
-    tbody.innerHTML = invoices
-        .map((inv) => {
-            // Backend join bảng pets trả về ten_thucung và mathucung
-            const petLabel = inv.ten_thucung
-                ? `${inv.mathucung ? inv.mathucung + " - " : ""}${inv.ten_thucung}`
-                : (inv.pet && inv.pet.ten_thucung) ||
-                  inv.pet_info ||
-                  `#${inv.pet_id || ""}`;
+    tbody.innerHTML = invoices.map((invoice) => {
+        const petName = invoice.ten_thucung || "";
+        const petLabel = invoice.mathucung
+            ? `${escapeInvoiceHtml(invoice.mathucung)} - ${escapeInvoiceHtml(petName)}`
+            : escapeInvoiceHtml(petName || `#${invoice.pet_id || ""}`);
+        const ownerLabel = escapeInvoiceHtml(invoice.ten_chu_nuoi || `#${invoice.owner_id || ""}`);
+        const method = methodMap[invoice.phuongthucthanhtoan] || escapeInvoiceHtml(invoice.phuongthucthanhtoan || "-");
+        const status = statusMap[invoice.trangthai] || `<span class="badge badge-secondary">${escapeInvoiceHtml(invoice.trangthai || "-")}</span>`;
 
-            // Backend join bảng owners trả về ten_chu_nuoi
-            const ownerLabel =
-                inv.ten_chu_nuoi ||
-                (inv.owner && (inv.owner.ho_ten || inv.owner.name)) ||
-                inv.owner_info ||
-                `#${inv.owner_id || ""}`;
-
-            return `
-                <tr>
-                    <td class="font-weight-bold text-primary">
-                        ${inv.mahoadon || ""}
-                    </td>
-                    <td>${petLabel}</td>
-                    <td>${ownerLabel}</td>
-                    <td class="font-weight-bold text-success">
-                        ${formatCurrency(inv.tongtien)}
-                    </td>
-                    <td>${methodMap[inv.phuongthucthanhtoan] || inv.phuongthucthanhtoan || ""}</td>
-                    <td>${statusMap[inv.trangthai] || `<span class="badge badge-secondary">${inv.trangthai || ""}</span>`}</td>
-                    <td><small>${inv.ngaytao || ""}</small></td>
-                </tr>
-            `;
-        })
-        .join("");
+        return `
+            <tr>
+                <td class="font-weight-bold text-primary">${escapeInvoiceHtml(invoice.mahoadon || "-")}</td>
+                <td>${petLabel}</td>
+                <td>${ownerLabel}</td>
+                <td class="font-weight-bold text-success">${formatCurrency(invoice.tongtien)}</td>
+                <td>${method}</td>
+                <td>${status}</td>
+                <td><small>${escapeInvoiceHtml(invoice.ngaytao || "-")}</small></td>
+            </tr>
+        `;
+    }).join("");
 }
