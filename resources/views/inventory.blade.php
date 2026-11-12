@@ -32,8 +32,11 @@
 </div>
 
 <div class="card shadow-sm">
-    <div class="card-header bg-white font-weight-bold text-info">
-        Bảng giá Dịch vụ Spa & Grooming
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong class="text-info">Bảng giá Dịch vụ Spa & Grooming</strong>
+        <button type="button" id="btnAddSpaService" class="btn btn-info btn-sm d-none" onclick="openSpaServiceForm()">
+            <i class="fas fa-plus mr-1"></i> Thêm dịch vụ
+        </button>
     </div>
     <div class="card-body table-responsive">
         <table class="table table-bordered">
