@@ -65,7 +65,6 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::post('/boarding/release', [BoardingController::class, 'releaseCage']);
 
     Route::get('/inventory', [InventoryController::class, 'index']);
-    Route::post('/inventory/store', [InventoryController::class, 'store']);
     Route::post('/inventory/batch/import', [InventoryController::class, 'importBatch']);
     Route::post('/inventory/export', [InventoryController::class, 'exportMedicineFEFO']);
 
