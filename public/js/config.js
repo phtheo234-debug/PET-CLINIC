@@ -4,6 +4,18 @@ function getToken() {
     return localStorage.getItem("access_token");
 }
 
+// Đồng bộ Sanctum token vào cookie để Laravel bảo vệ cả request mở trang Blade.
+function setWebAuthCookie(token) {
+    if (!token) return;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = "petclinic_token=" + encodeURIComponent(token)
+        + "; Path=/; Max-Age=28800; SameSite=Lax" + secure;
+}
+
+function clearWebAuthCookie() {
+    document.cookie = "petclinic_token=; Path=/; Max-Age=0; SameSite=Lax";
+}
+
 function getCurrentUser() {
     const raw = localStorage.getItem("current_user");
     if (!raw) return null;
@@ -38,6 +50,7 @@ async function apiRequest(endpoint, options = {}) {
     if (response.status === 401) {
         localStorage.removeItem("access_token");
         localStorage.removeItem("current_user");
+        clearWebAuthCookie();
         window.location.href = "/login";
         throw new Error("Phiên đăng nhập hết hạn hoặc không hợp lệ");
     }
@@ -65,6 +78,7 @@ async function logout() {
     } finally {
         localStorage.removeItem("access_token");
         localStorage.removeItem("current_user");
+        clearWebAuthCookie();
         window.location.href = "/login";
     }
 }
