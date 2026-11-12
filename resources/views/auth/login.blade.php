@@ -20,12 +20,17 @@
                         <div id="loginAlert" class="alert alert-danger d-none"></div>
                         <form id="loginForm">
                             <div class="form-group">
-                                <label class="font-weight-bold">Tên đăng nhập</label>
+                                <label class="font-weight-bold" for="username">Tên đăng nhập</label>
                                 <input type="text" id="username" class="form-control" placeholder="Nhập username..." required>
                             </div>
                             <div class="form-group">
-                                <label class="font-weight-bold">Mật khẩu</label>
-                                <input type="password" id="mat_khau" class="form-control" placeholder="Nhập mật khẩu..." required>
+                                <label class="font-weight-bold" for="mat_khau">Mật khẩu</label>
+                                <div class="input-group">
+                                    <input type="password" id="mat_khau" class="form-control" placeholder="Nhập mật khẩu..." autocomplete="current-password" required>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('mat_khau', this)" aria-label="Hiện mật khẩu" title="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
                             </div>
                             <button type="submit" id="btnSubmitLogin" class="btn btn-primary btn-block font-weight-bold">
                                 <i class="fas fa-sign-in-alt mr-1"></i> Đăng nhập hệ thống
