@@ -36,6 +36,7 @@
                                 <i class="fas fa-sign-in-alt mr-1"></i> Đăng nhập hệ thống
                             </button>
                         </form>
+                        <div class="text-center mt-3"><a href="{{ route('forgot-password') }}">Quên mật khẩu?</a></div>
                     </div>
                 </div>
             </div>
