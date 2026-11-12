@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     if (getToken()) {
-        window.location.href = "/dashboard";
+        const user = getCurrentUser();
+        window.location.href = user && user.phai_doimatkhau
+            ? "/change-password"
+            : "/dashboard";
         return;
     }
 
@@ -30,25 +33,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const result = await res.json();
             if (!res.ok) {
-                throw new Error(
-                    result.message || "Sai tên đăng nhập hoặc mật khẩu",
-                );
+                throw new Error(result.message || "Sai tên đăng nhập hoặc mật khẩu");
             }
 
             const payload = result.data || result;
             localStorage.setItem("access_token", payload.token);
-            localStorage.setItem(
-                "current_user",
-                JSON.stringify({
-                    user_id: payload.user_id,
-                    username: payload.username,
-                    ho_ten: payload.ho_ten,
-                    vaitro: payload.vaitro,
-                    phai_doimatkhau: payload.phai_doimatkhau,
-                }),
-            );
+            localStorage.setItem("current_user", JSON.stringify({
+                user_id: payload.user_id,
+                username: payload.username,
+                ho_ten: payload.ho_ten,
+                vaitro: payload.vaitro,
+                phai_doimatkhau: payload.phai_doimatkhau,
+            }));
 
-            window.location.href = "/dashboard";
+            window.location.href = payload.phai_doimatkhau
+                ? "/change-password"
+                : "/dashboard";
         } catch (err) {
             alertBox.textContent = err.message;
             alertBox.classList.remove("d-none");
