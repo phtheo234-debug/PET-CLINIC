@@ -18,7 +18,7 @@ function extractList(res) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    initPage();
+    await initPage();
     const currentUser = getCurrentUser();
     const isAdmin = currentUser && currentUser.vaitro === "QUAN_TRI";
     if (isAdmin) {
