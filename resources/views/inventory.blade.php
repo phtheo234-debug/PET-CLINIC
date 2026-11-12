@@ -42,10 +42,48 @@
                     <th>Mã DV</th>
                     <th>Tên gói dịch vụ</th>
                     <th>Đơn giá</th>
+                    <th id="spaActionHeader" class="d-none">Thao tác</th>
                 </tr>
             </thead>
             <tbody id="spaTableBody"></tbody>
         </table>
+    </div>
+</div>
+
+
+<div class="modal fade" id="spaServiceFormModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="spaServiceForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="spaServiceFormTitle">Thêm dịch vụ Spa</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="spa_service_form_id">
+                    <div class="form-group">
+                        <label for="spa_service_code">Mã dịch vụ</label>
+                        <input id="spa_service_code" class="form-control" maxlength="20" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="spa_service_name">Tên dịch vụ</label>
+                        <input id="spa_service_name" class="form-control" maxlength="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="spa_service_unit">Đơn vị tính</label>
+                        <input id="spa_service_unit" class="form-control" maxlength="20" placeholder="Lần, buổi, gói..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="spa_service_price">Đơn giá (VNĐ)</label>
+                        <input id="spa_service_price" type="number" min="0" step="0.01" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="submit" id="btnSaveSpaService" class="btn btn-info">Lưu dịch vụ</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
