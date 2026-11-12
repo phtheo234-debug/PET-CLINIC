@@ -7,6 +7,7 @@ Route::get('/', function () {
 });
 
 Route::view('/login', 'auth.login')->name('login');
+Route::view('/change-password', 'auth.change-password')->name('change-password');
 Route::view('/dashboard', 'dashboard')->name('dashboard');
 Route::view('/pets', 'pets')->name('pets');
 Route::view('/cages', 'cages')->name('cages');
