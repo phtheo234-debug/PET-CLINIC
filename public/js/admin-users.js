@@ -31,7 +31,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const actions = isAdmin
                     ? '<span class="text-muted">Tài khoản quản trị hệ thống</span>'
                     : `<button class="btn btn-sm btn-outline-warning mb-1" data-action="reset" data-id="${item.user_id}">Cấp lại MK</button>
-                       <button class="btn btn-sm ${active ? "btn-outline-danger" : "btn-outline-success"} mb-1" data-action="status" data-id="${item.user_id}" data-status="${active ? "KHOA" : "HOAT_DONG"}">${active ? "Khóa" : "Mở khóa"}</button>`;
+                       ${active
+                            ? `<button class="btn btn-sm btn-outline-warning mb-1" data-action="status" data-id="${item.user_id}" data-status="TAM_NGUNG">Tạm ngừng</button>
+                               <button class="btn btn-sm btn-outline-danger mb-1" data-action="status" data-id="${item.user_id}" data-status="KHOA">Khóa</button>`
+                            : `<button class="btn btn-sm btn-outline-success mb-1" data-action="status" data-id="${item.user_id}" data-status="HOAT_DONG">Mở hoạt động</button>`}`;
                 return `<tr>
                     <td>${item.user_id}</td><td>${escapeHtml(item.username)}</td>
                     <td>${escapeHtml(item.ho_ten)}</td><td>${escapeHtml(item.email)}</td>
@@ -56,7 +59,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 $("#resetPasswordModal").modal("show");
             } else {
                 const status = button.dataset.status;
-                if (!confirm(status === "KHOA" ? "Bạn chắc chắn muốn khóa tài khoản này?" : "Mở khóa tài khoản này?")) return;
+                const confirmMessage = status === "KHOA"
+                    ? "Bạn chắc chắn muốn khóa tài khoản này?"
+                    : status === "TAM_NGUNG"
+                        ? "Bạn chắc chắn muốn tạm ngừng tài khoản này?"
+                        : "Mở lại hoạt động cho tài khoản này?";
+                if (!confirm(confirmMessage)) return;
                 await apiRequest(`/admin/users/${id}/status`, {
                     method: "PUT", body: JSON.stringify({ trangthai: status })
                 });
