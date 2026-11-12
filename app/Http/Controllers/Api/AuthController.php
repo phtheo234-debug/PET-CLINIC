@@ -51,8 +51,8 @@ class AuthController extends Controller
     public function changePassword(Request $request)
     {
         $fields = $request->validate([
-            'mat_khau_cu'  => 'required|string',
-            'mat_khau_moi' => 'required|string|min:6',
+            'mat_khau_cu' => 'required|string',
+            'mat_khau_moi' => 'required|string|min:6|different:mat_khau_cu|confirmed',
         ]);
 
         $user = $request->user();
@@ -69,8 +69,11 @@ class AuthController extends Controller
         $user->save();
 
         return response()->json([
-            'status'  => 'success',
-            'message' => 'Đổi mật khẩu thành công'
+            'status' => 'success',
+            'message' => 'Đổi mật khẩu thành công.',
+            'data' => [
+                'phai_doimatkhau' => false,
+            ],
         ]);
     }
 
