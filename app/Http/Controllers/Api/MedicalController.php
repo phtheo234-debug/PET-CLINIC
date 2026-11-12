@@ -98,7 +98,7 @@ class MedicalController extends Controller
                 // 3. Nếu chọn Nhập viện (INPATIENT) hoặc Phẫu thuật (SURGERY) -> Tự động tìm & xếp lồng phù hợp
                 if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)) {
                     if ($pet->cage_id) {
-                        $assignedCage = DB::table('cages')->where('cage_id', $pet->cage_id)->first();
+                        $assignedCage = $this->cageOccupancy->sync((int) $pet->cage_id);
                     } else {
                         $assignedCage = $this->autoAssignSuitableCage(
                             $pet,
@@ -248,9 +248,12 @@ class MedicalController extends Controller
 
         // Ghi nhận xếp lồng vào pet_boardings, pets và cages (giống BoardingController::assignCage)
         DB::table('pet_boardings')->insert([
-            'pet_id'   => $pet->pet_id,
-            'cage_id'  => $selected->cage_id,
-            'check_in' => now(),
+            'pet_id'     => $pet->pet_id,
+            'cage_id'    => $selected->cage_id,
+            'check_in'   => now(),
+            'status'     => 'checked_in',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         DB::table('pets')->where('pet_id', $pet->pet_id)->update([
