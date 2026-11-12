@@ -31,10 +31,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const actions = isAdmin
                     ? '<span class="text-muted">Tài khoản quản trị hệ thống</span>'
                     : `<button class="btn btn-sm btn-outline-warning mb-1" data-action="reset" data-id="${item.user_id}">Cấp lại MK</button>
-                       ${active
-                            ? `<button class="btn btn-sm btn-outline-warning mb-1" data-action="status" data-id="${item.user_id}" data-status="TAM_NGUNG">Tạm ngừng</button>
-                               <button class="btn btn-sm btn-outline-danger mb-1" data-action="status" data-id="${item.user_id}" data-status="KHOA">Khóa</button>`
-                            : `<button class="btn btn-sm btn-outline-success mb-1" data-action="status" data-id="${item.user_id}" data-status="HOAT_DONG">Mở hoạt động</button>`}`;
+                       <div class="input-group input-group-sm mt-1" style="min-width: 190px;">
+                           <select class="form-control" id="status-${item.user_id}" aria-label="Trạng thái tài khoản">
+                               <option value="HOAT_DONG" ${item.trangthai === "HOAT_DONG" ? "selected" : ""}>Hoạt động</option>
+                               <option value="TAM_NGUNG" ${item.trangthai === "TAM_NGUNG" ? "selected" : ""}>Tạm ngừng hoạt động</option>
+                               <option value="KHOA" ${item.trangthai === "KHOA" ? "selected" : ""}>Đã khóa</option>
+                           </select>
+                           <div class="input-group-append">
+                               <button class="btn btn-outline-primary" data-action="status" data-id="${item.user_id}">Lưu</button>
+                           </div>
+                       </div>`;
                 return `<tr>
                     <td>${item.user_id}</td><td>${escapeHtml(item.username)}</td>
                     <td>${escapeHtml(item.ho_ten)}</td><td>${escapeHtml(item.email)}</td>
@@ -58,11 +64,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 document.getElementById("resetPasswordAlert").classList.add("d-none");
                 $("#resetPasswordModal").modal("show");
             } else {
-                const status = button.dataset.status;
+                const status = document.getElementById(`status-${id}`).value;
                 const confirmMessage = status === "KHOA"
                     ? "Bạn chắc chắn muốn khóa tài khoản này?"
                     : status === "TAM_NGUNG"
-                        ? "Bạn chắc chắn muốn tạm ngừng tài khoản này?"
+                        ? "Bạn chắc chắn muốn tạm ngừng hoạt động tài khoản này?"
                         : "Mở lại hoạt động cho tài khoản này?";
                 if (!confirm(confirmMessage)) return;
                 await apiRequest(`/admin/users/${id}/status`, {
