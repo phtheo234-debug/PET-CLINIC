@@ -22,13 +22,20 @@ class BoardingController extends Controller
         $cages = DB::table('cages')->orderBy('cage_id')->get();
 
         foreach ($cages as $cage) {
+            // Đồng bộ dữ liệu cũ bị lệch ngay khi tải danh sách lồng.
+            $syncedCage = DB::transaction(function () use ($cage) {
+                return $this->cageOccupancy->sync((int) $cage->cage_id);
+            });
+
+            $cage->soluonghientai = $syncedCage
+                ? (int) $syncedCage->soluonghientai
+                : 0;
+            $cage->trangthai = $syncedCage->trangthai ?? $cage->trangthai;
             $cage->pets = DB::table('pets')
                 ->select('pet_id', 'mathucung', 'ten_thucung', 'loai', 'giong', 'trangthai')
                 ->where('cage_id', $cage->cage_id)
                 ->get();
 
-            // Số thú hiển thị được lấy từ danh sách thú thực tế.
-            $cage->soluonghientai = $cage->pets->count();
             $cage->da_day = $cage->soluonghientai >= (int) $cage->succhua;
         }
 
