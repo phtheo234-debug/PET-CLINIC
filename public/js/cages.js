@@ -159,18 +159,22 @@ function renderCagesGrid() {
             };
             const currentCount = Number(c.soluonghientai ?? 0);
             const maxCapacity = Number(c.succhua ?? 1);
-            // Chỉ khóa khi lồng đã đủ sức chứa hoặc đang vệ sinh/bảo trì
-            const isUnavailable =
-                currentCount >= maxCapacity ||
-                c.trangthai === "DANG_VE_SINH" ||
-                c.trangthai === "BAO_TRI";
+            const isMaintenance = ["DANG_VE_SINH", "BAO_TRI"].includes(c.trangthai);
+            const isFull = currentCount >= maxCapacity && !isMaintenance;
+            const displayStatus = isMaintenance
+                ? st.text
+                : (isFull ? "Đã đủ sức chứa" : st.text);
+            const displayClass = isFull ? "warning" : st.cls;
+
+            // Không cho xếp thêm nếu lồng đầy, đang vệ sinh hoặc bảo trì.
+            const isUnavailable = isFull || isMaintenance;
 
             return `
             <div class="col-md-4 mb-3">
-                <div class="card cage-card border-${st.cls}">
-                    <div class="card-header bg-${st.cls} text-white d-flex justify-content-between">
+                <div class="card cage-card border-${displayClass}">
+                    <div class="card-header bg-${displayClass} text-white d-flex justify-content-between">
                         <strong>${cageCode} - ${cageName}</strong>
-                        <span>${st.text}</span>
+                        <span>${displayStatus}</span>
                     </div>
                     <div class="card-body">
                         <p class="mb-1"><strong>Phân loại:</strong> ${typeLabel[c.loailong] || c.loailong}</p>
