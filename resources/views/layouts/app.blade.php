@@ -19,6 +19,12 @@
                 <small class="text-muted">Hệ thống Quản lý Thú y</small>
             </div>
             <ul class="list-unstyled components">
+                <li class="{{ request()->routeIs('profile') ? 'active' : '' }}">
+                    <a href="{{ route('profile') }}"><i class="fas fa-user-cog"></i> Thông tin tài khoản</a>
+                </li>
+                <li id="adminUsersNav" class="d-none {{ request()->routeIs('admin.users') ? 'active' : '' }}">
+                    <a href="{{ route('admin.users') }}"><i class="fas fa-users-cog"></i> Quản lý tài khoản</a>
+                </li>
                 <li class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <a href="{{ route('dashboard') }}"><i class="fas fa-chart-line"></i> Tổng quan (Dashboard)</a>
                 </li>
