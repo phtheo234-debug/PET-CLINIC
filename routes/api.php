@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AdminCageController;
 use App\Http\Controllers\Api\AdminInventoryController;
+use App\Http\Controllers\Api\AdminSpaServiceController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\PetController;
 use App\Http\Controllers\Api\BoardingController;
@@ -52,6 +53,10 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::post('/inventory', [AdminInventoryController::class, 'store']);
         Route::put('/inventory/{id}', [AdminInventoryController::class, 'update']);
         Route::delete('/inventory/{id}', [AdminInventoryController::class, 'destroy']);
+
+        Route::post('/spa-services', [AdminSpaServiceController::class, 'store']);
+        Route::put('/spa-services/{id}', [AdminSpaServiceController::class, 'update']);
+        Route::delete('/spa-services/{id}', [AdminSpaServiceController::class, 'destroy']);
 
         Route::post('/cages', [AdminCageController::class, 'store']);
         Route::put('/cages/{id}', [AdminCageController::class, 'update']);
