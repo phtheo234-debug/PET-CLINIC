@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -6,24 +7,15 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('prescriptions', function (Blueprint $table) {
             $table->id('prescription_id');
 
-            $table->foreignId('record_id')
-                ->constrained('medical_records', 'record_id');
-
-            $table->foreignId('item_id')
-                ->constrained('inventory', 'item_id');
-
-            $table->foreignId('invoice_id')
-                ->nullable()
-                ->constrained('invoices', 'invoice_id')
-                ->nullOnDelete();
+            // Tạm tạo cột, khóa ngoại sẽ được thêm ở migration sau
+            $table->unsignedBigInteger('record_id');
+            $table->unsignedBigInteger('item_id');
+            $table->unsignedBigInteger('invoice_id')->nullable();
 
             $table->unsignedInteger('soluong');
             $table->text('huongdan')->nullable();
@@ -32,9 +24,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('prescriptions');
