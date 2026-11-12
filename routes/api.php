@@ -42,6 +42,10 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::post('/users', [AdminUserController::class, 'store']);
         Route::put('/users/{id}/reset-password', [AdminUserController::class, 'resetPassword']);
         Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus']);
+
+        Route::post('/cages', [AdminCageController::class, 'store']);
+        Route::put('/cages/{id}', [AdminCageController::class, 'update']);
+        Route::delete('/cages/{id}', [AdminCageController::class, 'destroy']);
     });
 
     Route::apiResource('pets', PetController::class);
