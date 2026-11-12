@@ -239,6 +239,10 @@ function renderPetsTable(items) {
                 <td><strong>${numericWeight !== "" ? numericWeight + " kg" : "-"}</strong></td>
                 <td>${statusBadges[p.trangthai] || p.trangthai || "Ngoại trú"}</td>
                 <td>
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                        onclick="openPetDetail(${petId})">
+                        <i class="fas fa-eye"></i> Chi tiết
+                    </button>
                     <button type="button" class="btn btn-sm btn-outline-info"
                         onclick="openWeightModal(${petId}, '${p.mathucung}', '${numericWeight}')">
                         <i class="fas fa-weight"></i> Cân
@@ -257,4 +261,66 @@ function openWeightModal(petId, mathucung, currentWeight) {
     input.value = currentWeight || "";
     $("#weightModal").modal("show");
     setTimeout(() => input.focus(), 300);
+}
+
+
+function escapePetHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[char]);
+}
+
+function formatPetDate(value) {
+    if (!value) return "-";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? escapePetHtml(value) : date.toLocaleString("vi-VN");
+}
+
+async function openPetDetail(petId) {
+    const content = document.getElementById("petDetailContent");
+    content.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i> Đang tải thông tin...</div>';
+    $("#petDetailModal").modal("show");
+
+    try {
+        const response = await apiRequest(`/pets/${petId}`);
+        const pet = response?.data?.data || response?.data || response;
+        const history = Array.isArray(pet.boarding_history) ? pet.boarding_history : [];
+        const statusLabel = {
+            checked_in: '<span class="badge badge-success">Đang lưu trú</span>',
+            checked_out: '<span class="badge badge-secondary">Đã trả lồng</span>'
+        };
+
+        const historyRows = history.length
+            ? history.map((item) => `
+                <tr>
+                    <td>${escapePetHtml(item.malong || "-")}<br><small class="text-muted">${escapePetHtml(item.ten_long || "")}</small></td>
+                    <td>${formatPetDate(item.check_in)}</td>
+                    <td>${formatPetDate(item.check_out)}</td>
+                    <td>${statusLabel[item.status] || escapePetHtml(item.status || "-")}</td>
+                </tr>
+            `).join("")
+            : '<tr><td colspan="4" class="text-center text-muted">Chưa có lịch sử lưu trú / trả lồng</td></tr>';
+
+        content.innerHTML = `
+            <div class="row mb-4">
+                <div class="col-md-6 mb-2"><strong>Mã thú cưng:</strong> ${escapePetHtml(pet.mathucung || "-")}</div>
+                <div class="col-md-6 mb-2"><strong>Tên:</strong> ${escapePetHtml(pet.name || "-")}</div>
+                <div class="col-md-6 mb-2"><strong>Loài / Giống:</strong> ${escapePetHtml(pet.species || "-")} / ${escapePetHtml(pet.breed || "-")}</div>
+                <div class="col-md-6 mb-2"><strong>Trạng thái:</strong> ${escapePetHtml(pet.trangthai || "-")}</div>
+                <div class="col-md-6 mb-2"><strong>Chủ nuôi:</strong> ${escapePetHtml(pet.owner?.name || "-")}</div>
+                <div class="col-md-6 mb-2"><strong>Số điện thoại:</strong> ${escapePetHtml(pet.owner?.phone || "-")}</div>
+            </div>
+            <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-history mr-1"></i> Lịch sử lưu trú / trả lồng</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead class="thead-light">
+                        <tr><th>Mã lồng</th><th>Thời gian nhận</th><th>Thời gian trả</th><th>Trạng thái</th></tr>
+                    </thead>
+                    <tbody>${historyRows}</tbody>
+                </table>
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `<div class="alert alert-danger mb-0">Không tải được chi tiết thú cưng: ${escapePetHtml(err.message)}</div>`;
+    }
 }
