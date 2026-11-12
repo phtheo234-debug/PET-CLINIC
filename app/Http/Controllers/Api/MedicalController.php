@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\CageOccupancyService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -10,8 +11,10 @@ use Illuminate\Support\Facades\Schema;
 
 class MedicalController extends Controller
 {
-    public function __construct(protected InventoryController $inventory)
-    {
+    public function __construct(
+        protected InventoryController $inventory,
+        private CageOccupancyService $cageOccupancy
+    ) {
     }
 
     /**
@@ -108,19 +111,31 @@ class MedicalController extends Controller
                 // 4. Nếu chẩn đoán kết luận CHUYEN_VIEN -> Tự động giải phóng lồng lưu trú
                 if ($fields['trangthai'] === 'CHUYEN_VIEN' || $huongXuLy === 'TRANSFER') {
                     if ($pet->cage_id) {
-                        DB::table('pet_boardings')
+                        $oldCageId = (int) $pet->cage_id;
+                        $activeBoarding = DB::table('pet_boardings')
                             ->where('pet_id', $pet->pet_id)
+                            ->where('cage_id', $oldCageId)
+                            ->where('status', 'checked_in')
                             ->whereNull('check_out')
-                            ->update(['check_out' => now()]);
+                            ->lockForUpdate()
+                            ->first();
 
-                        $oldCage = DB::table('cages')->where('cage_id', $pet->cage_id)->lockForUpdate()->first();
-                        if ($oldCage) {
-                            $newCount = max(0, $oldCage->soluonghientai - 1);
-                            DB::table('cages')->where('cage_id', $oldCage->cage_id)->update([
-                                'soluonghientai' => $newCount,
-                                'trangthai'      => ($newCount === 0) ? 'CON_TRONG' : 'DA_CO_THU',
-                            ]);
+                        if ($activeBoarding) {
+                            DB::table('pet_boardings')
+                                ->where('id', $activeBoarding->id)
+                                ->update([
+                                    'check_out' => now(),
+                                    'status' => 'checked_out',
+                                    'updated_at' => now(),
+                                ]);
                         }
+
+                        DB::table('pets')->where('pet_id', $pet->pet_id)->update([
+                            'trangthai' => 'CHUYEN_VIEN',
+                            'cage_id' => null,
+                        ]);
+
+                        $this->cageOccupancy->sync($oldCageId);
                     }
 
                     DB::table('pets')->where('pet_id', $fields['pet_id'])->update([
@@ -234,13 +249,7 @@ class MedicalController extends Controller
             'trangthai' => 'NOI_TRU',
         ]);
 
-        $newCount = (int) $selected->soluonghientai + 1;
-        DB::table('cages')->where('cage_id', $selected->cage_id)->update([
-            'soluonghientai' => $newCount,
-            'trangthai'      => ($newCount >= (int) $selected->succhua) ? 'DA_CO_THU' : 'CON_TRONG',
-        ]);
-
-        return DB::table('cages')->where('cage_id', $selected->cage_id)->first();
+        return $this->cageOccupancy->sync((int) $selected->cage_id);
     }
 
     /**
