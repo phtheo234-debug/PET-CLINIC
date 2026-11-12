@@ -102,7 +102,7 @@ class BoardingController extends Controller
                 $newCount = $cage->soluonghientai + 1;
                 DB::table('cages')->where('cage_id', $cage->cage_id)->update([
                     'soluonghientai' => $newCount,
-                    'trangthai'      => ($newCount >= $cage->succhua) ? 'DA_CO_THU' : 'DA_CO_THU'
+                    'trangthai' => 'DA_CO_THU'
                 ]);
 
                 return response()->json([
@@ -157,7 +157,9 @@ class BoardingController extends Controller
 
                 // Giảm số lượng hiện tại của lồng
                 $newCount = max(0, $cage->soluonghientai - 1);
-                $newStatus = ($newCount == 0) ? 'CON_TRONG' : 'DA_CO_THU';
+
+                // Cập nhật trạng thái theo số thú còn trong lồng
+                $newStatus = $newCount > 0 ? 'DA_CO_THU' : 'CON_TRONG';
 
                 DB::table('cages')->where('cage_id', $cage->cage_id)->update([
                     'soluonghientai' => $newCount,

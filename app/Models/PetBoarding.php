@@ -8,7 +8,7 @@ class PetBoarding extends Model
 {
     protected $table = 'pet_boardings';
     protected $primaryKey = 'id'; // Hoặc 'boarding_id' tùy theo file Migration của dự án
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'pet_id',

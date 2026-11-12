@@ -136,9 +136,9 @@ function renderCagesGrid() {
     };
     const statusMap = {
         CON_TRONG: { text: "Còn trống", cls: "success" },
-        DA_CO_THU: { text: "Đã đầy", cls: "danger" },
+        DA_CO_THU: { text: "Đang có thú", cls: "primary" },
         DANG_VE_SINH: { text: "Đang vệ sinh", cls: "warning" },
-        BAO_TRI: { text: "Bảo trì", cls: "secondary" },
+        BAO_TRI: { text: "Đang bảo trì", cls: "secondary" },
     };
 
     const grid = document.getElementById("cagesGrid");
@@ -159,8 +159,11 @@ function renderCagesGrid() {
             };
             const currentCount = Number(c.soluonghientai ?? 0);
             const maxCapacity = Number(c.succhua ?? 1);
-            const isFull =
-                currentCount >= maxCapacity || c.trangthai === "DA_CO_THU";
+            // Chỉ khóa khi lồng đã đủ sức chứa hoặc đang vệ sinh/bảo trì
+            const isUnavailable =
+                currentCount >= maxCapacity ||
+                c.trangthai === "DANG_VE_SINH" ||
+                c.trangthai === "BAO_TRI";
 
             return `
             <div class="col-md-4 mb-3">
@@ -172,7 +175,7 @@ function renderCagesGrid() {
                     <div class="card-body">
                         <p class="mb-1"><strong>Phân loại:</strong> ${typeLabel[c.loailong] || c.loailong}</p>
                         <p class="mb-3"><strong>Sức chứa (BR-03):</strong> ${currentCount} / ${maxCapacity} thú cưng</p>
-                        <button type="button" class="btn btn-sm btn-primary" ${isFull ? "disabled" : ""}
+                        <button type="button" class="btn btn-sm btn-primary" ${isUnavailable ? "disabled" : ""}
                             onclick="openAssignModal(${cageId}, '${cageCode}')">
                             <i class="fas fa-plus-circle mr-1"></i> Xếp thú vào lồng
                         </button>

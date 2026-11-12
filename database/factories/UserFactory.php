@@ -1,3 +1,4 @@
+
 <?php
 
 namespace Database\Factories;
@@ -5,7 +6,6 @@ namespace Database\Factories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<User>
@@ -13,33 +13,86 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
+     * Mật khẩu mặc định dùng cho tài khoản được tạo bởi Factory.
      */
-    protected static ?string $password;
+    protected static ?string $password = null;
 
     /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
+     * Định nghĩa dữ liệu mẫu cho bảng users.
      */
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            // Thông tin đăng nhập
+            'username' => fake()->unique()->userName(),
+            'mat_khau' => static::$password ??= Hash::make('123456'),
+
+            // Thông tin nhân viên
+            'ho_ten' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'phone' => fake()->numerify('09########'),
+
+            // Vai trò mặc định
+            'vaitro' => 'NHAN_VIEN',
+
+            // Trạng thái tài khoản
+            'trangthai' => 'HOAT_DONG',
+
+            // Bắt buộc đổi mật khẩu khi đăng nhập lần đầu
+            'phai_doimatkhau' => true,
+
+            // Thời điểm tạo tài khoản
+            'ngaytao' => now(),
         ];
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * Tạo tài khoản quản trị viên.
      */
-    public function unverified(): static
+    public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'vaitro' => 'QUAN_TRI',
+        ]);
+    }
+
+    /**
+     * Tạo tài khoản bác sĩ.
+     */
+    public function doctor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'vaitro' => 'BAC_SI',
+        ]);
+    }
+
+    /**
+     * Tạo tài khoản nhân viên.
+     */
+    public function staff(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'vaitro' => 'NHAN_VIEN',
+        ]);
+    }
+
+    /**
+     * Tạo tài khoản đang bị khóa.
+     */
+    public function locked(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'trangthai' => 'KHOA',
+        ]);
+    }
+
+    /**
+     * Tạo tài khoản không cần đổi mật khẩu lần đầu.
+     */
+    public function passwordConfirmed(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'phai_doimatkhau' => false,
         ]);
     }
 }
