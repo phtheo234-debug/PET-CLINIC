@@ -1,0 +1,260 @@
+let petsList = [];
+
+// Tự động sinh mã thú cưng hiển thị tạm trên form (VD: PET-001 -> PET-002)
+function generateNextPetCode() {
+    if (!petsList.length) {
+        return "PET-001";
+    }
+    let maxNum = 0;
+    petsList.forEach((p) => {
+        const match = (p.mathucung || "").match(/\d+/);
+        if (match) {
+            const num = parseInt(match[0], 10);
+            if (num > maxNum) {
+                maxNum = num;
+            }
+        }
+    });
+    return "PET-" + String(maxNum + 1).padStart(3, "0");
+}
+
+// Chuẩn hóa giá trị giới tính sang ENUM của Backend (DUC, CAI, CHUA_XAC_DINH)
+function normalizeGender(raw) {
+    const val = (raw || "").trim().toUpperCase();
+    if (val === "DUC" || val === "ĐỰC" || val === "MALE") return "DUC";
+    if (val === "CAI" || val === "CÁI" || val === "FEMALE") return "CAI";
+    return "CHUA_XAC_DINH";
+}
+
+function extractList(res) {
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.data)) return res.data;
+    if (res && res.data && Array.isArray(res.data.data)) return res.data.data;
+    return [];
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    initPage();
+    await loadPets();
+
+    // Tự động điền mã thú cưng mới mỗi lần mở Modal tiếp nhận
+    $("#addPetModal").on("show.bs.modal", function () {
+        const codeInput = document.getElementById("mathucung");
+        if (codeInput) codeInput.value = generateNextPetCode();
+    });
+
+    // Tìm kiếm nhanh theo mã, tên thú cưng hoặc SĐT chủ nuôi
+    document.getElementById("searchPet").addEventListener("input", (e) => {
+        const kw = e.target.value.trim().toLowerCase();
+        const filtered = petsList.filter((p) => {
+            const petName = (p.name || p.ten_thucung || "").toLowerCase();
+            const ownerName = (
+                (p.owner && (p.owner.name || p.owner.ho_ten)) ||
+                p.ho_ten_chu ||
+                ""
+            ).toLowerCase();
+            const ownerPhone = (p.owner && p.owner.phone) || p.phone || "";
+
+            return (
+                (p.mathucung && p.mathucung.toLowerCase().includes(kw)) ||
+                petName.includes(kw) ||
+                ownerName.includes(kw) ||
+                ownerPhone.includes(kw)
+            );
+        });
+        renderPetsTable(filtered);
+    });
+
+    // Xử lý lưu hồ sơ thú cưng & chủ nuôi
+    document.getElementById("petForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const ownerName = document.getElementById("ho_ten_chu").value.trim();
+        const ownerPhone = document.getElementById("phone").value.trim();
+        const petName = document.getElementById("ten_thucung").value.trim();
+        const species = document.getElementById("loai").value;
+        const breed = document.getElementById("giong").value.trim() || null;
+        const gender = normalizeGender(
+            document.getElementById("gioitinh").value,
+        );
+        const microchip =
+            document.getElementById("machip").value.trim() || null;
+        const weight = parseFloat(document.getElementById("can_nang").value);
+
+        if (!ownerName || !ownerPhone) {
+            alert("Vui lòng nhập đầy đủ Họ tên và Số điện thoại chủ nuôi!");
+            return;
+        }
+        if (!petName) {
+            alert("Vui lòng nhập tên thú cưng!");
+            return;
+        }
+        if (isNaN(weight) || weight <= 0) {
+            alert("Cân nặng thú cưng phải lớn hơn 0 kg!");
+            document.getElementById("can_nang").focus();
+            return;
+        }
+
+        const btnSave = document.getElementById("btnSavePet");
+        btnSave.disabled = true;
+        btnSave.innerHTML =
+            '<i class="fas fa-spinner fa-spin mr-1"></i> Đang lưu...';
+
+        try {
+            let ownerId = null;
+            try {
+                const ownersRes = await apiRequest("/owners");
+                const owners = extractList(ownersRes);
+                const existingOwner = owners.find(
+                    (o) => (o.phone || "").trim() === ownerPhone,
+                );
+                if (existingOwner) {
+                    ownerId = existingOwner.owner_id ?? existingOwner.id;
+                }
+            } catch (_) {}
+
+            const payload = {
+                owner_id: ownerId,
+                ho_ten: ownerName,
+                phone: ownerPhone,
+                name: petName,
+                species: species,
+                breed: breed,
+                gender: gender,
+                microchip_code: microchip,
+                weight: weight,
+            };
+
+            await apiRequest("/pets", {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+
+            e.target.reset();
+            $("#addPetModal").modal("hide");
+            await loadPets();
+            alert("Tiếp nhận hồ sơ chủ nuôi & thú cưng thành công!");
+        } catch (err) {
+            alert("Lỗi thêm hồ sơ thú cưng: " + err.message);
+        } finally {
+            btnSave.disabled = false;
+            btnSave.innerHTML = '<i class="fas fa-save mr-1"></i> Lưu Hồ sơ';
+        }
+    });
+
+    // Xử lý lưu cập nhật cân nặng mới từ Modal (BR-04)
+    const weightForm = document.getElementById("weightForm");
+    if (weightForm) {
+        weightForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const petId = Number(
+                document.getElementById("weight_pet_id").value,
+            );
+            const kg = parseFloat(document.getElementById("new_weight").value);
+
+            if (!petId || isNaN(kg) || kg <= 0) {
+                alert("Cân nặng phải lớn hơn 0 kg!");
+                document.getElementById("new_weight").focus();
+                return;
+            }
+
+            const btn = document.getElementById("btnSaveWeight");
+            btn.disabled = true;
+            btn.innerHTML =
+                '<i class="fas fa-spinner fa-spin mr-1"></i> Đang lưu...';
+
+            try {
+                await apiRequest(`/pets/${petId}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ weight: kg }),
+                });
+                e.target.reset();
+                $("#weightModal").modal("hide");
+                await loadPets();
+            } catch (err) {
+                alert("Lỗi cập nhật cân nặng: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML =
+                    '<i class="fas fa-check mr-1"></i> Lưu cân nặng';
+            }
+        });
+    }
+});
+
+async function loadPets() {
+    try {
+        const res = await apiRequest("/pets");
+        petsList = extractList(res);
+        renderPetsTable(petsList);
+    } catch (err) {
+        document.getElementById("petsTableBody").innerHTML =
+            `<tr><td colspan="7" class="text-danger text-center">${err.message}</td></tr>`;
+    }
+}
+
+function renderPetsTable(items) {
+    const statusBadges = {
+        NOI_TRU: '<span class="badge badge-warning">Nội trú</span>',
+        NGOAI_TRU: '<span class="badge badge-success">Ngoại trú</span>',
+        DA_XUAT_VIEN: '<span class="badge badge-secondary">Đã xuất viện</span>',
+        CHUYEN_VIEN: '<span class="badge badge-danger">Chuyển viện</span>',
+    };
+
+    const tbody = document.getElementById("petsTableBody");
+    if (!items.length) {
+        tbody.innerHTML =
+            '<tr><td colspan="7" class="text-center text-muted">Chưa có dữ liệu thú cưng</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = items
+        .map((p) => {
+            const petId = p.id ?? p.pet_id;
+            const petName = p.name || p.ten_thucung || "-";
+            const species = p.species || p.loai || "";
+            const breed = p.breed || p.giong || "";
+            const chip = p.microchip_code || p.machip || "Chưa gán";
+
+            const ownerName =
+                (p.owner && (p.owner.name || p.owner.ho_ten)) ||
+                p.ho_ten_chu ||
+                "-";
+            const ownerPhone = (p.owner && p.owner.phone) || p.phone || "";
+
+            const weight =
+                p.weight ??
+                p.can_nang ??
+                (p.latest_weight && p.latest_weight.can_nang) ??
+                "-";
+            const numericWeight =
+                weight !== "-" && weight !== null ? weight : "";
+
+            return `
+            <tr>
+                <td class="font-weight-bold text-primary">${p.mathucung}</td>
+                <td><strong>${petName}</strong> (${species}${breed ? " - " + breed : ""})</td>
+                <td>${ownerName}<br><small class="text-muted">${ownerPhone}</small></td>
+                <td><code>${chip}</code></td>
+                <td><strong>${numericWeight !== "" ? numericWeight + " kg" : "-"}</strong></td>
+                <td>${statusBadges[p.trangthai] || p.trangthai || "Ngoại trú"}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-info"
+                        onclick="openWeightModal(${petId}, '${p.mathucung}', '${numericWeight}')">
+                        <i class="fas fa-weight"></i> Cân
+                    </button>
+                </td>
+            </tr>
+        `;
+        })
+        .join("");
+}
+
+function openWeightModal(petId, mathucung, currentWeight) {
+    document.getElementById("weight_pet_id").value = petId;
+    document.getElementById("weightPetCode").innerText = mathucung || "";
+    const input = document.getElementById("new_weight");
+    input.value = currentWeight || "";
+    $("#weightModal").modal("show");
+    setTimeout(() => input.focus(), 300);
+}

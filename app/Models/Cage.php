@@ -6,5 +6,24 @@ use Illuminate\Database\Eloquent\Model;
 
 class Cage extends Model
 {
-    protected $fillable = ['code', 'size_type', 'max_weight', 'status'];
+    protected $table = 'cages';
+    protected $primaryKey = 'cage_id';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'malong',
+        'ten_long',
+        'loailong',
+        'succhua',
+        'soluonghientai',
+        'trangthai',
+    ];
+
+    /**
+     * Quan hệ: Một lồng có thể chứa nhiều thú cưng (tối đa theo succhua)
+     */
+    public function pets()
+    {
+        return $this->hasMany(Pet::class, 'cage_id', 'cage_id');
+    }
 }

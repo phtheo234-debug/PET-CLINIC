@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('pet_boardings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('pet_id')->constrained('pets')->onDelete('cascade');
-            $table->foreignId('cage_id')->constrained('cages')->onDelete('cascade');
+            // Chỉ định rõ tên cột khóa chính 'pet_id' và 'cage_id'
+            $table->foreignId('pet_id')->constrained('pets', 'pet_id')->onDelete('cascade');
+            $table->foreignId('cage_id')->constrained('cages', 'cage_id')->onDelete('cascade');
             $table->dateTime('check_in');
             $table->dateTime('check_out')->nullable();
             $table->enum('status', ['checked_in', 'checked_out'])->default('checked_in');

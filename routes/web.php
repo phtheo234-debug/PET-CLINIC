@@ -2,7 +2,17 @@
 
 use Illuminate\Support\Facades\Route;
 
-// Đổi view('welcome') thành view('test-api')
 Route::get('/', function () {
-    return view('test-api');
+    return redirect()->route('login');
 });
+
+Route::view('/login', 'auth.login')->name('login');
+Route::view('/dashboard', 'dashboard')->name('dashboard');
+Route::view('/pets', 'pets')->name('pets');
+Route::view('/cages', 'cages')->name('cages');
+Route::view('/medical', 'medical')->name('medical');
+Route::view('/inventory', 'inventory')->name('inventory');
+Route::view('/invoices', 'invoices')->name('invoices');
+
+// Giữ lại route test-api nếu nhóm vẫn dùng để kiểm tra nhanh
+Route::view('/test-api', 'test-api');

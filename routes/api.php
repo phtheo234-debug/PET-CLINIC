@@ -10,39 +10,73 @@ use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\MedicalController;
 use App\Http\Controllers\Api\PaymentController;
 
-// Public Endpoint
+/*
+|--------------------------------------------------------------------------
+| Public Routes (Không yêu cầu Token)
+|--------------------------------------------------------------------------
+*/
 Route::post('/v1/auth/login', [AuthController::class, 'login']);
 
-// Tất cả endpoint còn lại yêu cầu đăng nhập (Sanctum)
-Route::middleware('auth:sanctum')->group(function () {
+/*
+|--------------------------------------------------------------------------
+| Protected Routes (Bắt buộc có Header Authorization: Bearer <token>)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
-    Route::prefix('v1')->group(function () {
-        Route::get('/users/me', [AuthController::class, 'me']);
-        Route::put('/users/change-password', [AuthController::class, 'changePassword']);
-        Route::post('/auth/logout', [AuthController::class, 'logout']);
+    // ==========================================
+    // MODULE 1: XÁC THỰC & QUẢN LÝ NHÂN VIÊN
+    // ==========================================
+    Route::get('/users/me', [AuthController::class, 'me']);
+    Route::put('/users/change-password', [AuthController::class, 'changePassword']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-        Route::get('/analytics/dashboard', [DashboardController::class, 'getOverview']);
-
-        // Module 4: Kho & Xuất kho FEFO
-        Route::post('/inventory/export', [InventoryController::class, 'exportMedicineFEFO']);
-
-        // Module 5: Khám bệnh & Kê đơn mg/kg
-        Route::post('/medical/prescriptions', [MedicalController::class, 'createPrescription']);
-
-        // Module 7: Thanh toán POS & Xuất viện
-        Route::post('/payment/checkout', [PaymentController::class, 'createInvoiceAndCheckout']);
-
-        Route::prefix('admin')->group(function () {
-            Route::get('/users', [AdminUserController::class, 'index']);
-            Route::post('/users', [AdminUserController::class, 'store']);
-            Route::put('/users/{id}/reset-password', [AdminUserController::class, 'resetPassword']);
-            Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus']);
-        });
+    // Admin Management (Chỉ dành cho QUAN_TRI)
+    Route::prefix('admin')->group(function () {
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::post('/users', [AdminUserController::class, 'store']);
+        Route::put('/users/{id}/reset-password', [AdminUserController::class, 'resetPassword']);
+        Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus']);
     });
 
-    // CRUD Thú cưng
+    // ==========================================
+    // MODULE 2: QUẢN LÝ CHỦ NUÔI & THÚ CƯNG (CRUD)
+    // ==========================================
     Route::apiResource('pets', PetController::class);
+    Route::get('/owners', [PetController::class, 'owners']);
 
-    // Quản lý lưu trú & Xếp lồng
+    // ==========================================
+    // MODULE 3: LỒNG LƯU TRÚ & NỘI TRÚ
+    // ==========================================
+    Route::get('/boarding/cages', [BoardingController::class, 'index']);
     Route::post('/boarding/assign', [BoardingController::class, 'assignCage']);
+
+    // ==========================================
+    // MODULE 4: KHO THUỐC, VẬT TƯ & SPA (FEFO)
+    // ==========================================
+    Route::get('/inventory', [InventoryController::class, 'index']);
+    Route::post('/inventory/store', [InventoryController::class, 'store']);
+    Route::post('/inventory/batch/import', [InventoryController::class, 'importBatch']);
+    Route::post('/inventory/export', [InventoryController::class, 'exportMedicineFEFO']);
+
+    // ==========================================
+    // MODULE 5: KHÁM BỆNH, TIÊM PHÒNG & KÊ ĐƠN (mg/kg)
+    // ==========================================
+    Route::post('/medical/records', [MedicalController::class, 'store']);
+    Route::get('/medical/records', [MedicalController::class, 'index']); // <--- BẠN CHỈ CẦN THÊM DÒNG NÀY
+    Route::post('/medical/prescriptions', [MedicalController::class, 'createPrescription']);
+    Route::get('/medical/history/pet/{petId}', [MedicalController::class, 'getHistoryByPet']);
+    // ==========================================
+    // MODULE 7: THANH TOÁN POS & DUYỆT XUẤT VIỆN
+    // ==========================================
+    Route::get('/payment/invoices', [PaymentController::class, 'index']);
+    Route::get('/payment/invoices/{id}', [PaymentController::class, 'show']);
+    Route::post('/payment/checkout', [PaymentController::class, 'createInvoiceAndCheckout']);
+
+    // ==========================================
+    // MODULE 8: DASHBOARD & ANALYTICS THỜI GIAN THỰC
+    // ==========================================
+    Route::get('/analytics/dashboard', [DashboardController::class, 'getOverview']);
+    Route::get('/analytics/inventory-alerts', [DashboardController::class, 'getInventoryAlerts']);
+    Route::get('/analytics/revenue', [DashboardController::class, 'getRevenueReport']);
 });
