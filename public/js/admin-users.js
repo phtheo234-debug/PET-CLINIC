@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     })[ch]);
+    const statusLabels = {
+        HOAT_DONG: "Hoạt động",
+        KHOA: "Đã khóa",
+        TAM_NGUNG: "Tạm ngừng"
+    };
 
     async function loadUsers() {
         try {
@@ -21,15 +26,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             const users = result.data || [];
             table.innerHTML = users.length ? users.map(item => {
                 const active = item.trangthai === "HOAT_DONG";
-                const role = { QUAN_TRI: "Quản trị", BAC_SI: "Bác sĩ", NHAN_VIEN: "Nhân viên" }[item.vaitro] || item.vaitro;
+                const isAdmin = item.vaitro === "QUAN_TRI";
+                const role = { QUAN_TRI: "Quản trị viên", BAC_SI: "Bác sĩ", NHAN_VIEN: "Nhân viên" }[item.vaitro] || item.vaitro;
+                const actions = isAdmin
+                    ? '<span class="text-muted">Tài khoản quản trị hệ thống</span>'
+                    : `<button class="btn btn-sm btn-outline-warning mb-1" data-action="reset" data-id="${item.user_id}">Cấp lại MK</button>
+                       <button class="btn btn-sm ${active ? "btn-outline-danger" : "btn-outline-success"} mb-1" data-action="status" data-id="${item.user_id}" data-status="${active ? "KHOA" : "HOAT_DONG"}">${active ? "Khóa" : "Mở khóa"}</button>`;
                 return `<tr>
                     <td>${item.user_id}</td><td>${escapeHtml(item.username)}</td>
                     <td>${escapeHtml(item.ho_ten)}</td><td>${escapeHtml(item.email)}</td>
-                    <td>${escapeHtml(role)}</td><td>${escapeHtml(item.trangthai)}</td>
-                    <td class="text-nowrap">
-                    <button class="btn btn-sm btn-outline-warning mb-1" data-action="reset" data-id="${item.user_id}">Cấp lại MK</button>
-                    <button class="btn btn-sm ${active ? "btn-outline-danger" : "btn-outline-success"} mb-1" data-action="status" data-id="${item.user_id}" data-status="${active ? "KHOA" : "HOAT_DONG"}">${active ? "Khóa" : "Mở khóa"}</button>
-                    </td></tr>`;
+                    <td>${escapeHtml(role)}</td><td>${escapeHtml(statusLabels[item.trangthai] || item.trangthai)}</td>
+                    <td class="text-nowrap">${actions}</td></tr>`;
             }).join("") : '<tr><td colspan="7" class="text-center">Chưa có tài khoản.</td></tr>';
         } catch (error) {
             notify(error.message);
@@ -43,13 +50,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const id = button.dataset.id;
         try {
             if (button.dataset.action === "reset") {
-                const temporaryPassword = prompt("Nhập mật khẩu tạm mới (ít nhất 6 ký tự):");
-                if (!temporaryPassword) return;
-                if (temporaryPassword.length < 6) return notify("Mật khẩu tạm phải có ít nhất 6 ký tự.");
-                await apiRequest(`/admin/users/${id}/reset-password`, {
-                    method: "PUT", body: JSON.stringify({ mat_khau_tam: temporaryPassword })
-                });
-                notify("Đã cấp lại mật khẩu tạm. Người dùng sẽ phải đổi mật khẩu khi đăng nhập.", true);
+                document.getElementById("resetUserId").value = id;
+                document.getElementById("temporaryPassword").value = "";
+                document.getElementById("resetPasswordAlert").classList.add("d-none");
+                $("#resetPasswordModal").modal("show");
             } else {
                 const status = button.dataset.status;
                 if (!confirm(status === "KHOA" ? "Bạn chắc chắn muốn khóa tài khoản này?" : "Mở khóa tài khoản này?")) return;
@@ -57,9 +61,32 @@ document.addEventListener("DOMContentLoaded", async () => {
                     method: "PUT", body: JSON.stringify({ trangthai: status })
                 });
                 notify("Cập nhật trạng thái tài khoản thành công.", true);
+                await loadUsers();
             }
-            await loadUsers();
         } catch (error) { notify(error.message); }
+    });
+
+    document.getElementById("resetPasswordForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const id = document.getElementById("resetUserId").value;
+        const temporaryPassword = document.getElementById("temporaryPassword").value;
+        const resetAlert = document.getElementById("resetPasswordAlert");
+        if (temporaryPassword.length < 6) {
+            resetAlert.textContent = "Mật khẩu tạm phải có ít nhất 6 ký tự.";
+            resetAlert.className = "alert alert-danger";
+            return;
+        }
+        try {
+            await apiRequest(`/admin/users/${id}/reset-password`, {
+                method: "PUT", body: JSON.stringify({ mat_khau_tam: temporaryPassword })
+            });
+            $("#resetPasswordModal").modal("hide");
+            notify("Đã cấp lại mật khẩu tạm. Người dùng sẽ phải đổi mật khẩu khi đăng nhập.", true);
+            await loadUsers();
+        } catch (error) {
+            resetAlert.textContent = error.message;
+            resetAlert.className = "alert alert-danger";
+        }
     });
 
     document.getElementById("createUserForm").addEventListener("submit", async (event) => {
