@@ -253,32 +253,7 @@ class PaymentController extends Controller
                     'trangthai'           => 'DA_THANH_TOAN',
                     'ngaytao'             => now(),
                 ]);
-
-                // Lưu chi tiết phí lưu trú vào hóa đơn
-                if ($totalBoarding > 0) {
-                    // Lấy toàn bộ chi tiết hóa đơn: thuốc và lưu trú
-                    $details = DB::table('invoice_details')
-                        ->where('invoice_id', $id)
-                        ->select(
-                            'detail_id',
-                            'loai_chiphi',
-                            'ten_sanpham',
-                            'soluong',
-                            'donvitinh',
-                            'dongia',
-                            'thanhtien',
-                            'ghichu'
-                        )
-                        ->orderBy('detail_id')
-                        ->get();
-
-                    $invoice->chi_tiet = $details;
-
-                    // Giữ tên thuộc tính cũ nếu giao diện đang sử dụng chi_tiet_thuoc
-                    $invoice->chi_tiet_thuoc = $details;
-                }
-
-
+                
                 $code = sprintf('HD%05d', $invoiceId);
 
                 DB::table('invoices')

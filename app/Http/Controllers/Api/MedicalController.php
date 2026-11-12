@@ -267,10 +267,32 @@ class MedicalController extends Controller
                 }
 
                 $item = DB::table('inventory')->where('item_id', $request->medicine_id)->first();
+                
+                // Chỉ cho phép kê đơn từ mặt hàng thuốc
+                if ($item->danhmuc !== 'THUOC') {
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'Chỉ được kê đơn với mặt hàng thuộc danh mục thuốc!'
+                    ], 422);
+                }
+
+                // Không tự lấy liều mặc định nếu thuốc chưa được cấu hình
+                if (
+                    $item->lieu_mg_kg === null ||
+                    $item->mg_moi_don_vi === null ||
+                    (float) $item->lieu_mg_kg <= 0 ||
+                    (float) $item->mg_moi_don_vi <= 0
+                ) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'Thuốc chưa được cấu hình liều mg/kg hoặc hàm lượng mg mỗi đơn vị. Vui lòng cập nhật kho trước khi kê đơn!'
+                    ], 422);
+                }
 
                 $weight = (float) $record->cannangkhi_kham;
-                $mgPerKg = (float) ($item->lieu_mg_kg ?? 5);
-                $mgPerUnit = (float) ($item->mg_moi_don_vi ?? 25);
+                $mgPerKg = (float) $item->lieu_mg_kg;
+                $mgPerUnit = (float) $item->mg_moi_don_vi;
+
 
                 $mgPerDose = $weight * $mgPerKg;
                 $unitsPerDose = $mgPerDose / $mgPerUnit;

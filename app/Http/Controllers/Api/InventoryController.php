@@ -37,19 +37,27 @@ class InventoryController extends Controller
      */
     public function store(Request $request)
     {
+        
         $fields = $request->validate([
-            'masanpham'       => 'required|string|unique:inventory,masanpham',
+            'masanpham'       => 'required|string|max:20|unique:inventory,masanpham',
             'ten_sanpham'     => 'required|string|max:100',
             'danhmuc'         => 'required|in:THUOC,VAC_XIN,THUC_AN,VAT_TU,DICH_VU_SPA',
             'donvitinh'       => 'required|string|max:20',
             'dongia'          => 'required|numeric|min:0',
-            'tonkhotoithieu' => 'nullable|integer|min:0',
+            'tonkhotoithieu'  => 'nullable|integer|min:0',
+
+            // Cấu hình liều dùng, bắt buộc nếu là thuốc
+            'lieu_mg_kg'      => 'required_if:danhmuc,THUOC|nullable|numeric|gt:0',
+            'mg_moi_don_vi'   => 'required_if:danhmuc,THUOC|nullable|numeric|gt:0',
         ]);
+
 
         $id = DB::table('inventory')->insertGetId([
             'masanpham'       => $fields['masanpham'],
             'ten_sanpham'     => $fields['ten_sanpham'],
             'danhmuc'         => $fields['danhmuc'],
+            'lieu_mg_kg'    => $fields['lieu_mg_kg'] ?? null,
+            'mg_moi_don_vi' => $fields['mg_moi_don_vi'] ?? null,
             'donvitinh'       => $fields['donvitinh'],
             'dongia'          => $fields['dongia'],
             'tonkhotoithieu' => $fields['tonkhotoithieu'] ?? 10,
