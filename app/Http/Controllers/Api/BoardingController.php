@@ -125,8 +125,16 @@ class BoardingController extends Controller
 
                 $oldCageId = $pet->cage_id ? (int) $pet->cage_id : null;
                 $oldCage = $oldCageId ? DB::table('cages')->where('cage_id', $oldCageId)->first() : null;
-                if ($oldCage && $oldCage->loailong === $boardingRequest->loai_long_yeu_cau) {
-                    return response()->json(['status' => 'error', 'message' => 'Thú cưng đã ở đúng loại lồng được chỉ định.'], 409);
+                $latestPetWeight = DB::table('weight_logs')->where('pet_id', $pet->pet_id)->orderByDesc('ngaydo')->value('cannang');
+                $examPetWeight = DB::table('medical_records')->where('record_id', $boardingRequest->medical_record_id)->value('cannangkhi_kham');
+                $petWeight = (float) ($latestPetWeight ?? $examPetWeight ?? 0);
+                $oldCageCompatible = $oldCage
+                    && $oldCage->loailong === $boardingRequest->loai_long_yeu_cau
+                    && mb_strtolower((string) ($oldCage->loai_ap_dung ?? '')) === mb_strtolower((string) $pet->loai)
+                    && $petWeight > 0
+                    && (float) ($oldCage->tai_trong_toi_da ?? 0) >= $petWeight;
+                if ($oldCageCompatible) {
+                    return response()->json(['status' => 'error', 'message' => 'Thú cưng đã ở đúng lồng phù hợp với chỉ định, loài và cân nặng.'], 409);
                 }
 
                 $activeBoarding = DB::table('pet_boardings')
