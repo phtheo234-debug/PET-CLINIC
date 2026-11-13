@@ -302,7 +302,7 @@ function renderPetsTable(items) {
                 </td>
                 <td>
                     ${p.trangthai_kham ? (
-                        (["QUAN_TRI", "BAC_SI"].includes(currentUserRole) && p.record_id
+                        (["QUAN_TRI", "BAC_SI"].includes(currentUserRole) && p.record_id && !p.kham_da_thanh_toan
                             ? '<select class="form-control form-control-sm mb-1" id="petExamStatus_' + Number(p.id) + '">' +
                                 '<option value="DANG_DIEU_TRI" ' + (p.trangthai_kham === "DANG_DIEU_TRI" ? "selected" : "") + '>Đang điều trị</option>' +
                                 '<option value="HOAN_THANH" ' + (p.trangthai_kham === "HOAN_THANH" ? "selected" : "") + '>Hoàn thành</option>' +
