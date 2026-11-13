@@ -165,6 +165,14 @@ class MedicalController extends Controller
 
                 $isTransfer = $fields['trangthai'] === 'CHUYEN_VIEN' || $huongXuLy === 'TRANSFER';
 
+                // Nếu bác sĩ đổi chỉ định về ngoại trú, hủy yêu cầu lưu trú còn chờ.
+                if ($huongXuLy === 'OUTPATIENT' && !$isTransfer) {
+                    DB::table('boarding_requests')
+                        ->where('pet_id', $pet->pet_id)
+                        ->where('status', 'pending')
+                        ->update(['status' => 'cancelled', 'updated_at' => now()]);
+                }
+
                 if ($isTransfer) {
                     if ($pet->cage_id) {
                         $oldCageId = (int) $pet->cage_id;
