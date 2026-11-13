@@ -19,8 +19,11 @@ class PetController extends Controller
 
         $latestExam = DB::table('medical_records as mr1')->select('mr1.pet_id', 'mr1.record_id', 'mr1.trangthai as exam_status', 'mr1.ngaykham as exam_date', 'mr1.invoice_id as exam_invoice_id')->whereRaw('mr1.record_id = (SELECT MAX(mr2.record_id) FROM medical_records mr2 WHERE mr2.pet_id = mr1.pet_id)');
 
+        $latestQueue = DB::table('medical_queue as mq1')->select('mq1.pet_id', 'mq1.trangthai as queue_status')->whereIn('mq1.trangthai', ['CHO_KHAM', 'DANG_KHAM'])->whereRaw('mq1.queue_id = (SELECT MAX(mq2.queue_id) FROM medical_queue mq2 WHERE mq2.pet_id = mq1.pet_id AND mq2.trangthai IN (\'CHO_KHAM\', \'DANG_KHAM\'))');
+
         return DB::table('pets')
             ->leftJoinSub($latestExam, 'latest_exam', function ($join) { $join->on('pets.pet_id', '=', 'latest_exam.pet_id'); })
+            ->leftJoinSub($latestQueue, 'latest_queue', function ($join) { $join->on('pets.pet_id', '=', 'latest_queue.pet_id'); })
             ->leftJoin('owners', 'owners.owner_id', '=', 'pets.owner_id')
             ->leftJoinSub($latestWeight, 'latest_weight', function ($join) {
                 $join->on('pets.pet_id', '=', 'latest_weight.pet_id');
@@ -29,7 +32,7 @@ class PetController extends Controller
                 'pets.*',
                 'owners.ho_ten as owner_name',
                 'owners.phone as owner_phone',
-                'latest_weight.cannang as current_weight', 'latest_exam.record_id as record_id', 'latest_exam.exam_status as trangthai_kham', 'latest_exam.exam_date as ngaykham_gannhat', 'latest_exam.exam_invoice_id as mahoadon_kham'
+                'latest_weight.cannang as current_weight', 'latest_exam.record_id as record_id', 'latest_exam.exam_status as trangthai_kham', 'latest_exam.exam_date as ngaykham_gannhat', 'latest_exam.exam_invoice_id as mahoadon_kham', 'latest_queue.queue_status as queue_status'
             );
     }
 
@@ -55,9 +58,10 @@ class PetController extends Controller
             'cage_id'        => $p->cage_id,
             'trangthai' => $p->trangthai,
             'record_id' => $p->record_id ?? null,
-            'trangthai_kham' => $p->trangthai_kham ?? null,
+            'trangthai_kham' => $p->trangthai_kham ?? (($p->queue_status ?? null) === 'DANG_KHAM' ? 'DANG_DIEU_TRI' : (($p->queue_status ?? null) === 'CHO_KHAM' ? 'CHUA_KHAM' : null)),
             'ngaykham_gannhat' => $p->ngaykham_gannhat ?? null,
             'kham_da_thanh_toan' => !empty($p->mahoadon_kham),
+            'dang_cho_kham' => in_array($p->queue_status ?? null, ['CHO_KHAM', 'DANG_KHAM'], true),
             'owner'          => [
                 'id'    => $p->owner_id,
                 'name'  => $p->owner_name,
