@@ -80,8 +80,8 @@
                     <input type="hidden" id="spa_service_form_id">
                     <div class="form-group">
                         <label for="spa_service_code">Mã dịch vụ</label>
-                        <input id="spa_service_code" class="form-control" readonly placeholder="Tự động tạo khi lưu">
-                        <small class="form-text text-muted">Mã dịch vụ được hệ thống tự động tạo và không thể chỉnh sửa.</small>
+                        <input id="spa_service_code" class="form-control" readonly placeholder="Mã sẽ hiển thị tại đây">
+                        <small class="form-text text-muted">Mã dịch vụ được tạo trước và sẽ được lưu đúng như mã đang hiển thị.</small>
                     </div>
                     <div class="form-group">
                         <label for="spa_service_name">Tên dịch vụ</label>
@@ -114,8 +114,8 @@
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label for="inventory_code">Mã sản phẩm</label>
-                            <input id="inventory_code" class="form-control" readonly placeholder="Tự động tạo khi lưu">
-                            <small class="form-text text-muted">Mã sản phẩm được hệ thống tự động tạo và không thể chỉnh sửa.</small>
+                            <input id="inventory_code" class="form-control" readonly placeholder="Mã sẽ hiển thị tại đây">
+                            <small class="form-text text-muted">Mã sản phẩm được tạo trước và sẽ được lưu đúng như mã đang hiển thị.</small>
                         </div>
                         <div class="form-group col-md-6">
                             <label for="inventory_name">Tên mặt hàng</label>
