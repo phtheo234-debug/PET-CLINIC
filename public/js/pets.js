@@ -113,11 +113,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang thêm...';
             const result = await apiRequest("/medical/queue", {method:"POST", body:JSON.stringify({pet_id:Number(button.dataset.petId), ghi_chu:note.trim()})});
-            button.innerHTML = '<i class="fas fa-check mr-1"></i>Đã thêm vào chờ khám';
             alert(result?.message || "Đã đưa thú cưng vào danh sách chờ khám.");
             await loadPets();
-        } catch (error) { alert("Không thể thêm vào danh sách chờ: " + error.message); }
-        finally { button.disabled = false; }
+        } catch (error) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Thử lại';
+            alert("Không thể thêm vào danh sách chờ: " + error.message);
+        }
     });
 
     // Tiếp nhận hồ sơ chủ nuôi và thú cưng
@@ -305,7 +307,7 @@ function renderPetsTable(items) {
                 </td>
 
                 <td>
-                    ${["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole) ? '<button type="button" class="btn btn-sm btn-outline-danger mr-1" data-add-medical-queue data-pet-id="' + Number(petId) + '" data-queue-note="' + escapePetHtml(p.ghi_chu_cho_kham || "") + '">' + (p.dang_cho_kham ? "Sửa ghi chú chờ khám" : "Đưa vào chờ khám") + '</button>' : ""}
+                    ${["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole) && !p.trangthai_hangdoi && (!p.trangthai_kham || p.trangthai_kham === "CHUA_KHAM") ? '<button type="button" class="btn btn-sm btn-outline-danger mr-1" data-add-medical-queue data-pet-id="' + Number(petId) + '" data-queue-note="' + escapePetHtml(p.ghi_chu_cho_kham || "") + '"><i class="fas fa-user-clock mr-1"></i>Đưa vào chờ khám</button>' : p.trangthai_hangdoi === "CHO_KHAM" ? '<span class="badge badge-secondary mr-1">Đang chờ khám</span>' : p.trangthai_hangdoi === "DANG_KHAM" ? '<span class="badge badge-warning mr-1">Đang khám</span>' : ""}
                     <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="openPetDetail(${Number(petId)})"><i class="fas fa-eye"></i> Chi tiết</button>
                     <button type="button" class="btn btn-sm btn-outline-success" onclick="printPetProfile(${Number(petId)})"><i class="fas fa-print"></i> In hồ sơ</button>
                 </td>
