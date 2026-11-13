@@ -34,7 +34,11 @@ function extractList(res) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    initPage();
+    await initPage();
+    const currentUser = getCurrentUser();
+    const canReceivePets = !!currentUser && ["QUAN_TRI", "NHAN_VIEN"].includes(currentUser.vaitro);
+    const addPetButton = document.getElementById("btnOpenAddPet");
+    if (addPetButton && canReceivePets) addPetButton.classList.remove("d-none");
     await loadPets();
 
     // Tự động điền mã thú cưng mới mỗi lần mở Modal tiếp nhận
@@ -68,6 +72,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Xử lý lưu hồ sơ thú cưng & chủ nuôi
     document.getElementById("petForm").addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!canReceivePets) {
+            alert("Chỉ nhân viên hoặc quản trị viên được tiếp nhận thú cưng.");
+            return;
+        }
 
         const ownerName = document.getElementById("ho_ten_chu").value.trim();
         const ownerPhone = document.getElementById("phone").value.trim();
