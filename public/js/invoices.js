@@ -42,7 +42,8 @@ async function choosePaymentPet(id) {
         document.getElementById("paymentPetSearch").value=(p.mathucung||"")+" - "+(p.ten_thucung||"");
         document.getElementById("paymentOwnerName").value=p.ten_chu_nuoi||"";
         document.getElementById("paymentPetInfo").innerHTML="<strong>"+escapeInvoiceHtml(p.mathucung)+" - "+escapeInvoiceHtml(p.ten_thucung)+"</strong> · Trạng thái: "+escapeInvoiceHtml(p.trangthai||"-")+" · SĐT chủ: "+escapeInvoiceHtml(p.phone||"-");
-        paymentCatalog=paymentPreview.catalog||[];
+        const inventoryResponse = await apiRequest("/inventory");
+        paymentCatalog = invoiceList(inventoryResponse).filter(x => ["DICH_VU_SPA","THUC_AN","DO_DUNG"].includes(x.danhmuc) && (x.danhmuc === "DICH_VU_SPA" || Number(x.tong_ton_kho ?? x.soluongton ?? 0) > 0));
         renderMedicalCharges(paymentPreview.charges||{});
         renderExtraItemOptions();
         document.getElementById("medicalChargesSection").classList.toggle("d-none",medicalChargeLines.length===0);
