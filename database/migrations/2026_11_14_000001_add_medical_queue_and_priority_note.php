@@ -13,11 +13,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (Schema::hasColumn('medical_records', 'ghi_chu_kham')) {
-            Schema::table('medical_records', function ($table) {
-                $table->dropColumn('ghi_chu_kham');
-            });
-        }
+        DB::table('medical_records')->where('trangthai', 'CHUA_KHAM')->update(['trangthai' => 'DANG_DIEU_TRI']);
         DB::statement("ALTER TABLE medical_records MODIFY trangthai ENUM('DANG_DIEU_TRI','HOAN_THANH','CHUYEN_VIEN') NOT NULL DEFAULT 'HOAN_THANH'");
     }
 };
