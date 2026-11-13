@@ -11,9 +11,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             stats.so_thu_noi_tru ?? 0;
         document.getElementById("so_long_trong").innerText =
             stats.so_long_trong ?? 0;
-        document.getElementById("doanh_thu_ngay").innerText = formatCurrency(
-            stats.doanh_thu_ngay ?? 0,
-        );
+        const revenueElement = document.getElementById("doanh_thu_ngay");
+        if (revenueElement) {
+            revenueElement.innerText = formatCurrency(stats.doanh_thu_ngay ?? 0);
+        }
     } catch (err) {
         alert("Không thể tải dữ liệu Dashboard: " + err.message);
     }
