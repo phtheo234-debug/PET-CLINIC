@@ -504,7 +504,7 @@ async function deleteSpaService(serviceId) {
 function searchInventoryTable(type) {
     const input = document.getElementById("searchInventory_" + type);
     const keyword = String(input?.value || "").trim().toLocaleLowerCase("vi");
-    const config = {medical:["medicalInventoryTableBody"],food:["foodInventoryTableBody"],goods:["goodsInventoryTableBody"]};
+    const config = {medical:["medicalInventoryTableBody"],food:["foodInventoryTableBody"],goods:["goodsInventoryTableBody"],spa:["spaTableBody"]};
     (config[type] || []).forEach(id => {
         const body = document.getElementById(id);
         if (!body) return;
