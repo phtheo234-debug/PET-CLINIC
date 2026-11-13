@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\CageOccupancyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class AdminCageController extends Controller
@@ -17,33 +18,40 @@ class AdminCageController extends Controller
     public function store(Request $request)
     {
         $fields = $request->validate([
-            'malong' => 'required|string|max:20|unique:cages,malong',
             'ten_long' => 'required|string|max:50',
             'loailong' => ['required', Rule::in(['THUONG', 'CAP_CUU_ICU', 'CACH_LY'])],
             'succhua' => 'required|integer|min:1|max:100',
             'trangthai' => ['nullable', Rule::in(['CON_TRONG', 'DANG_VE_SINH', 'BAO_TRI'])],
         ]);
 
-        $id = DB::table('cages')->insertGetId([
-            'malong' => trim($fields['malong']),
-            'ten_long' => trim($fields['ten_long']),
-            'loailong' => $fields['loailong'],
-            'succhua' => $fields['succhua'],
-            'soluonghientai' => 0,
-            'trangthai' => $fields['trangthai'] ?? 'CON_TRONG',
-        ], 'cage_id');
+        $cage = DB::transaction(function () use ($fields) {
+            // Mã tạm duy nhất giúp tạo ID trước, sau đó sinh mã LONG theo ID.
+            $temporaryCode = 'TMP' . Str::random(16);
+            $id = DB::table('cages')->insertGetId([
+                'malong' => $temporaryCode,
+                'ten_long' => trim($fields['ten_long']),
+                'loailong' => $fields['loailong'],
+                'succhua' => $fields['succhua'],
+                'soluonghientai' => 0,
+                'trangthai' => $fields['trangthai'] ?? 'CON_TRONG',
+            ], 'cage_id');
+
+            $code = 'LONG' . str_pad((string) $id, 3, '0', STR_PAD_LEFT);
+            DB::table('cages')->where('cage_id', $id)->update(['malong' => $code]);
+
+            return DB::table('cages')->where('cage_id', $id)->first();
+        });
 
         return response()->json([
             'status' => 'success',
             'message' => 'Thêm lồng lưu trú thành công!',
-            'data' => DB::table('cages')->where('cage_id', $id)->first(),
+            'data' => $cage,
         ], 201);
     }
 
     public function update(Request $request, int $id)
     {
         $fields = $request->validate([
-            'malong' => ['required', 'string', 'max:20', Rule::unique('cages', 'malong')->ignore($id, 'cage_id')],
             'ten_long' => 'required|string|max:50',
             'loailong' => ['required', Rule::in(['THUONG', 'CAP_CUU_ICU', 'CACH_LY'])],
             'succhua' => 'required|integer|min:1|max:100',
@@ -76,7 +84,6 @@ class AdminCageController extends Controller
                 : ($actualCount > 0 ? 'DA_CO_THU' : 'CON_TRONG');
 
             DB::table('cages')->where('cage_id', $id)->update([
-                'malong' => trim($fields['malong']),
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
                 'succhua' => $fields['succhua'],
