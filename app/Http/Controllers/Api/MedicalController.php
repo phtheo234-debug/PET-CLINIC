@@ -151,7 +151,12 @@ class MedicalController extends Controller
                     $currentCage = $pet->cage_id
                         ? DB::table('cages')->where('cage_id', $pet->cage_id)->first()
                         : null;
-                    $needsCageMove = $pet->cage_id && (!$currentCage || $currentCage->loailong !== $requiredCageType);
+                    $needsCageMove = $pet->cage_id && (
+                        !$currentCage
+                        || $currentCage->loailong !== $requiredCageType
+                        || mb_strtolower((string) ($currentCage->loai_ap_dung ?? '')) !== mb_strtolower((string) $pet->loai)
+                        || (float) ($currentCage->tai_trong_toi_da ?? 0) < (float) $fields['cannangkhi_kham']
+                    );
 
                     if ($pet->cage_id && !$needsCageMove) {
                         $alreadyBoarded = true;
