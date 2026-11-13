@@ -93,9 +93,8 @@
                     <small class="form-text text-muted">Chỉ chọn thuốc/vắc-xin đã có trong kho và còn tồn. Khi lưu phiếu, hệ thống tự xuất kho theo hạn sử dụng gần nhất (FEFO).</small>
                 </div>
             </div>
-            <button type="submit" id="btnSaveMedical" class="btn btn-primary">
-                <i class="fas fa-save mr-1"></i> Lưu Phiếu Khám
-            </button>
+            <button type="submit" id="btnSaveMedical" class="btn btn-primary mr-2"><i class="fas fa-save mr-1"></i> Lưu Phiếu Khám</button>
+            <button type="button" id="btnPrintCurrentMedical" class="btn btn-outline-success" disabled><i class="fas fa-print mr-1"></i> In phiếu khám</button>
         </form>
     </div>
 </div>
