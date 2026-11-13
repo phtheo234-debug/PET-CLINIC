@@ -84,7 +84,8 @@ class AdminCageController extends Controller
                 ], 422);
             }
 
-            if ((int) $fields['succhua'] < $actualCount) {
+            $requestedCapacity = $fields['loailong'] === 'CACH_LY' ? 1 : (int) $fields['succhua'];
+            if ($requestedCapacity < $actualCount) {
                 return response()->json([
                     'status' => 'error',
                     'message' => "Sức chứa mới không được nhỏ hơn số thú đang ở trong lồng ({$actualCount}).",
