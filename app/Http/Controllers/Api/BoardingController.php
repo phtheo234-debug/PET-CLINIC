@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\CageOccupancyService;
+use App\Services\CageWaitingListService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BoardingController extends Controller
 {
-    public function __construct(private CageOccupancyService $cageOccupancy)
+    public function __construct(
+        private CageOccupancyService $cageOccupancy,
+        private CageWaitingListService $cageWaitingList
+    )
     {
     }
 
@@ -46,6 +50,32 @@ class BoardingController extends Controller
     }
 
     /**
+     * Danh sách thú cưng đang chờ lồng phù hợp.
+     */
+    public function waitingList()
+    {
+        $rows = DB::table('pet_cage_waitlist')
+            ->join('pets', 'pet_cage_waitlist.pet_id', '=', 'pets.pet_id')
+            ->where('pet_cage_waitlist.status', 'WAITING')
+            ->orderBy('pet_cage_waitlist.created_at')
+            ->select(
+                'pet_cage_waitlist.waitlist_id',
+                'pet_cage_waitlist.weight',
+                'pet_cage_waitlist.treatment_type',
+                'pet_cage_waitlist.isolation_required',
+                'pet_cage_waitlist.created_at',
+                'pets.pet_id',
+                'pets.mathucung',
+                'pets.ten_thucung',
+                'pets.loai',
+                'pets.giong'
+            )
+            ->get();
+
+        return response()->json(['status' => 'success', 'data' => $rows]);
+    }
+
+    /**
      * Xếp thú cưng vào lồng.
      */
     public function assignCage(Request $request)
@@ -54,6 +84,7 @@ class BoardingController extends Controller
             'pet_id' => 'required|integer|exists:pets,pet_id',
             'cage_id' => 'required|integer|exists:cages,cage_id',
             'check_in' => 'required|date',
+            'isolation_required' => 'nullable|boolean',
         ]);
 
         try {
@@ -94,13 +125,34 @@ class BoardingController extends Controller
                     ->where('cage_id', $cage->cage_id)
                     ->count();
 
-                if ($actualCount >= (int) $cage->succhua) {
+                $isolationRequired = (bool) ($fields['isolation_required'] ?? false);
+                if (($cage->loailong === 'CACH_LY') !== $isolationRequired) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Thú cưng cách ly chỉ được xếp vào lồng cách ly; thú cưng bình thường không được xếp vào lồng cách ly.',
+                    ], 422);
+                }
+
+                $effectiveCapacity = $cage->loailong === 'CACH_LY' ? 1 : (int) $cage->succhua;
+                if ($actualCount >= $effectiveCapacity) {
                     $this->cageOccupancy->sync((int) $cage->cage_id);
 
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Lồng đã đạt sức chứa tối đa.',
                     ], 422);
+                }
+
+                if (\Illuminate\Support\Facades\Schema::hasColumn('cages', 'loai_phu_hop')
+                    && $cage->loai_phu_hop !== null
+                    && $cage->loai_phu_hop !== 'TAT_CA') {
+                    $normalize = fn ($value) => \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii(trim((string) $value)));
+                    if ($normalize($cage->loai_phu_hop) !== $normalize($pet->loai)) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Loài thú cưng không phù hợp với loại lồng đã chọn.',
+                        ], 422);
+                    }
                 }
 
                 $latestWeightLog = DB::table('weight_logs')
@@ -140,6 +192,7 @@ class BoardingController extends Controller
                     'cage_id' => $cage->cage_id,
                     'check_in' => $fields['check_in'],
                     'status' => 'checked_in',
+                    'isolation_required' => $isolationRequired,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -228,10 +281,13 @@ class BoardingController extends Controller
                 ]);
 
                 $updatedCage = $this->cageOccupancy->sync((int) $cage->cage_id);
+                $assignedFromWaiting = $this->cageWaitingList->dispatchWaiting();
 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Trả lồng thành công!',
+                    'message' => $assignedFromWaiting > 0
+                        ? "Trả lồng thành công! Hệ thống đã tự động xếp {$assignedFromWaiting} thú cưng trong danh sách chờ."
+                        : 'Trả lồng thành công!',
                     'data' => [
                         'cage' => $updatedCage,
                     ],
