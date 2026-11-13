@@ -35,6 +35,10 @@ Route::middleware('web.token')->group(function () {
     Route::view('/admin/users', 'admin.users')
         ->middleware('web.role:QUAN_TRI')
         ->name('admin.users');
+
+    Route::view('/admin/statistics', 'admin.statistics')
+        ->middleware('web.role:QUAN_TRI')
+        ->name('admin.statistics');
 });
 
 Route::view('/test-api', 'test-api');
