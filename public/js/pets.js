@@ -205,7 +205,7 @@ async function loadPets() {
         renderPetsTable(petsList);
     } catch (err) {
         document.getElementById("petsTableBody").innerHTML =
-            `<tr><td colspan="6" class="text-danger text-center">${escapePetHtml(err.message)}</td></tr>`;
+            `<tr><td colspan="7" class="text-danger text-center">${escapePetHtml(err.message)}</td></tr>`;
     }
 }
 
@@ -222,7 +222,7 @@ function renderPetsTable(items) {
 
     if (!items.length) {
         tbody.innerHTML =
-            '<tr><td colspan="6" class="text-center text-muted">Chưa có dữ liệu thú cưng</td></tr>';
+            '<tr><td colspan="7" class="text-center text-muted">Chưa có dữ liệu thú cưng</td></tr>';
         return;
     }
 
@@ -279,6 +279,10 @@ function renderPetsTable(items) {
                 <td>
                     ${statusBadges[p.trangthai] || escapePetHtml(p.trangthai || "Ngoại trú")}
                 </td>
+                <td>
+                    ${p.trangthai_kham ? '<span class="badge badge-info">' + escapePetHtml(({DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"})[p.trangthai_kham] || p.trangthai_kham) + '</span>' : '<span class="text-muted">Chưa khám</span>'}
+                    ${p.ngaykham_gannhat ? '<br><small class="text-muted">' + formatPetDate(p.ngaykham_gannhat) + '</small>' : ''}
+                </td>
 
                 <td>
                     <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="openPetDetail(${Number(petId)})"><i class="fas fa-eye"></i> Chi tiết</button>
@@ -325,7 +329,7 @@ async function openPetDetail(petId) {
     try {
         const response = await apiRequest(`/pets/${petId}`);
         const pet = response?.data?.data || response?.data || response;
-        const history = Array.isArray(pet.boarding_history) ? pet.boarding_history : [];
+        const history = Array.isArray(pet.medical_history) ? pet.boarding_history : [];
         const exam = pet.latest_exam || null;
         const canUpdateExam = ["QUAN_TRI", "BAC_SI"].includes(currentUserRole);
 
@@ -334,20 +338,9 @@ async function openPetDetail(petId) {
             HOAN_THANH: "Hoàn thành",
             CHUYEN_VIEN: "Chuyển viện",
         };
-        const boardingStatusLabels = {
-            checked_in: '<span class="badge badge-success">Đang lưu trú</span>',
-            checked_out: '<span class="badge badge-secondary">Đã trả lồng</span>',
-        };
-        const historyRows = history.length
-            ? history.map((item) => `
-                <tr>
-                    <td>${escapePetHtml(item.malong || "-")}<br><small class="text-muted">${escapePetHtml(item.ten_long || "")}</small></td>
-                    <td>${formatPetDate(item.check_in)}</td>
-                    <td>${formatPetDate(item.check_out)}</td>
-                    <td>${boardingStatusLabels[item.status] || escapePetHtml(item.status || "-")}</td>
-                </tr>
-            `).join("")
-            : '<tr><td colspan="4" class="text-center text-muted">Chưa có lịch sử lưu trú / trả lồng</td></tr>';
+        const historyRows = history.length ? history.map((item) => `
+            <tr><td>${escapePetHtml(item.record_id)}</td><td>${formatPetDate(item.ngaykham)}</td><td>${escapePetHtml(item.chandoan || "-")}</td><td>${escapePetHtml(item.ten_phauthuat || item.huongxuly || "-")}</td><td>${escapePetHtml(examStatusLabels[item.trangthai] || item.trangthai || "-")}</td><td>${escapePetHtml(item.mahoadon || (item.invoice_id ? "Đã thanh toán" : "Chưa thanh toán"))}</td></tr>
+        `).join("") : '<tr><td colspan="6" class="text-center text-muted">Chưa có lịch sử khám bệnh</td></tr>';
 
         const examStatusControl = exam
             ? (canUpdateExam
@@ -401,10 +394,10 @@ async function openPetDetail(petId) {
                 ${examStatusControl}
             </div>
 
-            <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-history mr-1"></i>Lịch sử lưu trú / trả lồng</h6>
+            <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-history mr-1"></i>Lịch sử khám bệnh</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
-                    <thead class="thead-light"><tr><th>Mã lồng</th><th>Thời gian nhận</th><th>Thời gian trả</th><th>Trạng thái</th></tr></thead>
+                    <thead class="thead-light"><tr><th>Mã phiếu</th><th>Ngày khám</th><th>Chẩn đoán</th><th>Hướng xử lý</th><th>Trạng thái</th><th>Hóa đơn</th></tr></thead>
                     <tbody>${historyRows}</tbody>
                 </table>
             </div>
@@ -465,9 +458,9 @@ async function printPetProfile(petId) {
         const pet = response?.data?.data || response?.data || {};
         const history = pet.boarding_history || [];
         const historyRows = history.map((item, index) =>
-            "<tr><td>" + (index + 1) + "</td><td>" + escapePetHtml(item.malong || "-") + " " + escapePetHtml(item.ten_long || "") +
-            "</td><td>" + formatPetDate(item.check_in) + "</td><td>" + formatPetDate(item.check_out) +
-            "</td><td>" + escapePetHtml(item.status || "-") + "</td></tr>"
+            "<tr><td>" + (index + 1) + "</td><td>#" + escapePetHtml(item.record_id) + "</td><td>" + formatPetDate(item.ngaykham) +
+            "</td><td>" + escapePetHtml(item.chandoan || "-") + "</td><td>" + escapePetHtml(item.trangthai || "-") +
+            "</td><td>" + escapePetHtml(item.mahoadon || (item.invoice_id ? "Đã thanh toán" : "Chưa thanh toán")) + "</td></tr>"
         ).join("");
         const w = window.open("", "_blank", "width=900,height=750");
         if (!w) { alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup rồi thử lại."); return; }
@@ -478,8 +471,8 @@ async function printPetProfile(petId) {
             "<div><b>Giới tính:</b> " + escapePetHtml(pet.gender || "-") + "</div><div><b>Ngày sinh:</b> " + escapePetHtml(pet.dob || "-") + "</div>" +
             "<div><b>Cân nặng hiện tại:</b> " + escapePetHtml(pet.weight || "-") + " kg</div><div><b>Trạng thái:</b> " + escapePetHtml(pet.trangthai || "-") + "</div>" +
             "<div><b>Chủ nuôi:</b> " + escapePetHtml(pet.owner?.name || "-") + "</div><div><b>Số điện thoại:</b> " + escapePetHtml(pet.owner?.phone || "-") + "</div></div>" +
-            "<h3>LỊCH SỬ LƯU TRÚ / TRẢ LỒNG</h3><table><thead><tr><th>STT</th><th>Lồng</th><th>Nhận lồng</th><th>Trả lồng</th><th>Trạng thái</th></tr></thead><tbody>" +
-            (historyRows || "<tr><td colspan='5'>Chưa có lịch sử lưu trú.</td></tr>") +
+            "<h3>LỊCH SỬ KHÁM BỆNH</h3><table><thead><tr><th>STT</th><th>Mã phiếu</th><th>Ngày khám</th><th>Chẩn đoán</th><th>Trạng thái</th><th>Hóa đơn</th></tr></thead><tbody>" +
+            (historyRows || "<tr><td colspan='5'>Chưa có lịch sử khám bệnh.</td></tr>") +
             "</tbody></table><script>window.onload=function(){window.print();};<\\/script></body></html>");
         w.document.close();
     } catch (error) { alert("Không thể in hồ sơ thú cưng: " + error.message); }
