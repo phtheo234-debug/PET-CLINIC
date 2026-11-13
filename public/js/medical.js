@@ -94,8 +94,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     const actionSelect = document.getElementById("huong_xuly");
-    actionSelect?.addEventListener("change", updateIsolationOption);
-    updateIsolationOption();
+    actionSelect?.addEventListener("change", updateMedicalSections);
+    document.getElementById("yeu_cau_cach_ly")?.addEventListener("change", updateMedicalSections);
+    loadSurgeryTypes();
+    updateMedicalSections();
 
     document
         .getElementById("cannangkhi_kham")
@@ -127,20 +129,25 @@ document.addEventListener("DOMContentLoaded", async () => {
                 document.getElementById("cannangkhi_kham").focus();
                 return;
             }
+            const huongXuLy = document.getElementById("huong_xuly").value;
+            if (huongXuLy === "SURGERY" && !document.getElementById("medicalSurgerySelect")?.value) {
+                alert("Vui lòng chọn loại phẫu thuật.");
+                document.getElementById("medicalSurgerySelect")?.focus();
+                return;
+            }
 
             const btn = document.getElementById("btnSaveMedical");
             btn.disabled = true;
             btn.innerHTML =
                 '<i class="fas fa-spinner fa-spin mr-1"></i> Đang lưu...';
 
-            const huongXuLy = document.getElementById("huong_xuly").value;
-
             const payload = {
                 pet_id: petId,
                 cannangkhi_kham: weight,
                 trieuchung: document.getElementById("trieuchung").value.trim(),
                 chandoan: document.getElementById("chandoan").value.trim(),
-                items: selectedMedicalItems,
+                items: huongXuLy === "TRANSFER" ? [] : selectedMedicalItems,
+                surgery_id: huongXuLy === "SURGERY" ? Number(document.getElementById("medicalSurgerySelect").value) : null,
                 huong_xuly: huongXuLy,
                 yeu_cau_cach_ly: document.getElementById("yeu_cau_cach_ly")
                     ?.checked
@@ -172,16 +179,36 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 });
 
-function updateIsolationOption() {
+async function loadSurgeryTypes() {
+    const select = document.getElementById("medicalSurgerySelect");
+    if (!select) return;
+    try {
+        const response = await apiRequest("/surgeries");
+        const surgeries = extractList(response);
+        select.innerHTML = '<option value="">-- Chọn loại phẫu thuật --</option>' + surgeries
+            .filter(item => Number(item.trangthai ?? 1) === 1)
+            .map(item => '<option value="' + Number(item.surgery_id) + '">' +
+                escapeMedicalHtml(item.ma_phauthuat) + ' · ' + escapeMedicalHtml(item.ten_phauthuat) +
+                ' (' + Number(item.gia).toLocaleString("vi-VN") + ' đ)</option>').join("");
+        if (!surgeries.length) select.innerHTML = '<option value="">Chưa có loại phẫu thuật trong danh mục</option>';
+    } catch (error) {
+        select.innerHTML = '<option value="">Không tải được danh mục phẫu thuật</option>';
+        console.error(error);
+    }
+}
+
+function updateMedicalSections() {
     const action = document.getElementById("huong_xuly")?.value;
-    const wrapper = document.getElementById("isolationOption");
     const checkbox = document.getElementById("yeu_cau_cach_ly");
     const canRequestStay = ["INPATIENT", "SURGERY"].includes(action);
-
-    wrapper?.classList.toggle("d-none", !canRequestStay);
-
-    if (!canRequestStay && checkbox) {
-        checkbox.checked = false;
+    const showMedicine = ["OUTPATIENT", "INPATIENT", "SURGERY"].includes(action);
+    document.getElementById("isolationOption")?.classList.toggle("d-none", !canRequestStay);
+    document.getElementById("medicalInventorySection")?.classList.toggle("d-none", !showMedicine);
+    document.getElementById("medicalSurgerySection")?.classList.toggle("d-none", action !== "SURGERY");
+    if (!canRequestStay && checkbox) checkbox.checked = false;
+    if (action === "TRANSFER") {
+        selectedMedicalItems = [];
+        renderSelectedMedicalItems();
     }
 }
 
