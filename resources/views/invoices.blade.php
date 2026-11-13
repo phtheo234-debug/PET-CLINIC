@@ -5,6 +5,58 @@
 
 @section('content')
 <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white font-weight-bold text-info">
+        <i class="fas fa-spa mr-1"></i> GHI NHẬN DỊCH VỤ SPA ĐÃ SỬ DỤNG
+    </div>
+    <div class="card-body">
+        <form id="spaUsageForm">
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="spa_usage_pet">Thú cưng <span class="text-danger">*</span></label>
+                    <select id="spa_usage_pet" class="form-control" required>
+                        <option value="">-- Chọn thú cưng --</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="spa_usage_service">Dịch vụ Spa <span class="text-danger">*</span></label>
+                    <select id="spa_usage_service" class="form-control" required>
+                        <option value="">-- Chọn dịch vụ --</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-2">
+                    <label for="spa_usage_quantity">Số lần <span class="text-danger">*</span></label>
+                    <input id="spa_usage_quantity" type="number" class="form-control" min="1" step="1" value="1" required>
+                </div>
+                <div class="form-group col-md-2">
+                    <label>Đơn giá</label>
+                    <input id="spa_usage_price" class="form-control bg-light" readonly placeholder="Tự động">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="spa_usage_note">Ghi chú</label>
+                <input id="spa_usage_note" class="form-control" maxlength="255" placeholder="Ghi chú tình trạng hoặc nội dung đã thực hiện">
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="submit" id="btnSaveSpaUsage" class="btn btn-info">
+                    <i class="fas fa-save mr-1"></i> Ghi nhận dịch vụ đã sử dụng
+                </button>
+            </div>
+        </form>
+        <div id="spaUsageResult" class="mt-3" aria-live="polite"></div>
+        <div class="table-responsive mt-3">
+            <table class="table table-sm table-bordered mb-0">
+                <thead class="thead-light">
+                    <tr><th>Thú cưng</th><th>Dịch vụ</th><th>Số lần</th><th>Thành tiền</th><th>Trạng thái hóa đơn</th><th>Nhân viên</th><th>Ngày ghi nhận</th></tr>
+                </thead>
+                <tbody id="spaUsageTableBody">
+                    <tr><td colspan="7" class="text-center text-muted">Đang tải lịch sử dịch vụ...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
     <div class="card-header bg-white font-weight-bold text-success">
         <i class="fas fa-cash-register mr-1"></i> THANH TOÁN VÀ DUYỆT XUẤT VIỆN
     </div>
