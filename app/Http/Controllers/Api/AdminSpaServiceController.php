@@ -13,7 +13,6 @@ class AdminSpaServiceController extends Controller
     {
         $fields = $request->validate([
             'ten_sanpham' => 'required|string|max:100',
-            'donvitinh' => 'nullable|string|max:20',
             'dongia' => 'required|numeric|min:0',
         ]);
 
