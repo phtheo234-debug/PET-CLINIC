@@ -357,7 +357,6 @@ function renderMedicalHistory(records) {
         CHUA_KHAM: '<span class="badge badge-secondary">Chưa khám</span>',
         DANG_DIEU_TRI: '<span class="badge badge-warning">Đang điều trị</span>',
         HOAN_THANH: '<span class="badge badge-success">Hoàn thành</span>',
-        DANG_DIEU_TRI: '<span class="badge badge-warning">Đang điều trị</span>',
         CHUYEN_VIEN: '<span class="badge badge-danger">Chuyển viện</span>',
     };
     const actionLabels = {
