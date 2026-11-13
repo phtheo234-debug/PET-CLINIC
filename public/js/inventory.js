@@ -7,6 +7,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const user = getCurrentUser();
     isAdminInventory = !!user && user.vaitro === "QUAN_TRI";
     isAdminSpa = isAdminInventory;
+    document.querySelectorAll(".inventoryLotColumn").forEach(el => {
+        el.classList.toggle("d-none", !isAdminInventory);
+    });
 
     if (isAdminInventory) {
         document.getElementById("btnAddSpaService")?.classList.remove("d-none");
@@ -115,7 +118,7 @@ function renderInventory(items) {
             return '<tr>' +
                 '<td><code>' + escapeInventoryHtml(item.masanpham) + '</code></td>' +
                 '<td><strong>' + escapeInventoryHtml(item.ten_sanpham) + '</strong></td>' +
-                '<td>' + escapeInventoryHtml(batch.solo || '—') + '</td>' +
+                '<td class="inventoryLotColumn' + (isAdminInventory ? '' : ' d-none') + '">' + escapeInventoryHtml(batch.solo || '—') + '</td>' +
                 '<td>' + quantity + '</td>' +
                 '<td>' + escapeInventoryHtml(batch.ngaysanxuat || '—') + '</td>' +
                 '<td>' + escapeInventoryHtml(batch.ngayhethan || '—') + '</td>' +
