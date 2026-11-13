@@ -79,30 +79,54 @@ class MedicalController extends Controller
         return response()->json(['status' => 'success', 'message' => 'Đã thêm vào danh sách chờ khám.', 'queue_id' => $id], 201);
     }
 
-    /** Danh sách chờ, ưu tiên ca có ghi chú. */
+    /** Danh sách chờ khám: đang khám trước, tiếp theo là ca ưu tiên; vẫn hiển thị ca đã khám trong ngày. */
     public function queue()
     {
         $records = DB::table('medical_queue as q')
             ->join('pets as p', 'p.pet_id', '=', 'q.pet_id')
             ->leftJoin('owners as o', 'o.owner_id', '=', 'p.owner_id')
-            ->whereIn('q.trangthai', ['CHO_KHAM', 'DANG_KHAM'])
-            ->select('q.queue_id', 'q.pet_id', 'q.ghi_chu', 'q.trangthai as queue_status', 'q.created_at',
-                'p.mathucung', 'p.ten_thucung', 'p.loai', 'p.giong', 'o.ho_ten as ten_chu_nuoi', 'o.phone as sdt_chu_nuoi')
-            ->orderByRaw("CASE WHEN q.ghi_chu IS NOT NULL AND TRIM(q.ghi_chu) <> '' THEN 0 ELSE 1 END")
-            ->orderBy('q.created_at')->get();
+            ->where(function ($query) {
+                $query->whereIn('q.trangthai', ['CHO_KHAM', 'DANG_KHAM'])
+                    ->orWhere(function ($completed) {
+                        $completed->where('q.trangthai', 'DA_KHAM')
+                            ->whereDate('q.created_at', now()->toDateString());
+                    });
+            })
+            ->select(
+                'q.queue_id', 'q.pet_id', 'q.ghi_chu', 'q.trangthai as queue_status', 'q.created_at',
+                'p.mathucung', 'p.ten_thucung', 'p.loai', 'p.giong',
+                'o.ho_ten as ten_chu_nuoi', 'o.phone as sdt_chu_nuoi'
+            )
+            ->orderByRaw("CASE WHEN q.trangthai = 'DANG_KHAM' THEN 0 WHEN q.trangthai = 'CHO_KHAM' AND q.ghi_chu IS NOT NULL AND TRIM(q.ghi_chu) <> '' THEN 1 WHEN q.trangthai = 'CHO_KHAM' THEN 2 ELSE 3 END")
+            ->orderBy('q.created_at')
+            ->get();
+
         return response()->json(['status' => 'success', 'data' => $records]);
     }
 
-    /** Bác sĩ chọn ca; ca được đánh dấu đang khám và thú cưng được chọn trên form. */
+    /** Bác sĩ hoặc admin chọn một ca; mỗi thời điểm chỉ có một ca đang khám. */
     public function startQueueRecord(Request $request, $id)
     {
-        $queue = DB::table('medical_queue')->where('queue_id', $id)->first();
-        abort_if(!$queue, 404, 'Không tìm thấy lượt chờ khám.');
-        if ($queue->trangthai === 'DA_KHAM') {
-            return response()->json(['status' => 'error', 'message' => 'Lượt khám này đã hoàn thành.'], 409);
-        }
-        DB::table('medical_queue')->where('queue_id', $id)->update(['trangthai' => 'DANG_KHAM', 'updated_at' => now()]);
-        return response()->json(['status' => 'success', 'message' => 'Đã chọn ca khám.', 'data' => ['pet_id' => $queue->pet_id]]);
+        return DB::transaction(function () use ($id) {
+            $queue = DB::table('medical_queue')->where('queue_id', $id)->lockForUpdate()->first();
+            abort_if(!$queue, 404, 'Không tìm thấy lượt chờ khám.');
+            if ($queue->trangthai === 'DA_KHAM') {
+                return response()->json(['status' => 'error', 'message' => 'Lượt khám này đã hoàn thành.'], 409);
+            }
+            if ($queue->trangthai === 'DANG_KHAM') {
+                return response()->json(['status' => 'success', 'message' => 'Đây là ca đang được khám.', 'data' => ['pet_id' => $queue->pet_id]]);
+            }
+            $otherActive = DB::table('medical_queue')
+                ->where('trangthai', 'DANG_KHAM')
+                ->where('queue_id', '<>', $id)
+                ->lockForUpdate()
+                ->exists();
+            if ($otherActive) {
+                return response()->json(['status' => 'error', 'message' => 'Đang có một thú cưng được khám. Hãy lưu phiếu khám hiện tại trước khi chọn ca tiếp theo.'], 409);
+            }
+            DB::table('medical_queue')->where('queue_id', $id)->update(['trangthai' => 'DANG_KHAM', 'updated_at' => now()]);
+            return response()->json(['status' => 'success', 'message' => 'Đã chọn ca khám.', 'data' => ['pet_id' => $queue->pet_id]]);
+        });
     }
 
     /** Nhân viên/quản trị chỉnh sửa ghi chú ưu tiên. */
