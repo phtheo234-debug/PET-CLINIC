@@ -74,7 +74,14 @@
                     <label>Chẩn đoán bệnh <span class="text-danger">*</span></label>
                     <textarea id="chandoan" class="form-control" rows="2" placeholder="VD: Viêm đường hô hấp trên..." required></textarea>
                 </div>
-                <div class="form-group col-md-12">
+                <div class="form-group col-md-12 d-none" id="medicalSurgerySection">
+                    <label class="font-weight-bold text-danger">Loại phẫu thuật <span class="text-danger">*</span></label>
+                    <select id="medicalSurgerySelect" class="form-control">
+                        <option value="">-- Chọn loại phẫu thuật --</option>
+                    </select>
+                    <small class="form-text text-muted">Giá phẫu thuật được lấy từ danh mục phẫu thuật của phòng khám.</small>
+                </div>
+                <div class="form-group col-md-12 d-none" id="medicalInventorySection">
                     <label class="font-weight-bold">Thuốc / Vắc-xin sử dụng từ kho</label>
                     <div class="form-row align-items-end">
                         <div class="form-group col-md-4 mb-2"><label for="medicalInventorySelect">Mặt hàng trong kho</label><select id="medicalInventorySelect" class="form-control"><option value="">-- Chọn thuốc hoặc vắc-xin --</option></select></div>
