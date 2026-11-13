@@ -27,4 +27,14 @@
         <div class="alert alert-info mt-4 mb-0 small">Thông tin chỉ hiển thị sau khi người dùng đăng nhập vào hệ thống Pet Clinic.</div>
     </div>
 </div>
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof initPage === 'function') {
+            initPage();
+        }
+    });
+</script>
+@endpush
+
 @endsection
