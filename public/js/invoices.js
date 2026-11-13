@@ -1,3 +1,92 @@
+
+let retailPosItems = [];
+
+async function loadRetailPosOptions() {
+    const petSelect = document.getElementById("pos_pet_select");
+    try {
+        const [petsResponse, inventoryResponse] = await Promise.all([apiRequest("/pets"), apiRequest("/inventory")]);
+        const pets = extractList(petsResponse);
+        const items = extractList(inventoryResponse);
+        petSelect.innerHTML = '<option value="">-- Chọn thú cưng --</option>' + pets.map(pet => {
+            const id = Number(pet.pet_id ?? pet.id);
+            return '<option value="' + id + '">' + escapeInvoiceHtml(pet.mathucung || ("PET-" + id)) +
+                ' - ' + escapeInvoiceHtml(pet.ten_thucung || pet.name || "") + '</option>';
+        }).join("");
+        retailPosItems = items.filter(item => ["THUC_AN", "DO_DUNG", "DICH_VU_SPA"].includes(item.danhmuc));
+        addRetailPosLine();
+    } catch (error) {
+        petSelect.innerHTML = '<option value="">Không tải được hồ sơ thú cưng</option>';
+        document.getElementById("retailPosResult").textContent = error.message;
+    }
+}
+
+async function updateRetailPosOwner() {
+    const petId = Number(document.getElementById("pos_pet_select").value);
+    const ownerInput = document.getElementById("pos_owner_name");
+    if (!petId) { ownerInput.value = ""; return; }
+    try {
+        const response = await apiRequest("/pets/" + petId);
+        const pet = response?.data?.data || response?.data || {};
+        ownerInput.value = pet.owner?.name || pet.owner?.ho_ten || pet.owner_name || "";
+    } catch (_) { ownerInput.value = ""; }
+}
+
+function addRetailPosLine() {
+    const container = document.getElementById("posCartRows");
+    if (!container) return;
+    const row = document.createElement("div");
+    row.className = "form-row align-items-end pos-cart-line border rounded p-2 mb-2";
+    const options = retailPosItems.map(item => {
+        const category = item.danhmuc === "THUC_AN" ? "Thức ăn" : item.danhmuc === "DO_DUNG" ? "Đồ dùng" : "Dịch vụ";
+        return '<option value="' + Number(item.item_id) + '">' + category + ' · ' +
+            escapeInvoiceHtml(item.ten_sanpham) + ' · ' + formatCurrency(item.dongia) + '</option>';
+    }).join("");
+    row.innerHTML = '<div class="form-group col-md-8 mb-1"><label>Mặt hàng / dịch vụ</label><select class="form-control pos-line-item" required><option value="">-- Chọn --</option>' + options + '</select></div>' +
+        '<div class="form-group col-md-2 mb-1"><label>Số lượng</label><input type="number" class="form-control pos-line-quantity" min="1" step="1" value="1" required></div>' +
+        '<div class="form-group col-md-2 mb-1"><button type="button" class="btn btn-outline-danger btn-block btn-remove-pos-line">Xóa</button></div>';
+    row.querySelector(".btn-remove-pos-line").addEventListener("click", () => {
+        row.remove();
+        if (!container.children.length) addRetailPosLine();
+    });
+    container.appendChild(row);
+}
+
+async function submitRetailPos(event) {
+    event.preventDefault();
+    const petId = Number(document.getElementById("pos_pet_select").value);
+    const result = document.getElementById("retailPosResult");
+    const button = document.getElementById("btnRetailPosCheckout");
+    const lines = Array.from(document.querySelectorAll(".pos-cart-line")).map(row => ({
+        item_id: Number(row.querySelector(".pos-line-item").value),
+        quantity: Number(row.querySelector(".pos-line-quantity").value)
+    }));
+    if (!petId) { alert("Vui lòng chọn hồ sơ thú cưng."); return; }
+    if (!lines.length || lines.some(line => !line.item_id || !Number.isInteger(line.quantity) || line.quantity < 1)) {
+        alert("Vui lòng chọn mặt hàng và số lượng hợp lệ."); return;
+    }
+    button.disabled = true;
+    try {
+        const response = await apiRequest("/payment/pos/checkout", {
+            method: "POST",
+            body: JSON.stringify({
+                pet_id: petId,
+                payment_method: document.getElementById("pos_payment_method").value,
+                items: lines
+            })
+        });
+        const data = response?.data?.data || response?.data || {};
+        result.innerHTML = '<div class="alert alert-success">Thanh toán thành công hóa đơn <strong>' +
+            escapeInvoiceHtml(data.mahoadon || "") + '</strong> · Tổng tiền: <strong>' +
+            formatCurrency(data.tong_thanhtoan) + '</strong> <button type="button" class="btn btn-sm btn-outline-primary ml-2" onclick="printInvoice(' +
+            Number(data.invoice_id) + ')">In hóa đơn</button></div>';
+        document.getElementById("posCartRows").replaceChildren();
+        addRetailPosLine();
+        await Promise.all([loadInvoices(), loadRetailPosOptions()]);
+    } catch (error) {
+        result.innerHTML = '<div class="alert alert-danger">Không thể thanh toán: ' + escapeInvoiceHtml(error.message) + '</div>';
+    } finally { button.disabled = false; }
+}
+
 async function loadPendingOutpatientVisits() {
     const select = document.getElementById("outpatient_record_select");
     if (!select) return;
@@ -31,7 +120,7 @@ async function printInvoice(invoiceId) {
         const response = await apiRequest("/payment/invoices/" + invoiceId);
         const invoice = response?.data?.data || response?.data || {};
         const details = invoice.chi_tiet || [];
-        const labels = {THUOC:"Thuốc",VAC_XIN:"Vắc-xin",PHI_KHAM:"Phí khám",LUU_TRU:"Lưu trú",DICH_VU_SPA:"Dịch vụ"};
+        const labels = {THUOC:"Thuốc",VAC_XIN:"Vắc-xin",THUC_AN:"Thức ăn",DO_DUNG:"Đồ dùng",PHI_KHAM:"Phí khám",LUU_TRU:"Lưu trú",DICH_VU_SPA:"Dịch vụ"};
         const rows = details.map((line,index) => "<tr><td>"+(index+1)+"</td><td>"+escapeInvoiceHtml(line.ten_sanpham)+"</td><td>"+(labels[line.loai_chiphi] || escapeInvoiceHtml(line.loai_chiphi))+"</td><td>"+Number(line.soluong)+" "+escapeInvoiceHtml(line.donvitinh || "")+"</td><td>"+formatCurrency(line.dongia)+"</td><td>"+formatCurrency(line.thanhtien)+"</td></tr>").join("");
         const win = window.open("", "_blank", "width=900,height=750");
         if (!win) { alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup rồi thử lại."); return; }
@@ -73,7 +162,7 @@ function formatCurrency(value) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     initPage();
-    await Promise.all([loadPetsForInvoice(), loadInvoices(), loadSpaUsageOptions(), loadSpaUsages(), loadPendingOutpatientVisits()]);
+    await Promise.all([loadPetsForInvoice(), loadInvoices(), loadSpaUsageOptions(), loadSpaUsages(), loadPendingOutpatientVisits(), loadRetailPosOptions()]);
 
     const petSelect = document.getElementById("pet_select");
     if (petSelect) {
@@ -81,6 +170,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     document.getElementById("spa_usage_service")?.addEventListener("change", updateSpaServicePrice);
+    document.getElementById("pos_pet_select")?.addEventListener("change", updateRetailPosOwner);
+    document.getElementById("btnAddPosLine")?.addEventListener("click", addRetailPosLine);
+    document.getElementById("retailPosForm")?.addEventListener("submit", submitRetailPos);
     document.getElementById("outpatientVisitForm")?.addEventListener("submit", payOutpatientVisit);
     document.getElementById("spaUsageForm")?.addEventListener("submit", saveSpaUsage);
 
