@@ -11,7 +11,8 @@ async function loadMedicalInventory() {
 }
 
 function escapeMedicalHtml(value) {
-    return String(value ?? "").replace(/[&<>"\']/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#039;"}[char]));
+    const map = {"&":"&amp;", "<":"&lt;", ">":"&gt;", '"' : "&quot;", "'": "&#039;"};
+    return String(value ?? "").replace(/[&<>"']/g, (char) => map[char]);
 }
 
 function addMedicalInventoryItem() {
@@ -158,10 +159,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                     "Nhập cân nặng để tự động tính liều mg/kg";
                 await loadMedicalRecords();
                 const savedRecord = res?.data?.data || res?.data || {};
-                if (savedRecord.record_id) await printMedicalRecord(savedRecord.record_id);
                 selectedMedicalItems = [];
                 renderSelectedMedicalItems();
-                alert(res?.message || "Đã lưu phiếu khám bệnh thành công!");
+                alert((res?.message || "Đã lưu phiếu khám bệnh thành công!") + " Bạn có thể nhấn In phiếu trong danh sách lịch sử khám.");
             } catch (err) {
                 alert("Lỗi lưu phiếu khám: " + err.message);
             } finally {

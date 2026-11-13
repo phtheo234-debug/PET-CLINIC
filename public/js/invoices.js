@@ -317,7 +317,7 @@ async function loadInvoices() {
 function renderInvoices(invoices) {
     const tbody = document.getElementById("invoicesTableBody");
     if (!invoices.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Chưa có hóa đơn thanh toán</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Chưa có hóa đơn thanh toán</td></tr>';
         return;
     }
 
