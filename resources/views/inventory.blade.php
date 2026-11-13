@@ -133,9 +133,14 @@
                                 <option value="DO_DUNG">Đồ dùng</option>
                             </select>
                         </div>
-                        <div class="form-group col-md-6">
+                        <div class="form-group col-md-6" id="inventoryUnitGroup">
                             <label for="inventory_unit">Đơn vị tính</label>
-                            <input id="inventory_unit" class="form-control" maxlength="20" placeholder="Viên, lọ, kg, cái..." required>
+                            <input id="inventory_unit" class="form-control" maxlength="20" placeholder="Viên, lọ, kg...">
+                        </div>
+                        <div class="form-group col-md-6 d-none" id="inventoryStockGroup">
+                            <label for="inventory_stock">Số lượng tồn</label>
+                            <input id="inventory_stock" type="number" class="form-control" min="0" step="1" value="0">
+                            <small class="form-text text-muted">Đồ dùng quản lý số lượng trực tiếp, không nhập theo lô.</small>
                         </div>
                         <div class="form-group col-md-6">
                             <label for="inventory_price">Đơn giá (VNĐ)</label>
