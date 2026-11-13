@@ -21,6 +21,8 @@ class AdminCageController extends Controller
             'ten_long' => 'required|string|max:50',
             'loailong' => ['required', Rule::in(['THUONG', 'CAP_CUU_ICU', 'CACH_LY'])],
             'succhua' => 'required|integer|min:1|max:100',
+            'loai_phu_hop' => ['nullable', Rule::in(['TAT_CA', 'CHO', 'MEO'])],
+            'tai_trong_toi_da' => 'nullable|numeric|min:0.1|max:9999',
             'trangthai' => ['nullable', Rule::in(['CON_TRONG', 'DANG_VE_SINH', 'BAO_TRI'])],
         ]);
 
@@ -32,6 +34,8 @@ class AdminCageController extends Controller
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
                 'succhua' => $fields['succhua'],
+                'loai_phu_hop' => $fields['loai_phu_hop'] ?? 'TAT_CA',
+                'tai_trong_toi_da' => $fields['tai_trong_toi_da'] ?? null,
                 'soluonghientai' => 0,
                 'trangthai' => $fields['trangthai'] ?? 'CON_TRONG',
             ], 'cage_id');
@@ -87,6 +91,8 @@ class AdminCageController extends Controller
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
                 'succhua' => $fields['succhua'],
+                'loai_phu_hop' => $fields['loai_phu_hop'] ?? 'TAT_CA',
+                'tai_trong_toi_da' => $fields['tai_trong_toi_da'] ?? null,
                 'soluonghientai' => $actualCount,
                 'trangthai' => $status,
             ]);
