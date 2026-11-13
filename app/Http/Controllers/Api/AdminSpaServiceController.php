@@ -58,13 +58,13 @@ class AdminSpaServiceController extends Controller
 
         $fields = $request->validate([
             'ten_sanpham' => 'required|string|max:100',
-            'donvitinh' => 'required|string|max:20',
+            'donvitinh' => 'nullable|string|max:20',
             'dongia' => 'required|numeric|min:0',
         ]);
 
         DB::table('inventory')->where('item_id', $id)->update([
             'ten_sanpham' => $fields['ten_sanpham'],
-            'donvitinh' => $fields['donvitinh'],
+            'donvitinh' => '',
             'dongia' => $fields['dongia'],
         ]);
 
