@@ -41,6 +41,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("cageTypeFilter")?.addEventListener("change", renderCagesGrid);
 
     await Promise.all([loadCages(), loadWaitingList()]);
+    // Cập nhật danh sách chờ định kỳ để quản trị viên sớm nhận biết thiếu lồng.
+    window.setInterval(loadWaitingList, 30000);
 });
 
 async function submitAssignCage(e) {
