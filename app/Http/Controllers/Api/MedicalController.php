@@ -145,7 +145,15 @@ class MedicalController extends Controller
                 $alreadyBoarded = false;
 
                 if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true) || $needsIsolation) {
-                    if ($pet->cage_id) {
+                    $requiredCageType = $needsIsolation
+                        ? 'CACH_LY'
+                        : ($huongXuLy === 'SURGERY' ? 'CAP_CUU_ICU' : 'THUONG');
+                    $currentCage = $pet->cage_id
+                        ? DB::table('cages')->where('cage_id', $pet->cage_id)->first()
+                        : null;
+                    $needsCageMove = $pet->cage_id && (!$currentCage || $currentCage->loailong !== $requiredCageType);
+
+                    if ($pet->cage_id && !$needsCageMove) {
                         $alreadyBoarded = true;
                         $boardingRequest = DB::table('boarding_requests')
                             ->where('pet_id', $pet->pet_id)
@@ -153,10 +161,6 @@ class MedicalController extends Controller
                             ->orderByDesc('request_id')
                             ->first();
                     } else {
-                        $requiredCageType = $needsIsolation
-                            ? 'CACH_LY'
-                            : ($huongXuLy === 'SURGERY' ? 'CAP_CUU_ICU' : 'THUONG');
-
                         $pendingRequest = DB::table('boarding_requests')
                             ->where('pet_id', $pet->pet_id)
                             ->where('status', 'pending')
@@ -167,9 +171,11 @@ class MedicalController extends Controller
                             'medical_record_id' => $recordId,
                             'loai_long_yeu_cau' => $requiredCageType,
                             'yeu_cau_cach_ly' => $needsIsolation,
-                            'ghi_chu' => $needsIsolation
-                                ? 'Bác sĩ chỉ định cách ly.'
-                                : ($huongXuLy === 'SURGERY' ? 'Lưu trú theo chỉ định phẫu thuật.' : 'Lưu trú điều trị nội trú.'),
+                            'ghi_chu' => $needsCageMove
+                                ? 'Cần chuyển sang loại lồng phù hợp với chỉ định mới.'
+                                : ($needsIsolation
+                                    ? 'Bác sĩ chỉ định cách ly.'
+                                    : ($huongXuLy === 'SURGERY' ? 'Lưu trú theo chỉ định phẫu thuật.' : 'Lưu trú điều trị nội trú.')),
                             'updated_at' => now(),
                         ];
 
@@ -181,17 +187,11 @@ class MedicalController extends Controller
                         } else {
                             $requestId = DB::table('boarding_requests')->insertGetId(array_merge(
                                 $requestData,
-                                [
-                                    'pet_id' => $pet->pet_id,
-                                    'status' => 'pending',
-                                    'created_at' => now(),
-                                ]
+                                ['pet_id' => $pet->pet_id, 'status' => 'pending', 'created_at' => now()]
                             ));
                         }
 
-                        $boardingRequest = DB::table('boarding_requests')
-                            ->where('request_id', $requestId)
-                            ->first();
+                        $boardingRequest = DB::table('boarding_requests')->where('request_id', $requestId)->first();
                     }
                 }
 
