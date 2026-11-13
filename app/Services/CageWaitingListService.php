@@ -20,12 +20,36 @@ class CageWaitingListService
             throw new \RuntimeException('Không tìm thấy thú cưng.');
         }
 
-        // Nếu thú đã ở lồng phù hợp thì giữ nguyên, không tạo lượt lưu trú trùng.
+        // Nếu thú đã ở lồng phù hợp và các tiêu chí vẫn đạt thì giữ nguyên.
         if ($pet->cage_id) {
             $current = DB::table('cages')->where('cage_id', $pet->cage_id)->first();
-            if ($current && (($current->loailong === 'CACH_LY') === $isolation)) {
-                $this->closeWaitingRows($petId, 'ASSIGNED', (int) $current->cage_id);
-                return ['cage' => $current, 'waiting' => false];
+            if ($current) {
+                $currentCount = DB::table('pets')->where('cage_id', $current->cage_id)->count();
+                $currentCapacity = $current->loailong === 'CACH_LY' ? 1 : (int) $current->succhua;
+                $speciesMatches = !Schema::hasColumn('cages', 'loai_phu_hop')
+                    || empty($current->loai_phu_hop)
+                    || $current->loai_phu_hop === 'TAT_CA'
+                    || $this->normalizeSpecies((string) $current->loai_phu_hop) === $this->normalizeSpecies((string) $pet->loai);
+                $weightMatches = !Schema::hasColumn('cages', 'tai_trong_toi_da')
+                    || $current->tai_trong_toi_da === null
+                    || (float) $current->tai_trong_toi_da >= $weight;
+
+                if ((($current->loailong === 'CACH_LY') === $isolation)
+                    && !in_array($current->trangthai, ['DANG_VE_SINH', 'BAO_TRI'], true)
+                    && $currentCount <= $currentCapacity
+                    && ($current->loailong !== 'CACH_LY' || $currentCount === 1)
+                    && $speciesMatches && $weightMatches) {
+                    if (Schema::hasColumn('pet_boardings', 'isolation_required')) {
+                        DB::table('pet_boardings')
+                            ->where('pet_id', $petId)
+                            ->where('cage_id', $current->cage_id)
+                            ->where('status', 'checked_in')
+                            ->whereNull('check_out')
+                            ->update(['isolation_required' => $isolation]);
+                    }
+                    $this->closeWaitingRows($petId, 'ASSIGNED', (int) $current->cage_id);
+                    return ['cage' => $current, 'waiting' => false];
+                }
             }
 
             // Không để thú cần cách ly tiếp tục ở chung lồng thường.
