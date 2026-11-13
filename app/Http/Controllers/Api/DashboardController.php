@@ -33,29 +33,50 @@ class DashboardController extends Controller
     }
 
     /**
-     * FR-STAT-03: Cảnh báo thuốc/vắc-xin cận date (trong 30 ngày) hoặc hết hạn
+     * Cảnh báo hạn sử dụng thuốc, vắc-xin và thức ăn.
+     * Hàng hết hạn tự động chuyển trạng thái HET_HAN, không còn được xuất/bán.
      */
     public function getInventoryAlerts()
     {
-        $canhBaoDate = DB::table('inventory_batches')
-            ->join('inventory', 'inventory_batches.item_id', '=', 'inventory.item_id')
+        $today = Carbon::today();
+        $sixMonths = Carbon::today()->addMonths(6);
+
+        DB::table('inventory_batches')
+            ->whereNotNull('ngayhethan')
+            ->whereDate('ngayhethan', '<', $today->toDateString())
+            ->where('trangthai', 'DANG_SU_DUNG')
+            ->update(['trangthai' => 'HET_HAN']);
+
+        $base = DB::table('inventory_batches as b')
+            ->join('inventory as i', 'i.item_id', '=', 'b.item_id')
+            ->whereIn('i.danhmuc', ['THUOC', 'VAC_XIN', 'THUC_AN'])
+            ->where('b.soluong', '>', 0)
             ->select(
-                'inventory.masanpham',
-                'inventory.ten_sanpham',
-                'inventory_batches.solo',
-                'inventory_batches.soluong',
-                'inventory_batches.ngayhethan',
-                'inventory_batches.trangthai'
-            )
-            ->where('inventory_batches.ngayhethan', '<=', Carbon::now()->addDays(30))
-            ->orderBy('inventory_batches.ngayhethan', 'asc')
+                'b.batch_id', 'i.masanpham', 'i.ten_sanpham', 'i.danhmuc',
+                'b.solo', 'b.soluong', 'b.ngayhethan', 'b.trangthai'
+            );
+
+        $soonExpiry = (clone $base)
+            ->where('b.trangthai', 'DANG_SU_DUNG')
+            ->whereDate('b.ngayhethan', '>=', $today->toDateString())
+            ->whereDate('b.ngayhethan', '<=', $sixMonths->toDateString())
+            ->orderBy('b.ngayhethan')
+            ->get();
+
+        $expired = (clone $base)
+            ->where('b.trangthai', 'HET_HAN')
+            ->whereDate('b.ngayhethan', '<', $today->toDateString())
+            ->orderBy('b.ngayhethan')
             ->get();
 
         return response()->json([
             'status' => 'success',
-            'data'   => [
-                'canh_bao_date' => $canhBaoDate
-            ]
+            'data' => [
+                'sap_het_han' => $soonExpiry,
+                'da_het_han' => $expired,
+                'so_sap_het_han' => $soonExpiry->count(),
+                'so_da_het_han' => $expired->count(),
+            ],
         ]);
     }
 
