@@ -221,7 +221,7 @@ function renderCagesGrid() {
             return `
             <div class="col-md-4 mb-3">
                 <div class="card cage-card border-${statusClass} h-100">
-                    <div class="card-header bg-${statusClass} text-white d-flex justify-content-between">
+                    <div class="card-header bg-${statusClass} text-white ${isFull ? "cage-card-header-full" : ""} d-flex justify-content-between">
                         <strong>${cage.malong || `L-${cageId}`} - ${cage.ten_long || ""}</strong>
                         <span>${statusText}</span>
                     </div>
