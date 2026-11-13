@@ -73,7 +73,8 @@ function renderExpiryNotice(items) {
         return;
     }
     const rows = list => list.slice(0, 8).map(item =>
-        '<li><strong>' + escapeInventoryHtml(item.name) + '</strong> · Lô ' + escapeInventoryHtml(item.lot) +
+        '<li><strong>' + escapeInventoryHtml(item.name) + '</strong>' +
+        (isAdminInventory ? ' · Lô ' + escapeInventoryHtml(item.lot) : '') +
         ' · Tồn ' + Number(item.qty) + ' · HSD ' + escapeInventoryHtml(item.date) + '</li>'
     ).join("");
     box.innerHTML =
