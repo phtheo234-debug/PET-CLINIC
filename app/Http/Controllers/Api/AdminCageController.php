@@ -106,7 +106,7 @@ class AdminCageController extends Controller
             DB::table('cages')->where('cage_id', $id)->update([
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
-                'succhua' => $fields['succhua'],
+                'succhua' => $requestedCapacity,
                 'loai_phu_hop' => $fields['loai_phu_hop'] ?? 'TAT_CA',
                 'tai_trong_toi_da' => $fields['tai_trong_toi_da'] ?? null,
                 'soluonghientai' => $actualCount,
