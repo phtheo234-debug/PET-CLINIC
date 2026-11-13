@@ -22,6 +22,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     initPage();
     await Promise.all([loadPetsDropdown(), loadMedicalRecords()]);
 
+    const actionSelect = document.getElementById("huong_xuly");
+    actionSelect?.addEventListener("change", updateIsolationOption);
+    updateIsolationOption();
+
     document
         .getElementById("cannangkhi_kham")
         .addEventListener("input", (e) => {
@@ -67,6 +71,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 chandoan: document.getElementById("chandoan").value.trim(),
                 don_thuoc: document.getElementById("don_thuoc").value.trim(),
                 huong_xuly: huongXuLy,
+                yeu_cau_cach_ly: document.getElementById("yeu_cau_cach_ly")?.checked ? 1 : 0,
                 trangthai: mapActionToStatus(huongXuLy),
             };
 
@@ -89,6 +94,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         });
 });
+
+function updateIsolationOption() {
+    const action = document.getElementById("huong_xuly")?.value;
+    const wrapper = document.getElementById("isolationOption");
+    const checkbox = document.getElementById("yeu_cau_cach_ly");
+    const canRequestStay = ["INPATIENT", "SURGERY"].includes(action);
+
+    wrapper?.classList.toggle("d-none", !canRequestStay);
+
+    if (!canRequestStay && checkbox) {
+        checkbox.checked = false;
+    }
+}
 
 async function loadPetsDropdown() {
     const select = document.getElementById("pet_select");
@@ -140,18 +158,21 @@ async function loadMedicalRecords() {
 
 function renderMedicalHistory(records) {
     const statusMap = {
-        HOAN_THANH:
-            '<span class="badge badge-success">Hoàn thành (Ngoại trú)</span>',
-        DANG_DIEU_TRI:
-            '<span class="badge badge-warning">Đang điều trị / Nội trú</span>',
-        CHUYEN_VIEN:
-            '<span class="badge badge-danger">Chuyển viện tuyến trên</span>',
-        OUTPATIENT:
-            '<span class="badge badge-success">Điều trị ngoại trú</span>',
-        INPATIENT: '<span class="badge badge-warning">Nhập viện nội trú</span>',
-        SURGERY: '<span class="badge badge-info">Chỉ định phẫu thuật</span>',
-        TRANSFER:
-            '<span class="badge badge-danger">Chuyển viện tuyến trên</span>',
+        HOAN_THANH: '<span class="badge badge-success">Hoàn thành</span>',
+        DANG_DIEU_TRI: '<span class="badge badge-warning">Đang điều trị</span>',
+        CHUYEN_VIEN: '<span class="badge badge-danger">Chuyển viện</span>',
+    };
+    const actionLabels = {
+        OUTPATIENT: "Ngoại trú",
+        INPATIENT: "Chỉ định nội trú",
+        SURGERY: "Chỉ định phẫu thuật",
+        TRANSFER: "Chuyển viện",
+    };
+    const boardingLabels = {
+        pending: '<span class="badge badge-warning">Chờ nhân viên xác nhận lồng</span>',
+        checked_in: '<span class="badge badge-success">Đã xếp lồng / Đang nội trú</span>',
+        completed: '<span class="badge badge-secondary">Đã kết thúc lưu trú</span>',
+        cancelled: '<span class="badge badge-secondary">Đã hủy yêu cầu lưu trú</span>',
     };
 
     const tbody = document.getElementById("medicalHistoryBody");
@@ -168,7 +189,11 @@ function renderMedicalHistory(records) {
                 : r.mathucung
                   ? `${r.mathucung}${r.ten_thucung ? " (" + r.ten_thucung + ")" : ""}`
                   : `#${r.pet_id}`;
-            const statusKey = r.trangthai || r.huong_xuly;
+            const statusKey = r.trangthai;
+            const actionLabel = actionLabels[r.huong_xuly] || statusMap[statusKey] || statusKey || "-";
+            const boardingLabel = boardingLabels[r.boarding_status]
+                ? `<br>${boardingLabels[r.boarding_status]}`
+                : "";
             const cageBadge = r.malong
                 ? `<br><small class="text-info font-weight-bold"><i class="fas fa-home"></i> Lồng: ${r.malong}</small>`
                 : "";
@@ -179,7 +204,7 @@ function renderMedicalHistory(records) {
                 <td>${r.cannangkhi_kham} kg</td>
                 <td>${r.trieuchung || ""}</td>
                 <td><strong>${r.chandoan || ""}</strong></td>
-                <td>${statusMap[statusKey] || statusKey || "-"}${cageBadge}</td>
+                <td>${actionLabel}${boardingLabel}${cageBadge}</td>
                 <td><small>${r.ngaykham || r.created_at || ""}</small></td>
             </tr>
         `;
