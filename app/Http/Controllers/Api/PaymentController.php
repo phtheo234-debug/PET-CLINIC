@@ -652,7 +652,7 @@ class PaymentController extends Controller
 
         $examCount = $records->where('trangthai', 'HOAN_THANH')->count();
         $examFee = $examCount * 50000;
-        $surgeryTotal = $records->sum(fn($r) => (float)($r->surgery_price ?? 0));
+        $surgeryTotal = $records->where('trangthai', 'HOAN_THANH')->sum(fn($r) => (float)($r->surgery_price ?? 0));
         $medicineTotal = $prescriptions->sum(fn($r) => (float)$r->soluong * (float)$r->dongia);
 
         $activeBoarding = DB::table('pet_boardings')
@@ -689,7 +689,7 @@ class PaymentController extends Controller
                 'medicine_total' => $medicineTotal, 'surgery_total' => $surgeryTotal,
                 'boarding' => $boarding,
                 'prescriptions' => $prescriptions,
-                'surgeries' => $records->filter(fn($r) => (float)($r->surgery_price ?? 0) > 0)->map(fn($r) => [
+                'surgeries' => $records->filter(fn($r) => $r->trangthai === 'HOAN_THANH' && (float)($r->surgery_price ?? 0) > 0)->map(fn($r) => [
                     'name' => 'Phẫu thuật - Phiếu #' . $r->record_id, 'price' => (float)$r->surgery_price
                 ])->values(),
             ],
