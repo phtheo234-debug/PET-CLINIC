@@ -55,6 +55,7 @@ async function printMedicalRecord(recordId) {
             "<p><b>Cân nặng khi khám:</b> " + escapeMedicalHtml(record.cannangkhi_kham) + " kg</p>" +
             "<p><b>Triệu chứng:</b><br>" + escapeMedicalHtml(record.trieuchung || "-") + "</p><p><b>Chẩn đoán:</b><br>" + escapeMedicalHtml(record.chandoan || "-") + "</p>" +
             "<p><b>Trạng thái:</b> " + escapeMedicalHtml(labels[record.trangthai] || record.trangthai || "-") + "</p>" +
+            (record.surgery_id ? "<p><b>Phẫu thuật:</b> " + escapeMedicalHtml(record.ma_phauthuat || "") + " - " + escapeMedicalHtml(record.ten_phauthuat || "") + " · " + Number(record.surgery_price || 0).toLocaleString("vi-VN") + " đ</p>" : "") +
             "<h3>THUỐC / VẮC-XIN CHỈ ĐỊNH</h3><table><thead><tr><th>STT</th><th>Tên</th><th>Loại</th><th>Số lượng</th><th>Hướng dẫn</th></tr></thead><tbody>" + (rows || "<tr><td colspan=\"5\">Không kê thuốc/vắc-xin</td></tr>") + "</tbody></table>" +
             "<div class=\"sign\"><div>Bác sĩ khám<br><br><br>" + escapeMedicalHtml(record.ten_bac_si || "") + "</div><div>Chủ nuôi xác nhận<br><br><br>........................</div></div><script>window.onload=function(){window.print();};<\\/script></body></html>");
         win.document.close();
