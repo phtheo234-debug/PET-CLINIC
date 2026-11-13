@@ -74,6 +74,7 @@ class CageWaitingListService
 
         if (!$cage) {
             $this->putOnWaitingList($petId, $weight, $treatment, $isolation);
+            DB::table('pets')->where('pet_id', $petId)->update(['trangthai' => 'NOI_TRU']);
 
             return ['cage' => null, 'waiting' => true];
         }
