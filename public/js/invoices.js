@@ -1,3 +1,31 @@
+async function loadPendingOutpatientVisits() {
+    const select = document.getElementById("outpatient_record_select");
+    if (!select) return;
+    try {
+        const response = await apiRequest("/payment/visits/pending");
+        const visits = extractList(response);
+        select.innerHTML = '<option value="">-- Chọn phiếu khám ngoại trú --</option>' + visits.map((visit) =>
+            '<option value="' + Number(visit.record_id) + '">#' + Number(visit.record_id) + " · " + escapeInvoiceHtml(visit.mathucung || "") + " - " + escapeInvoiceHtml(visit.ten_thucung || "") + " · " + escapeInvoiceHtml(visit.ngaykham || "") + "</option>"
+        ).join("");
+        if (!visits.length) select.innerHTML = '<option value="">Không có phiếu khám ngoại trú chờ thanh toán</option>';
+    } catch (error) { select.innerHTML = '<option value="">Không tải được phiếu khám</option>'; }
+}
+
+async function payOutpatientVisit(event) {
+    event.preventDefault();
+    const recordId = Number(document.getElementById("outpatient_record_select").value);
+    const button = document.getElementById("btnPayOutpatient");
+    const result = document.getElementById("outpatientPaymentResult");
+    if (!recordId) { alert("Vui lòng chọn phiếu khám cần thanh toán."); return; }
+    button.disabled = true;
+    try {
+        const response = await apiRequest("/payment/visits/checkout", {method:"POST", body:JSON.stringify({record_id:recordId, payment_method:document.getElementById("outpatient_payment_method").value})});
+        const data = response?.data?.data || response?.data || {};
+        result.innerHTML = '<div class="alert alert-success mb-0">Đã thanh toán phiếu khám <b>' + escapeInvoiceHtml(data.mahoadon || "") + '</b>. Phí khám: <b>' + formatCurrency(data.tien_kham) + '</b>; thuốc/vắc-xin: <b>' + formatCurrency(data.tien_thuoc) + '</b>; tổng cộng: <b>' + formatCurrency(data.tong_thanhtoan) + '</b>. <button type="button" class="btn btn-sm btn-outline-primary ml-2" onclick="printInvoice(' + Number(data.invoice_id) + ')"><i class="fas fa-print mr-1"></i>In hóa đơn</button></div>';
+        await Promise.all([loadPendingOutpatientVisits(), loadInvoices()]);
+    } catch (error) { result.innerHTML = '<div class="alert alert-danger mb-0">Không thanh toán được: ' + escapeInvoiceHtml(error.message) + '</div>'; }
+    finally { button.disabled = false; }
+}
 async function printInvoice(invoiceId) {
     try {
         const response = await apiRequest("/payment/invoices/" + invoiceId);
@@ -45,7 +73,7 @@ function formatCurrency(value) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     initPage();
-    await Promise.all([loadPetsForInvoice(), loadInvoices(), loadSpaUsageOptions(), loadSpaUsages()]);
+    await Promise.all([loadPetsForInvoice(), loadInvoices(), loadSpaUsageOptions(), loadSpaUsages(), loadPendingOutpatientVisits()]);
 
     const petSelect = document.getElementById("pet_select");
     if (petSelect) {
@@ -53,6 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     document.getElementById("spa_usage_service")?.addEventListener("change", updateSpaServicePrice);
+    document.getElementById("outpatientVisitForm")?.addEventListener("submit", payOutpatientVisit);
     document.getElementById("spaUsageForm")?.addEventListener("submit", saveSpaUsage);
 
     const form = document.getElementById("invoiceForm");

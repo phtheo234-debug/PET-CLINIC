@@ -58,6 +58,20 @@
 </div>
 
 <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white font-weight-bold text-primary"><i class="fas fa-receipt mr-1"></i> THANH TOÁN LƯỢT KHÁM NGOẠI TRÚ</div>
+    <div class="card-body">
+        <p class="text-muted small">Mỗi phiếu khám đã hoàn thành được tính phí khám 50.000 đồng/lần, cộng thêm thuốc/vắc-xin đã xuất từ kho nếu có. Không thực hiện xuất viện tại mục này.</p>
+        <form id="outpatientVisitForm">
+            <div class="form-row align-items-end">
+                <div class="form-group col-md-6"><label for="outpatient_record_select">Phiếu khám chưa thanh toán</label><select id="outpatient_record_select" class="form-control" required><option value="">-- Đang tải phiếu khám --</option></select></div>
+                <div class="form-group col-md-3"><label for="outpatient_payment_method">Phương thức thanh toán</label><select id="outpatient_payment_method" class="form-control"><option value="TIEN_MAT">Tiền mặt</option><option value="CHUYEN_KHOAN">Chuyển khoản</option><option value="THE">Thẻ</option></select></div>
+                <div class="form-group col-md-3"><button type="submit" id="btnPayOutpatient" class="btn btn-primary btn-block"><i class="fas fa-check mr-1"></i>Thanh toán lượt khám</button></div>
+            </div>
+        </form>
+        <div id="outpatientPaymentResult" class="mt-2" aria-live="polite"></div>
+    </div>
+</div>
+<div class="card shadow-sm mb-4">
     <div class="card-header bg-white font-weight-bold text-success">
         <i class="fas fa-cash-register mr-1"></i> THANH TOÁN VÀ DUYỆT XUẤT VIỆN
     </div>

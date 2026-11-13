@@ -293,6 +293,7 @@ class PaymentController extends Controller
                         'i.ten_sanpham',
                         'i.donvitinh',
                         'i.dongia as don_gia',
+                        'i.danhmuc',
                         DB::raw('rx.soluong * i.dongia as thanh_tien')
                     )
                     ->lockForUpdate()
@@ -370,7 +371,7 @@ class PaymentController extends Controller
                         DB::table('invoice_details')->insert([
                             'invoice_id'      => $invoiceId,
                             'prescription_id' => $line->prescription_id,
-                            'loai_chiphi'     => 'THUOC',
+                            'loai_chiphi'     => $line->danhmuc === 'VAC_XIN' ? 'VAC_XIN' : 'THUOC',
                             'ten_sanpham'     => $line->ten_sanpham,
                             'donvitinh'       => $line->donvitinh,
                             'soluong'         => $line->soluong,
