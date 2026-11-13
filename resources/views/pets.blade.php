@@ -65,18 +65,20 @@
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-md-3">
-                        <label>Giống</label><input type="text" id="giong" class="form-control" placeholder="VD: Poodle">
+                    <div class="form-group col-md-4">
+                        <label>Giống</label>
+                        <input type="text" id="giong" class="form-control" placeholder="VD: Poodle">
                     </div>
-                    <div class="form-group col-md-3">
-                        <label>Giới tính</label><select id="gioitinh" class="form-control"><option value="DUC">Đực</option><option value="CAI">Cái</option></select>
+                    <div class="form-group col-md-4">
+                        <label>Giới tính</label>
+                        <select id="gioitinh" class="form-control">
+                            <option value="DUC">Đực</option>
+                            <option value="CAI">Cái</option>
+                        </select>
                     </div>
-                    <div class="form-group col-md-3">
+                    <div class="form-group col-md-4">
                         <label>Cân nặng (kg) <span class="text-danger">*</span></label>
                         <input type="number" step="0.1" min="0.1" max="200" id="can_nang" class="form-control" placeholder="VD: 3.5" required>
-                    </div>
-                    <div class="form-group col-md-3">
-                        
                     </div>
                 </div>
             </div>

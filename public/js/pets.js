@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById("gioitinh").value,
         );
 
-const weight = parseFloat(document.getElementById("can_nang").value);
+        const weight = parseFloat(document.getElementById("can_nang").value);
 
         if (!ownerName || !ownerPhone) {
             alert("Vui lòng nhập đầy đủ Họ tên và Số điện thoại chủ nuôi!");
@@ -232,7 +232,7 @@ function renderPetsTable(items) {
             const species = p.species || p.loai || "";
             const breed = p.breed || p.giong || "";
 
-const ownerName =
+            const ownerName =
                 (p.owner && (p.owner.name || p.owner.ho_ten)) ||
                 p.ho_ten_chu ||
                 "-";
