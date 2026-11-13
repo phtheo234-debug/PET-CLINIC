@@ -440,15 +440,18 @@ class PaymentController extends Controller
 
 
                                 // Phí khám cố định 50.000 đồng cho mỗi phiếu khám chưa lập hóa đơn.
-                $unbilledRecords = DB::table('medical_records')
-                    ->where('pet_id', $pet->pet_id)
-                    ->whereNull('invoice_id')
-                    ->orderBy('ngaykham')
+                $unbilledRecords = DB::table('medical_records as mr')
+                    ->leftJoin('surgeries as s', 's.surgery_id', '=', 'mr.surgery_id')
+                    ->where('mr.pet_id', $pet->pet_id)
+                    ->whereNull('mr.invoice_id')
+                    ->select('mr.*', 's.ma_phauthuat', 's.ten_phauthuat')
+                    ->orderBy('mr.ngaykham')
                     ->lockForUpdate()
                     ->get();
                 $examFeePerVisit = 50000;
                 $totalExam = $unbilledRecords->count() * $examFeePerVisit;
-                $grandTotal = $totalMedicine + $totalBoarding + $totalSpa + $totalExam;
+                $totalSurgery = $unbilledRecords->sum(fn ($record) => (float) ($record->surgery_price ?? 0));
+                $grandTotal = $totalMedicine + $totalBoarding + $totalSpa + $totalExam + $totalSurgery;
 
                 if ($grandTotal <= 0 && $lines->isEmpty() && $unbilledRecords->isEmpty()) {
                     return response()->json([
@@ -517,6 +520,18 @@ class PaymentController extends Controller
                     ]);
                 }
                 if ($unbilledRecords->isNotEmpty()) {
+                    foreach ($unbilledRecords as $examRecord) {
+                        if ((float) ($examRecord->surgery_price ?? 0) > 0) {
+                            DB::table('invoice_details')->insert([
+                                'invoice_id' => $invoiceId, 'prescription_id' => null, 'loai_chiphi' => 'PHAU_THUAT',
+                                'ten_sanpham' => 'Phẫu thuật: ' . ($examRecord->ten_phauthuat ?: $examRecord->ma_phauthuat ?: 'Theo chỉ định'),
+                                'donvitinh' => 'ca', 'soluong' => 1, 'dongia' => $examRecord->surgery_price,
+                                'thanhtien' => $examRecord->surgery_price,
+                                'ghichu' => 'Phiếu khám #' . $examRecord->record_id,
+                                'created_at' => now(), 'updated_at' => now(),
+                            ]);
+                        }
+                    }
                     DB::table('medical_records')->whereIn('record_id', $unbilledRecords->pluck('record_id'))->update(['invoice_id' => $invoiceId]);
                 }
                 // 6. Lưu chi tiết phí lưu trú
@@ -598,6 +613,7 @@ class PaymentController extends Controller
                         'mahoadon'       => $code,
                         'tien_thuoc'     => $totalMedicine,
                         'tien_kham'       => $totalExam,
+                        'tien_phauthuat'  => $totalSurgery,
                         'so_lan_kham'     => $unbilledRecords->count(),
                         'tien_long'      => $totalBoarding,
                         'tien_spa'       => $totalSpa,
