@@ -21,7 +21,8 @@
   <div class="form-group col-md-2"><label for="extraQuantity">Số lượng</label><input type="number" id="extraQuantity" class="form-control" min="1" step="1" value="1"></div>
   <div class="form-group col-md-3"><label>Đơn giá (VND)</label><input id="extraUnitPrice" class="form-control bg-light" readonly value="0 ₫"></div>
  </div><div class="text-right mb-3"><button type="button" id="btnAddExtraItem" class="btn btn-outline-warning"><i class="fas fa-plus mr-1"></i>Thêm vào hóa đơn</button></div>
- <div class="table-responsive"><table class="table table-bordered table-sm"><thead class="thead-light"><tr><th>Danh mục</th><th>Tên sản phẩm / dịch vụ</th><th>Số lượng</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th><th></th></tr></thead><tbody id="extraItemsBody"><tr><td colspan="6" class="text-center text-muted">Chưa chọn dịch vụ ngoài khám.</td></tr></tbody></table></div></div>
+ <div class="table-responsive"><table class="table table-bordered table-sm"><thead class="thead-light"><tr><th>Danh mục</th><th>Tên sản phẩm / dịch vụ</th><th>Số lượng</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th><th></th></tr></thead><tbody id="extraItemsBody"><tr><td colspan="6" class="text-center text-muted">Chưa chọn dịch vụ ngoài khám.</td></tr></tbody></table></div>
+ <div class="text-right mt-3"><button type="button" id="btnFinishExtra" class="btn btn-outline-success"><i class="fas fa-arrow-down mr-1"></i>Hoàn tất bảng 3 & xem tổng tiền</button></div>
 </div>
 <div class="card shadow-sm mb-4 d-none" id="finalPaymentSection">
  <div class="card-header bg-white font-weight-bold text-success">BẢNG 4. TỔNG HỢP VÀ XÁC NHẬN THANH TOÁN</div>
