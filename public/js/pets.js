@@ -104,21 +104,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("btnSearchPet")?.addEventListener("click", runPetSearch);
     document.getElementById("searchPet")?.addEventListener("keydown", event => { if (event.key === "Enter") runPetSearch(); });
 
-    document.getElementById("petsTableBody").addEventListener("click", async event => {
+    // Mở hộp thoại ghi chú khi yêu cầu đưa thú cưng vào danh sách chờ.
+    document.getElementById("petsTableBody").addEventListener("click", event => {
         const button = event.target.closest("[data-add-medical-queue]");
         if (!button) return;
-        const note = prompt("Ghi chú khám (để trống nếu không cần ưu tiên):", button.dataset.queueNote || "");
-        if (note === null) return;
+        const petId = Number(button.dataset.petId || 0);
+        const pet = petsList.find(item => Number(item.pet_id ?? item.id) === petId);
+        document.getElementById("queuePetId").value = String(petId);
+        document.getElementById("queuePetName").textContent =
+            (pet?.mathucung ? pet.mathucung + " · " : "") + (pet?.ten_thucung || pet?.name || "Thú cưng");
+        document.getElementById("queuePetNote").value = button.dataset.queueNote || "";
+        $("#addMedicalQueueModal").modal("show");
+    });
+
+    // Xác nhận gửi vào hàng đợi; ghi chú là tùy chọn.
+    document.getElementById("addMedicalQueueForm")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const petId = Number(document.getElementById("queuePetId").value || 0);
+        const note = document.getElementById("queuePetNote").value.trim();
+        const button = document.getElementById("btnConfirmAddMedicalQueue");
+        if (!petId) {
+            alert("Không xác định được thú cưng cần đưa vào chờ khám.");
+            return;
+        }
         button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang gửi...';
         try {
-            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang thêm...';
-            const result = await apiRequest("/medical/queue", {method:"POST", body:JSON.stringify({pet_id:Number(button.dataset.petId), ghi_chu:note.trim()})});
-            alert(result?.message || "Đã đưa thú cưng vào danh sách chờ khám.");
+            const result = await apiRequest("/medical/queue", {
+                method: "POST",
+                body: JSON.stringify({ pet_id: petId, ghi_chu: note })
+            });
+            $("#addMedicalQueueModal").modal("hide");
+            document.getElementById("addMedicalQueueForm").reset();
             await loadPets();
+            alert(result?.message || "Đã đưa thú cưng vào danh sách chờ khám.");
         } catch (error) {
+            alert("Không thể đưa thú cưng vào chờ khám: " + error.message);
+        } finally {
             button.disabled = false;
-            button.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Thử lại';
-            alert("Không thể thêm vào danh sách chờ: " + error.message);
+            button.innerHTML = '<i class="fas fa-check mr-1"></i>Xác nhận';
         }
     });
 
