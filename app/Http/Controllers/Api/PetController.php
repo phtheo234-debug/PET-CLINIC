@@ -58,7 +58,7 @@ class PetController extends Controller
             'cage_id'        => $p->cage_id,
             'trangthai' => $p->trangthai,
             'record_id' => $p->record_id ?? null,
-            'trangthai_kham' => $p->trangthai_kham ?? (($p->queue_status ?? null) === 'DANG_KHAM' ? 'DANG_DIEU_TRI' : (($p->queue_status ?? null) === 'CHO_KHAM' ? 'CHUA_KHAM' : null)),
+            'trangthai_kham' => ($p->queue_status ?? null) === 'DANG_KHAM' ? 'DANG_DIEU_TRI' : (($p->queue_status ?? null) === 'CHO_KHAM' ? 'CHUA_KHAM' : ($p->trangthai_kham ?? null)),
             'ngaykham_gannhat' => $p->ngaykham_gannhat ?? null,
             'kham_da_thanh_toan' => !empty($p->mahoadon_kham),
             'dang_cho_kham' => in_array($p->queue_status ?? null, ['CHO_KHAM', 'DANG_KHAM'], true),
