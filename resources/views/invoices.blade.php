@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Thanh toán POS & Xuất viện - Pet Clinic')
-@section('page_title', 'Thanh toán Viện phí POS & Xuất viện')
+@section('page_title', 'Thanh toán POS, Bán lẻ & Xuất viện')
 
 @section('content')
 <div class="card shadow-sm mb-4">
