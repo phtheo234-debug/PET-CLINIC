@@ -89,6 +89,37 @@
         </div>
     </div>
 </div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-warning text-dark font-weight-bold">
+                <i class="fas fa-clock mr-1"></i> Hàng sắp hết hạn (trong 6 tháng)
+                <span class="badge badge-dark ml-2" id="countSapHetHan">0</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="thead-light"><tr><th>Sản phẩm</th><th>Lô</th><th>Tồn</th><th>Hạn dùng</th></tr></thead>
+                    <tbody id="tableSapHetHan"><tr><td colspan="4" class="text-center text-muted">Đang tải...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-danger text-white font-weight-bold">
+                <i class="fas fa-exclamation-triangle mr-1"></i> Hàng đã hết hạn
+                <span class="badge badge-light ml-2" id="countDaHetHan">0</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="thead-light"><tr><th>Sản phẩm</th><th>Lô</th><th>Tồn</th><th>Hết hạn</th><th></th></tr></thead>
+                    <tbody id="tableDaHetHan"><tr><td colspan="5" class="text-center text-muted">Đang tải...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
