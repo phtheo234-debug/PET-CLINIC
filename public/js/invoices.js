@@ -12,7 +12,7 @@ async function loadRetailPosOptions() {
             return '<option value="' + id + '">' + escapeInvoiceHtml(pet.mathucung || ("PET-" + id)) +
                 ' - ' + escapeInvoiceHtml(pet.ten_thucung || pet.name || "") + '</option>';
         }).join("");
-        retailPosItems = items.filter(item => ["THUC_AN", "DO_DUNG", "DICH_VU_SPA"].includes(item.danhmuc));
+        retailPosItems = items.filter(item => item.danhmuc === "DICH_VU_SPA" || (["THUC_AN", "DO_DUNG"].includes(item.danhmuc) && Number(item.tong_ton_kho || 0) > 0));
         document.getElementById("posCartRows").replaceChildren();
         addRetailPosLine();
     } catch (error) {
