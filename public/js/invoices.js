@@ -133,8 +133,20 @@ async function submitUnifiedPayment() {
         document.getElementById("paymentPetSearch").value="";document.getElementById("paymentOwnerName").value="";
         document.getElementById("paymentPetInfo").textContent="Chưa chọn hồ sơ thú cưng.";
         ["medicalChargesSection","extraServicesSection","finalPaymentSection"].forEach(id=>document.getElementById(id).classList.add("d-none"));
-        await loadInvoices();
-    } catch(e){document.getElementById("unifiedPaymentResult").innerHTML='<div class="alert alert-danger">'+escapeInvoiceHtml(e.message)+'</div>';button.disabled=false;}
+
+        // Giữ nguyên trang sau thanh toán: chỉ cập nhật danh sách hóa đơn và
+        // làm mới dữ liệu thú cưng để lần thanh toán tiếp theo dùng dữ liệu mới.
+        await Promise.all([
+            loadInvoices(),
+            loadPaymentPets().catch(function(err) {
+                console.error("Không thể làm mới danh sách thú cưng:", err);
+            })
+        ]);
+        button.disabled = false;
+    } catch(e){
+        document.getElementById("unifiedPaymentResult").innerHTML='<div class="alert alert-danger">'+escapeInvoiceHtml(e.message)+'</div>';
+        button.disabled=false;
+    }
 }
 async function loadInvoices() {
     const body=document.getElementById("invoicesTableBody");
