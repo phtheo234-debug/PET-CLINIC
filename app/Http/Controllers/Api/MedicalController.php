@@ -56,50 +56,65 @@ class MedicalController extends Controller
         }
     }
 
-    /** Danh sách ca đang chờ bác sĩ tiếp nhận, ưu tiên ghi chú khẩn cấp. */
+    /** Nhân viên/quản trị đưa thú cưng vào hàng chờ khám. */
+    public function addToQueue(Request $request)
+    {
+        $fields = $request->validate([
+            'pet_id' => 'required|integer|exists:pets,pet_id',
+            'ghi_chu' => 'nullable|string|max:2000',
+        ]);
+        $active = DB::table('medical_queue')->where('pet_id', $fields['pet_id'])
+            ->whereIn('trangthai', ['CHO_KHAM', 'DANG_KHAM'])->first();
+        if ($active) {
+            DB::table('medical_queue')->where('queue_id', $active->queue_id)->update([
+                'ghi_chu' => trim($fields['ghi_chu'] ?? '') ?: null, 'updated_at' => now(),
+            ]);
+            return response()->json(['status' => 'success', 'message' => 'Thú cưng đã có trong danh sách chờ; ghi chú đã được cập nhật.']);
+        }
+        $id = DB::table('medical_queue')->insertGetId([
+            'pet_id' => $fields['pet_id'], 'created_by' => $request->user()->user_id,
+            'ghi_chu' => trim($fields['ghi_chu'] ?? '') ?: null, 'trangthai' => 'CHO_KHAM',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        return response()->json(['status' => 'success', 'message' => 'Đã thêm vào danh sách chờ khám.', 'queue_id' => $id], 201);
+    }
+
+    /** Danh sách chờ, ưu tiên ca có ghi chú. */
     public function queue()
     {
-        $records = DB::table('medical_records as mr')
-            ->join('pets as p', 'p.pet_id', '=', 'mr.pet_id')
+        $records = DB::table('medical_queue as q')
+            ->join('pets as p', 'p.pet_id', '=', 'q.pet_id')
             ->leftJoin('owners as o', 'o.owner_id', '=', 'p.owner_id')
-            ->whereNull('mr.invoice_id')
-            ->whereIn('mr.trangthai', ['CHUA_KHAM', 'DANG_DIEU_TRI'])
-            ->select('mr.record_id', 'mr.pet_id', 'mr.ngaykham', 'mr.trieuchung', 'mr.chandoan',
-                'mr.ghi_chu_kham', 'mr.trangthai', 'p.mathucung', 'p.ten_thucung', 'p.loai', 'p.giong',
-                'o.ho_ten as ten_chu_nuoi', 'o.phone as sdt_chu_nuoi')
-            ->orderByRaw("CASE WHEN mr.ghi_chu_kham IS NOT NULL AND TRIM(mr.ghi_chu_kham) <> '' THEN 0 ELSE 1 END")
-            ->orderBy('mr.ngaykham')
-            ->get();
-
+            ->whereIn('q.trangthai', ['CHO_KHAM', 'DANG_KHAM'])
+            ->select('q.queue_id', 'q.pet_id', 'q.ghi_chu', 'q.trangthai as queue_status', 'q.created_at',
+                'p.mathucung', 'p.ten_thucung', 'p.loai', 'p.giong', 'o.ho_ten as ten_chu_nuoi', 'o.phone as sdt_chu_nuoi')
+            ->orderByRaw("CASE WHEN q.ghi_chu IS NOT NULL AND TRIM(q.ghi_chu) <> '' THEN 0 ELSE 1 END")
+            ->orderBy('q.created_at')->get();
         return response()->json(['status' => 'success', 'data' => $records]);
     }
 
-    /** Bác sĩ tiếp nhận một ca trong danh sách chờ. */
+    /** Bác sĩ chọn ca; ca được đánh dấu đang khám và thú cưng được chọn trên form. */
     public function startQueueRecord(Request $request, $id)
     {
-        $record = DB::table('medical_records')->where('record_id', $id)->lockForUpdate()->first();
-        abort_if(!$record, 404, 'Không tìm thấy phiếu khám.');
-        if ($record->invoice_id || $record->trangthai === 'HOAN_THANH') {
-            return response()->json(['status' => 'error', 'message' => 'Ca khám đã hoàn thành hoặc thanh toán.'], 409);
+        $queue = DB::table('medical_queue')->where('queue_id', $id)->first();
+        abort_if(!$queue, 404, 'Không tìm thấy lượt chờ khám.');
+        if ($queue->trangthai === 'DA_KHAM') {
+            return response()->json(['status' => 'error', 'message' => 'Lượt khám này đã hoàn thành.'], 409);
         }
-        if ($record->trangthai === 'CHUYEN_VIEN') {
-            return response()->json(['status' => 'error', 'message' => 'Ca khám đã chuyển viện.'], 409);
-        }
-        DB::table('medical_records')->where('record_id', $id)->update(['trangthai' => 'DANG_DIEU_TRI']);
-        return response()->json(['status' => 'success', 'message' => 'Đã tiếp nhận ca khám.', 'data' => DB::table('medical_records')->where('record_id', $id)->first()]);
+        DB::table('medical_queue')->where('queue_id', $id)->update(['trangthai' => 'DANG_KHAM', 'updated_at' => now()]);
+        return response()->json(['status' => 'success', 'message' => 'Đã chọn ca khám.', 'data' => ['pet_id' => $queue->pet_id]]);
     }
 
-    /** Nhân viên/quản trị ghi chú mức độ ưu tiên cho ca khám. */
+    /** Nhân viên/quản trị chỉnh sửa ghi chú ưu tiên. */
     public function updateQueueNote(Request $request, $id)
     {
-        $fields = $request->validate(['ghi_chu_kham' => 'nullable|string|max:2000']);
-        $record = DB::table('medical_records')->where('record_id', $id)->first();
-        abort_if(!$record, 404, 'Không tìm thấy phiếu khám.');
-        if ($record->invoice_id) {
-            return response()->json(['status' => 'error', 'message' => 'Ca khám đã thanh toán, không thể sửa ghi chú ưu tiên.'], 409);
-        }
-        DB::table('medical_records')->where('record_id', $id)->update(['ghi_chu_kham' => trim($fields['ghi_chu_kham'] ?? '') ?: null]);
-        return response()->json(['status' => 'success', 'message' => 'Đã cập nhật ghi chú khám.']);
+        $fields = $request->validate(['ghi_chu' => 'nullable|string|max:2000']);
+        $queue = DB::table('medical_queue')->where('queue_id', $id)->first();
+        abort_if(!$queue, 404, 'Không tìm thấy lượt chờ khám.');
+        DB::table('medical_queue')->where('queue_id', $id)->update([
+            'ghi_chu' => trim($fields['ghi_chu'] ?? '') ?: null, 'updated_at' => now(),
+        ]);
+        return response()->json(['status' => 'success', 'message' => 'Đã cập nhật ghi chú ưu tiên.']);
     }
 
     /**
@@ -150,6 +165,8 @@ class MedicalController extends Controller
                 if ($huongXuLy === 'TRANSFER' && !empty($fields['items'])) {
                     throw new Exception('Chuyển viện không được kê thuốc/vắc-xin tại phiếu này.');
                 }
+
+                DB::table('medical_queue')->where('pet_id', $fields['pet_id'])->whereIn('trangthai', ['CHO_KHAM', 'DANG_KHAM'])->update(['trangthai' => 'DA_KHAM', 'updated_at' => now()]);
 
                 $recordId = DB::table('medical_records')->insertGetId([
                     'pet_id' => $fields['pet_id'],
