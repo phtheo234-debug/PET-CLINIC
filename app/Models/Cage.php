@@ -17,6 +17,8 @@ class Cage extends Model
         'succhua',
         'soluonghientai',
         'trangthai',
+        'loai_phu_hop',
+        'tai_trong_toi_da',
     ];
 
     /**
