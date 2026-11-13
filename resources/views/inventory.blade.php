@@ -121,31 +121,31 @@
                             <label for="inventory_name">Tên mặt hàng</label>
                             <input id="inventory_name" class="form-control" maxlength="100" required>
                         </div>
-                        <div class="form-group col-md-6">
+                        <div class="form-group col-md-6" id="inventoryCategoryGroup">
                             <label for="inventory_category">Danh mục</label>
-                            <select id="inventory_category" class="form-control" required>
+                            <select id="inventory_category" class="form-control">
                                 <option value="THUOC">Thuốc</option>
                                 <option value="VAC_XIN">Vắc-xin</option>
-                                <option value="THUC_AN">Thức ăn</option>
-                                <option value="DO_DUNG">Đồ dùng</option>
                             </select>
+                            <small class="form-text text-muted">Chỉ kho thuốc mới cần chọn danh mục thuốc hoặc vắc-xin.</small>
                         </div>
                         <div class="form-group col-md-6" id="inventoryUnitGroup">
                             <label for="inventory_unit">Đơn vị tính</label>
                             <input id="inventory_unit" class="form-control" maxlength="20" placeholder="Viên, lọ, kg...">
                         </div>
-                        <div class="form-group col-md-6 d-none" id="inventoryStockGroup">
-                            <label for="inventory_stock">Số lượng tồn</label>
-                            <input id="inventory_stock" type="number" class="form-control" min="0" step="1" value="0">
-                            <small class="form-text text-muted">Đồ dùng quản lý số lượng trực tiếp, không nhập theo lô.</small>
+                        <div class="form-group col-md-6" id="inventoryStockGroup">
+                            <label for="inventory_stock" id="inventoryStockLabel">Số lượng</label>
+                            <input id="inventory_stock" type="number" class="form-control" min="0" step="1" value="0" required>
+                            <small class="form-text text-muted" id="inventoryStockHelp">Nhập số lượng ban đầu của mặt hàng.</small>
                         </div>
                         <div class="form-group col-md-6">
                             <label for="inventory_price">Đơn giá (VNĐ)</label>
                             <input id="inventory_price" type="number" class="form-control" min="0" step="0.01" required>
                         </div>
-                        <div class="form-group col-md-6">
-                            <label for="inventory_minimum">Tồn kho tối thiểu</label>
-                            <input id="inventory_minimum" type="number" class="form-control" min="0" step="1" value="10">
+                        <div class="form-group col-md-6 d-none" id="inventoryExpiryGroup">
+                            <label for="inventory_expiry">Hạn sử dụng lô nhập ban đầu</label>
+                            <input id="inventory_expiry" type="date" class="form-control">
+                            <small class="form-text text-muted">Mã lô được hệ thống tự động sinh; chỉ áp dụng cho thuốc, vắc-xin và thức ăn.</small>
                         </div>
                     </div>
 
