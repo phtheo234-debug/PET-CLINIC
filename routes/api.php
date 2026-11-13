@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\MedicalController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\SpaUsageController;
+use App\Http\Controllers\Api\SurgeryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,10 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::put('/cages/{id}', [AdminCageController::class, 'update']);
         Route::delete('/cages/{id}', [AdminCageController::class, 'destroy']);
 
+        Route::post('/surgeries', [SurgeryController::class, 'store']);
+        Route::put('/surgeries/{id}', [SurgeryController::class, 'update']);
+        Route::delete('/surgeries/{id}', [SurgeryController::class, 'destroy']);
+
         Route::post('/inventory', [AdminInventoryController::class, 'store']);
         Route::put('/inventory/{id}', [AdminInventoryController::class, 'update']);
         Route::delete('/inventory/{id}', [AdminInventoryController::class, 'destroy']);
@@ -78,6 +83,8 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     // Ghi nhận Spa và thanh toán thuộc nghiệp vụ nhân viên/quản trị.
     Route::get('/spa/usages', [SpaUsageController::class, 'index'])->middleware('role:QUAN_TRI,NHAN_VIEN');
     Route::post('/spa/usages', [SpaUsageController::class, 'store'])->middleware('role:QUAN_TRI,NHAN_VIEN');
+
+    Route::get('/surgeries', [SurgeryController::class, 'index']);
 
     // Danh mục kho cho phép xem; nhập/xuất kho dành cho nhân viên/quản trị.
     Route::get('/inventory', [InventoryController::class, 'index']);
