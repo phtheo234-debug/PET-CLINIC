@@ -70,6 +70,7 @@ async function submitAssignCage(e) {
                 cage_id: cageId,
                 pet_id: petId,
                 check_in: getCurrentDateTime(),
+                isolation_required: document.getElementById("assign_isolation_required")?.checked || false,
                 ghi_chu: note || null,
                 lydo: note || null,
             }),
@@ -318,5 +319,8 @@ function openAssignModal(cageId, cageCode) {
     if (!canManageBoarding) return;
     document.getElementById("selected_cage_id").value = cageId;
     document.getElementById("modalCageCode").innerText = cageCode;
+    const cage = cagesList.find((item) => Number(item.cage_id) === Number(cageId));
+    const isolationCheckbox = document.getElementById("assign_isolation_required");
+    if (isolationCheckbox) isolationCheckbox.checked = cage?.loailong === "CACH_LY";
     $("#assignCageModal").modal("show");
 }
