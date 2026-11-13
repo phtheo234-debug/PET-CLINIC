@@ -97,6 +97,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     actionSelect?.addEventListener("change", updateMedicalSections);
     document.getElementById("yeu_cau_cach_ly")?.addEventListener("change", updateMedicalSections);
     loadSurgeryTypes();
+    if (document.getElementById("surgeryCatalogBody")) {
+        document.getElementById("surgeryForm")?.addEventListener("submit", saveSurgery);
+        loadSurgeryCatalog();
+    }
     updateMedicalSections();
 
     document
@@ -343,4 +347,85 @@ function renderMedicalHistory(records) {
         `;
         })
         .join("");
+}
+
+
+let surgeryCatalog = [];
+
+async function loadSurgeryCatalog() {
+    const tbody = document.getElementById("surgeryCatalogBody");
+    if (!tbody) return;
+    try {
+        const response = await apiRequest("/surgeries");
+        surgeryCatalog = extractList(response);
+        tbody.innerHTML = surgeryCatalog.length ? surgeryCatalog.map(item => `
+            <tr>
+                <td>${escapeMedicalHtml(item.ma_phauthuat)}</td>
+                <td>${escapeMedicalHtml(item.ten_phauthuat)}</td>
+                <td>${Number(item.gia).toLocaleString("vi-VN")} đ</td>
+                <td>${Number(item.trangthai) ? '<span class="badge badge-success">Đang áp dụng</span>' : '<span class="badge badge-secondary">Ngừng áp dụng</span>'}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editSurgery(${Number(item.surgery_id)})">Sửa</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSurgery(${Number(item.surgery_id)})">Xóa</button>
+                </td>
+            </tr>`).join("") : '<tr><td colspan="5" class="text-center text-muted">Chưa có loại phẫu thuật.</td></tr>';
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-danger text-center">' + escapeMedicalHtml(error.message) + '</td></tr>';
+    }
+}
+
+function openSurgeryForm(item = null) {
+    const form = document.getElementById("surgeryForm");
+    if (!form) return;
+    form.reset();
+    document.getElementById("surgery_form_id").value = item ? item.surgery_id : "";
+    document.getElementById("surgeryFormTitle").innerText = item ? "Cập nhật loại phẫu thuật" : "Thêm loại phẫu thuật";
+    document.getElementById("surgery_code").value = item ? item.ma_phauthuat : "";
+    document.getElementById("surgery_name").value = item ? item.ten_phauthuat : "";
+    document.getElementById("surgery_price").value = item ? item.gia : "";
+    document.getElementById("surgery_status").value = item ? String(Number(item.trangthai)) : "1";
+    $("#surgeryFormModal").modal("show");
+}
+
+function editSurgery(id) {
+    const item = surgeryCatalog.find(row => Number(row.surgery_id) === Number(id));
+    if (item) openSurgeryForm(item);
+}
+
+async function saveSurgery(event) {
+    event.preventDefault();
+    const id = document.getElementById("surgery_form_id").value;
+    const payload = {
+        ma_phauthuat: document.getElementById("surgery_code").value.trim(),
+        ten_phauthuat: document.getElementById("surgery_name").value.trim(),
+        gia: Number(document.getElementById("surgery_price").value),
+        trangthai: Number(document.getElementById("surgery_status").value)
+    };
+    const button = document.getElementById("btnSaveSurgery");
+    button.disabled = true;
+    try {
+        await apiRequest(id ? "/admin/surgeries/" + id : "/admin/surgeries", {
+            method: id ? "PUT" : "POST",
+            body: JSON.stringify(payload)
+        });
+        $("#surgeryFormModal").modal("hide");
+        await Promise.all([loadSurgeryCatalog(), loadSurgeryTypes()]);
+        alert(id ? "Đã cập nhật loại phẫu thuật." : "Đã thêm loại phẫu thuật.");
+    } catch (error) {
+        alert("Không thể lưu loại phẫu thuật: " + error.message);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function deleteSurgery(id) {
+    const item = surgeryCatalog.find(row => Number(row.surgery_id) === Number(id));
+    if (!item || !confirm("Xóa/ngừng áp dụng loại phẫu thuật " + item.ten_phauthuat + "?")) return;
+    try {
+        const response = await apiRequest("/admin/surgeries/" + id, { method: "DELETE" });
+        await Promise.all([loadSurgeryCatalog(), loadSurgeryTypes()]);
+        alert(response?.message || "Đã xử lý loại phẫu thuật.");
+    } catch (error) {
+        alert("Không thể xóa loại phẫu thuật: " + error.message);
+    }
 }
