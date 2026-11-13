@@ -111,8 +111,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (note === null) return;
         button.disabled = true;
         try {
-            await apiRequest("/medical/queue", {method:"POST", body:JSON.stringify({pet_id:Number(button.dataset.petId), ghi_chu:note.trim()})});
-            alert("Đã đưa thú cưng vào danh sách chờ khám.");
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang thêm...';
+            const result = await apiRequest("/medical/queue", {method:"POST", body:JSON.stringify({pet_id:Number(button.dataset.petId), ghi_chu:note.trim()})});
+            button.innerHTML = '<i class="fas fa-check mr-1"></i>Đã thêm vào chờ khám';
+            alert(result?.message || "Đã đưa thú cưng vào danh sách chờ khám.");
             await loadPets();
         } catch (error) { alert("Không thể thêm vào danh sách chờ: " + error.message); }
         finally { button.disabled = false; }
@@ -296,7 +298,7 @@ function renderPetsTable(items) {
                     ${statusBadges[p.trangthai] || escapePetHtml(p.trangthai || "Ngoại trú")}
                 </td>
                 <td>
-                    ${p.trangthai_kham ? '<span class="badge badge-info">' + escapePetHtml(({CHUA_KHAM:"Chưa khám",DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"})[p.trangthai_kham] || p.trangthai_kham) + '</span>' + (p.kham_da_thanh_toan ? '<br><small class="text-success">Đã thanh toán</small>' : '') + (p.ngaykham_gannhat ? '<br><small class="text-muted">' + formatPetDate(p.ngaykham_gannhat) + '</small>' : '') : '<span class="text-muted">Chưa khám</span>'}
+                    ${p.trangthai_hangdoi ? '<span class="badge ' + (p.trangthai_hangdoi === "DANG_KHAM" ? "badge-warning" : p.trangthai_hangdoi === "DA_KHAM" ? "badge-success" : "badge-secondary") + '">' + ({CHO_KHAM:"Chưa khám",DANG_KHAM:"Đang khám",DA_KHAM:"Đã khám"})[p.trangthai_hangdoi] + '</span>' : p.trangthai_kham ? '<span class="badge badge-info">' + escapePetHtml(({CHUA_KHAM:"Chưa khám",DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"})[p.trangthai_kham] || p.trangthai_kham) + '</span>' : '<span class="text-muted">Chưa khám</span>'} + (p.kham_da_thanh_toan ? '<br><small class="text-success">Đã thanh toán</small>' : '') + (p.ngaykham_gannhat ? '<br><small class="text-muted">' + formatPetDate(p.ngaykham_gannhat) + '</small>' : '')
                 </td>
 
                 <td>
