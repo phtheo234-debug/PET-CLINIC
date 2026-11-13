@@ -1,7 +1,6 @@
 let inventoryItems = [];
 let isAdminInventory = false;
 let isAdminSpa = false;
-let warehouseFilter = 'medical';
 
 document.addEventListener("DOMContentLoaded", async () => {
     await initPage();
@@ -12,8 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (isAdminInventory) {
         document.getElementById("btnAddSpaService")?.classList.remove("d-none");
         document.getElementById("spaActionHeader")?.classList.remove("d-none");
-        document.getElementById("btnAddInventory")?.classList.remove("d-none");
-        document.getElementById("inventoryActionHeader")?.classList.remove("d-none");
+        document.querySelectorAll(".inventoryAddButton, .inventoryActionHeader").forEach(el => el.classList.remove("d-none"));
     }
 
     document.getElementById("inventoryForm")?.addEventListener("submit", saveInventoryItem);
@@ -30,19 +28,13 @@ async function loadInventory() {
         inventoryItems = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
         renderInventory(inventoryItems);
     } catch (err) {
-        document.getElementById("inventoryTableBody").innerHTML =
-            `<tr><td colspan="${isAdminInventory ? 9 : 8}" class="text-danger text-center">${escapeInventoryHtml(err.message || "Lỗi tải kho")}</td></tr>`;
+        ["medicalInventoryTableBody", "foodInventoryTableBody", "goodsInventoryTableBody"].forEach(id => {
+            const body = document.getElementById(id);
+            if (body) body.innerHTML = `<tr><td colspan="8" class="text-danger text-center">${escapeInventoryHtml(err.message || "Lỗi tải kho")}</td></tr>`;
+        });
     }
 }
 
-
-function filterInventoryWarehouse(filter) {
-    warehouseFilter = filter;
-    document.getElementById("btnWarehouseMedical").className = filter === "medical" ? "btn btn-primary" : "btn btn-outline-primary";
-    document.getElementById("btnWarehouseRetail").className = filter === "retail" ? "btn btn-primary" : "btn btn-outline-primary";
-    document.getElementById("btnWarehouseAll").className = filter === "all" ? "btn btn-secondary" : "btn btn-outline-secondary";
-    renderInventory(inventoryItems);
-}
 
 function renderExpiryNotice(items) {
     const today = new Date();
