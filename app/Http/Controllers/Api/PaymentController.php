@@ -655,26 +655,39 @@ class PaymentController extends Controller
         $surgeryTotal = $records->where('trangthai', 'HOAN_THANH')->sum(fn($r) => (float)($r->surgery_price ?? 0));
         $medicineTotal = $prescriptions->sum(fn($r) => (float)$r->soluong * (float)$r->dongia);
 
-        $activeBoarding = DB::table('pet_boardings')
-            ->where('pet_id', $petId)->where('status', 'checked_in')->whereNull('check_out')
-            ->orderByDesc('check_in')->first();
-        $boarding = null;
-        if ($activeBoarding) {
-            $cage = DB::table('cages')->where('cage_id', $activeBoarding->cage_id)->first();
-            $rateMap = ['THUONG' => 50000, 'CAP_CUU_ICU' => 80000, 'CACH_LY' => 100000];
-            $rate = $rateMap[$cage->loailong ?? ''] ?? 50000;
-            $checkIn = Carbon::parse($activeBoarding->check_in);
-            $days = max(1, (int) ceil($checkIn->diffInHours(now()) / 24));
-            $boarding = [
-                'cage_id' => $cage->cage_id ?? null,
-                'malong' => $cage->malong ?? '',
-                'ten_long' => $cage->ten_long ?? '',
-                'loailong' => $cage->loailong ?? '',
+        // Tính toàn bộ các lượt lưu trú, bao gồm cả lồng cũ đã chuyển đi.
+        // Mỗi lượt được tính riêng theo loại lồng tại thời điểm lưu trú.
+        $boardingRows = DB::table('pet_boardings as pb')
+            ->leftJoin('cages as c', 'c.cage_id', '=', 'pb.cage_id')
+            ->where('pb.pet_id', $petId)
+            ->whereNotNull('pb.check_in')
+            ->orderBy('pb.check_in')
+            ->get([
+                'pb.id', 'pb.cage_id', 'pb.check_in', 'pb.check_out', 'pb.status',
+                'c.malong', 'c.ten_long', 'c.loailong'
+            ]);
+        $rateMap = ['THUONG' => 50000, 'CAP_CUU_ICU' => 80000, 'CACH_LY' => 100000];
+        $boardings = $boardingRows->map(function ($stay) use ($rateMap) {
+            $checkIn = Carbon::parse($stay->check_in);
+            $checkOut = $stay->check_out ? Carbon::parse($stay->check_out) : now();
+            // Tính theo ngày lịch và tính cả ngày vào lồng.
+            $days = max(1, (int) $checkIn->copy()->startOfDay()->diffInDays($checkOut->copy()->startOfDay()) + 1);
+            $rate = $rateMap[$stay->loailong ?? ''] ?? 50000;
+            return [
+                'boarding_id' => $stay->id,
+                'cage_id' => $stay->cage_id,
+                'malong' => $stay->malong ?? '',
+                'ten_long' => $stay->ten_long ?? '',
+                'loailong' => $stay->loailong ?? '',
+                'check_in' => $stay->check_in,
+                'check_out' => $stay->check_out,
                 'days' => $days,
                 'rate' => $rate,
                 'total' => $days * $rate,
+                'is_active' => $stay->check_out === null,
             ];
-        }
+        })->values();
+        $boardingTotal = $boardings->sum('total');
 
         $catalog = DB::table('inventory')
             ->whereIn('danhmuc', ['DICH_VU_SPA', 'THUC_AN', 'DO_DUNG'])
@@ -687,7 +700,7 @@ class PaymentController extends Controller
             'charges' => [
                 'exam_count' => $examCount, 'exam_total' => $examFee,
                 'medicine_total' => $medicineTotal, 'surgery_total' => $surgeryTotal,
-                'boarding' => $boarding,
+                'boardings' => $boardings, 'boarding_total' => $boardingTotal,
                 'prescriptions' => $prescriptions,
                 'surgeries' => $records->filter(fn($r) => $r->trangthai === 'HOAN_THANH' && (float)($r->surgery_price ?? 0) > 0)->map(fn($r) => [
                     'name' => 'Phẫu thuật - Phiếu #' . $r->record_id, 'price' => (float)$r->surgery_price
@@ -743,15 +756,39 @@ class PaymentController extends Controller
                     $detailRows[] = ['type'=>$line->danhmuc === 'VAC_XIN' ? 'VAC_XIN':'THUOC','name'=>$line->ten_sanpham,'unit'=>$line->donvitinh,'qty'=>(int)$line->soluong,'price'=>(float)$line->dongia,'note'=>null,'prescription_id'=>$line->prescription_id];
                 }
 
-                $activeBoarding = DB::table('pet_boardings')->where('pet_id',$pet->pet_id)
-                    ->where('status','checked_in')->whereNull('check_out')->orderByDesc('check_in')->lockForUpdate()->first();
+                // Khóa và tính phí tất cả lượt lưu trú của thú cưng, không chỉ lồng hiện tại.
+                $boardingRows = DB::table('pet_boardings as pb')
+                    ->leftJoin('cages as c', 'c.cage_id', '=', 'pb.cage_id')
+                    ->where('pb.pet_id', $pet->pet_id)
+                    ->whereNotNull('pb.check_in')
+                    ->orderBy('pb.check_in')
+                    ->lockForUpdate()
+                    ->get([
+                        'pb.id', 'pb.cage_id', 'pb.check_in', 'pb.check_out', 'pb.status',
+                        'c.malong', 'c.loailong'
+                    ]);
+                $rateMap = ['THUONG'=>50000, 'CAP_CUU_ICU'=>80000, 'CACH_LY'=>100000];
+                $activeBoarding = null;
+                foreach ($boardingRows as $stay) {
+                    $checkIn = Carbon::parse($stay->check_in);
+                    $checkOut = $stay->check_out ? Carbon::parse($stay->check_out) : now();
+                    $days = max(1, (int) $checkIn->copy()->startOfDay()->diffInDays($checkOut->copy()->startOfDay()) + 1);
+                    $rate = $rateMap[$stay->loailong ?? ''] ?? 50000;
+                    $detailRows[] = [
+                        'type' => 'LUU_TRU',
+                        'name' => 'Phí lưu trú lồng ' . ($stay->malong ?? ''),
+                        'unit' => 'ngày',
+                        'qty' => $days,
+                        'price' => $rate,
+                        'note' => 'Từ ' . $checkIn->format('d/m/Y H:i') . ' đến ' . ($stay->check_out ? Carbon::parse($stay->check_out)->format('d/m/Y H:i') : 'thời điểm thanh toán'),
+                    ];
+                    if ($stay->check_out === null) {
+                        $activeBoarding = $stay;
+                    }
+                }
                 $cage = null;
                 if ($activeBoarding) {
-                    $cage = DB::table('cages')->where('cage_id',$activeBoarding->cage_id)->lockForUpdate()->first();
-                    $rateMap = ['THUONG'=>50000,'CAP_CUU_ICU'=>80000,'CACH_LY'=>100000];
-                    $rate = $rateMap[$cage->loailong ?? ''] ?? 50000;
-                    $days = max(1,(int)ceil(Carbon::parse($activeBoarding->check_in)->diffInHours(now())/24));
-                    $detailRows[] = ['type'=>'LUU_TRU','name'=>'Phí lồng '.($cage->malong ?? ''),'unit'=>'ngày','qty'=>$days,'price'=>$rate,'note'=>'Từ '.Carbon::parse($activeBoarding->check_in)->format('d/m/Y H:i')];
+                    $cage = DB::table('cages')->where('cage_id', $activeBoarding->cage_id)->lockForUpdate()->first();
                 }
 
                 foreach (($fields['items'] ?? []) as $line) {
