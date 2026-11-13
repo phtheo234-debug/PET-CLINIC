@@ -95,7 +95,7 @@ function renderBoardingRequests() {
             const isolationLabel =
                 Number(item.yeu_cau_cach_ly) === 1 ? " · Bắt buộc cách ly" : "";
             const cageLabel = cage
-                ? `<strong>${cage.malong}</strong> - ${cage.ten_long}<br><small class="text-muted">${Number(cage.soluonghientai || 0)}/${Number(cage.succhua || 0)} chỗ đang sử dụng</small>`
+                ? `<strong>${cage.malong}</strong> - ${cage.ten_long}<br><small class="text-muted">${Number(cage.soluonghientai || 0)}/${Number(cage.succhua || 0)} chỗ · tối đa ${Number(cage.tai_trong_toi_da || 0)} kg · loài ${cage.loai_ap_dung || "?"}</small>`
                 : '<span class="text-danger">Chưa có lồng phù hợp</span><br><small class="text-muted">Yêu cầu vẫn được giữ chờ, hệ thống sẽ tìm lại khi làm mới.</small>';
             const action = canConfirmBoarding
                 ? cage
