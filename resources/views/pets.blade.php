@@ -15,7 +15,7 @@
 </script>
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <input type="text" id="searchPet" class="form-control w-50" placeholder="Tìm theo mã thú cưng, tên, SĐT chủ nuôi...">
+        <div class="input-group w-50"><input type="text" id="searchPet" class="form-control" placeholder="Tìm theo mã thú cưng, tên, SĐT chủ nuôi..."><div class="input-group-append"><button type="button" id="btnSearchPet" class="btn btn-outline-primary"><i class="fas fa-search mr-1"></i>Tìm</button></div></div>
         <button type="button" id="btnOpenAddPet" class="btn btn-primary d-none" data-toggle="modal" data-target="#addPetModal">
             <i class="fas fa-plus mr-1"></i> Tiếp nhận Thú cưng
         </button>
