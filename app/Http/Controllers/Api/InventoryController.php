@@ -23,7 +23,7 @@ class InventoryController extends Controller
         $items = DB::table('inventory')->get();
 
         foreach ($items as $item) {
-            if ($item->danhmuc !== 'DICH_VU_SPA') {
+            if (in_array($item->danhmuc, ['THUOC', 'VAC_XIN', 'THUC_AN'], true)) {
                 $item->batches = DB::table('inventory_batches')
                     ->where('item_id', $item->item_id)
                     ->orderBy('ngayhethan')
@@ -48,7 +48,13 @@ class InventoryController extends Controller
                 });
                 $item->solo = $firstUsableBatch->solo ?? null;
                 $item->ngayhethan = $firstUsableBatch->ngayhethan ?? null;
+            } elseif ($item->danhmuc === 'DO_DUNG') {
+                $item->batches = collect();
+                $item->tong_ton_kho = (int) $item->soluongton;
+                $item->solo = null;
+                $item->ngayhethan = null;
             }
+
         }
 
         return response()->json([
@@ -102,13 +108,16 @@ class InventoryController extends Controller
     {
         $fields = $request->validate([
             'item_id'    => 'required|integer|exists:inventory,item_id',
-            'solo'       => 'required|string|max:50',
+            'solo'       => 'nullable|string|max:50',
             'soluong'    => 'required|integer|min:1',
             'ngaynhap'   => 'required|date|before_or_equal:today',
             'ngayhethan' => 'nullable|date|after:ngaynhap|after_or_equal:today',
         ]);
 
         $itemCategory = DB::table('inventory')->where('item_id', $fields['item_id'])->value('danhmuc');
+        if ($itemCategory === 'DO_DUNG') {
+            return response()->json(['status' => 'error', 'message' => 'Kho đồ dùng không nhập theo lô. Vui lòng cập nhật số lượng trực tiếp tại bảng kho đồ dùng.'], 422);
+        }
         if (in_array($itemCategory, ['THUOC', 'VAC_XIN', 'THUC_AN'], true) && empty($fields['ngayhethan'])) {
             return response()->json(['status' => 'error', 'message' => 'Thuốc, vắc-xin và thức ăn bắt buộc phải có hạn sử dụng.'], 422);
         }
@@ -120,27 +129,22 @@ class InventoryController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if (!$item || $item->danhmuc === 'DICH_VU_SPA') {
+                if (!$item || !in_array($item->danhmuc, ['THUOC', 'VAC_XIN', 'THUC_AN'], true)) {
                     throw new Exception('Chỉ được nhập lô cho mặt hàng hàng hóa trong kho.');
                 }
 
-                $duplicateBatch = DB::table('inventory_batches')
-                    ->where('item_id', $item->item_id)
-                    ->where('solo', $fields['solo'])
-                    ->exists();
-
-                if ($duplicateBatch) {
-                    throw new Exception('Mã lô này đã tồn tại cho mặt hàng đã chọn.');
-                }
-
-                return DB::table('inventory_batches')->insertGetId([
+                $temporaryCode = 'TMP' . strtoupper(bin2hex(random_bytes(8)));
+                $batchId = DB::table('inventory_batches')->insertGetId([
                     'item_id'    => $fields['item_id'],
-                    'solo'       => $fields['solo'],
+                    'solo'       => $temporaryCode,
                     'soluong'    => $fields['soluong'],
                     'ngaynhap'   => $fields['ngaynhap'],
-                    'ngayhethan' => $fields['ngayhethan'] ?? null,
+                    'ngayhethan' => $fields['ngayhethan'],
                     'trangthai'  => 'DANG_SU_DUNG',
                 ]);
+                $lotCode = 'LO-' . now()->format('Ymd') . '-' . str_pad((string) $batchId, 6, '0', STR_PAD_LEFT);
+                DB::table('inventory_batches')->where('batch_id', $batchId)->update(['solo' => $lotCode]);
+                return $batchId;
             });
         } catch (Exception $e) {
             return response()->json([
@@ -217,11 +221,7 @@ class InventoryController extends Controller
             ->where('soluong', '>', 0)
             ->where('trangthai', 'DANG_SU_DUNG')
             ->where(function ($query) use ($item) {
-                if ($item->danhmuc === 'DO_DUNG') {
-                    $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
-                } else {
-                    $query->whereNotNull('ngayhethan')->whereDate('ngayhethan', '>=', now()->toDateString());
-                }
+                $query->whereNotNull('ngayhethan')->whereDate('ngayhethan', '>=', now()->toDateString());
             })
             ->orderByRaw('CASE WHEN ngayhethan IS NULL THEN 1 ELSE 0 END')
             ->orderBy('ngayhethan')
