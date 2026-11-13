@@ -14,6 +14,12 @@ class InventoryController extends Controller
      */
     public function index()
     {
+        DB::table('inventory_batches')
+            ->whereNotNull('ngayhethan')
+            ->whereDate('ngayhethan', '<', now()->toDateString())
+            ->where('trangthai', 'DANG_SU_DUNG')
+            ->update(['trangthai' => 'HET_HAN']);
+
         $items = DB::table('inventory')->get();
 
         foreach ($items as $item) {
@@ -27,12 +33,14 @@ class InventoryController extends Controller
                     ->where('item_id', $item->item_id)
                     ->where('trangthai', 'DANG_SU_DUNG')
                     ->where('soluong', '>', 0)
-                    ->whereDate('ngayhethan', '>=', now()->toDateString())
+                    ->where(function ($query) {
+                        $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+                    })
                     ->sum('soluong');
                 $firstUsableBatch = $item->batches->first(function ($batch) {
                     return $batch->trangthai === 'DANG_SU_DUNG'
                         && (int) $batch->soluong > 0
-                        && $batch->ngayhethan >= now()->toDateString();
+                        && (!$batch->ngayhethan || $batch->ngayhethan >= now()->toDateString());
                 });
                 $item->solo = $firstUsableBatch->solo ?? null;
                 $item->ngayhethan = $firstUsableBatch->ngayhethan ?? null;
@@ -54,7 +62,7 @@ class InventoryController extends Controller
         $fields = $request->validate([
             'masanpham'       => 'required|string|max:20|unique:inventory,masanpham',
             'ten_sanpham'     => 'required|string|max:100',
-            'danhmuc'         => 'required|in:THUOC,VAC_XIN,THUC_AN,VAT_TU,DICH_VU_SPA',
+            'danhmuc'         => 'required|in:THUOC,VAC_XIN,THUC_AN,DO_DUNG,DICH_VU_SPA',
             'donvitinh'       => 'required|string|max:20',
             'dongia'          => 'required|numeric|min:0',
             'tonkhotoithieu'  => 'nullable|integer|min:0',
@@ -93,8 +101,13 @@ class InventoryController extends Controller
             'solo'       => 'required|string|max:50',
             'soluong'    => 'required|integer|min:1',
             'ngaynhap'   => 'required|date|before_or_equal:today',
-            'ngayhethan' => 'required|date|after:ngaynhap|after_or_equal:today',
+            'ngayhethan' => 'nullable|date|after:ngaynhap|after_or_equal:today',
         ]);
+
+        $itemCategory = DB::table('inventory')->where('item_id', $fields['item_id'])->value('danhmuc');
+        if (in_array($itemCategory, ['THUOC', 'VAC_XIN', 'THUC_AN'], true) && empty($fields['ngayhethan'])) {
+            return response()->json(['status' => 'error', 'message' => 'Thuốc, vắc-xin và thức ăn bắt buộc phải có hạn sử dụng.'], 422);
+        }
 
         try {
             $batchId = DB::transaction(function () use ($fields) {
@@ -121,7 +134,7 @@ class InventoryController extends Controller
                     'solo'       => $fields['solo'],
                     'soluong'    => $fields['soluong'],
                     'ngaynhap'   => $fields['ngaynhap'],
-                    'ngayhethan' => $fields['ngayhethan'],
+                    'ngayhethan' => $fields['ngayhethan'] ?? null,
                     'trangthai'  => 'DANG_SU_DUNG',
                 ]);
             });
@@ -137,6 +150,20 @@ class InventoryController extends Controller
             'message' => 'Nhập lô hàng thành công!',
             'data'    => DB::table('inventory_batches')->where('batch_id', $batchId)->first()
         ], 201);
+    }
+
+
+    /** Xóa lô đã hết hạn sau khi admin xác nhận đã xử lý hàng tồn. */
+    public function deleteExpiredBatch(int $batchId)
+    {
+        $batch = DB::table('inventory_batches')->where('batch_id', $batchId)->first();
+        if (!$batch || !$batch->ngayhethan || $batch->ngayhethan >= now()->toDateString()
+            || $batch->trangthai !== 'HET_HAN') {
+            return response()->json(['status' => 'error', 'message' => 'Chỉ được xóa lô đã hết hạn.'], 422);
+        }
+
+        DB::table('inventory_batches')->where('batch_id', $batchId)->delete();
+        return response()->json(['status' => 'success', 'message' => 'Đã xóa lô hàng hết hạn.']);
     }
 
     /**
@@ -185,7 +212,10 @@ class InventoryController extends Controller
             ->where('item_id', $itemId)
             ->where('soluong', '>', 0)
             ->where('trangthai', 'DANG_SU_DUNG')
-            ->whereDate('ngayhethan', '>=', now()->toDateString())
+            ->where(function ($query) {
+                $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+            })
+            ->orderByRaw('CASE WHEN ngayhethan IS NULL THEN 1 ELSE 0 END')
             ->orderBy('ngayhethan')
             ->orderBy('batch_id')
             ->lockForUpdate()
