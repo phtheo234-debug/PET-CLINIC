@@ -23,6 +23,7 @@
  </div><div class="text-right mb-3"><button type="button" id="btnAddExtraItem" class="btn btn-outline-warning"><i class="fas fa-plus mr-1"></i>Thêm vào hóa đơn</button></div>
  <div class="table-responsive"><table class="table table-bordered table-sm"><thead class="thead-light"><tr><th>Danh mục</th><th>Tên sản phẩm / dịch vụ</th><th>Số lượng</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th><th></th></tr></thead><tbody id="extraItemsBody"><tr><td colspan="6" class="text-center text-muted">Chưa chọn dịch vụ ngoài khám.</td></tr></tbody></table></div>
 </div>
+</div>
 <div class="card shadow-sm mb-4 d-none" id="finalPaymentSection">
  <div class="card-header bg-white font-weight-bold text-success">BẢNG 4. TỔNG HỢP VÀ XÁC NHẬN THANH TOÁN</div>
  <div class="card-body"><div class="table-responsive"><table class="table table-bordered table-sm"><thead class="thead-light"><tr><th>Khoản phải trả</th><th>Số lượng</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th></tr></thead><tbody id="finalChargesBody"></tbody><tfoot><tr><th colspan="3" class="text-right">TỔNG CỘNG</th><th class="text-success" id="finalGrandTotal">0 ₫</th></tr></tfoot></table></div>
