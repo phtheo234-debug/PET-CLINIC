@@ -104,6 +104,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("btnSearchPet")?.addEventListener("click", runPetSearch);
     document.getElementById("searchPet")?.addEventListener("keydown", event => { if (event.key === "Enter") runPetSearch(); });
 
+    document.getElementById("petsTableBody").addEventListener("click", async event => {
+        const button = event.target.closest("[data-add-medical-queue]");
+        if (!button) return;
+        const note = prompt("Ghi chú khám (để trống nếu không cần ưu tiên):", "");
+        if (note === null) return;
+        button.disabled = true;
+        try {
+            await apiRequest("/medical/queue", {method:"POST", body:JSON.stringify({pet_id:Number(button.dataset.petId), ghi_chu:note.trim()})});
+            alert("Đã đưa thú cưng vào danh sách chờ khám.");
+        } catch (error) { alert("Không thể thêm vào danh sách chờ: " + error.message); }
+        finally { button.disabled = false; }
+    });
+
     // Tiếp nhận hồ sơ chủ nuôi và thú cưng
     document.getElementById("petForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -286,6 +299,7 @@ function renderPetsTable(items) {
                 </td>
 
                 <td>
+                    ${["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole) ? '<button type="button" class="btn btn-sm btn-outline-danger mr-1" data-add-medical-queue data-pet-id="' + Number(petId) + '">Chờ khám</button>' : ""}
                     <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="openPetDetail(${Number(petId)})"><i class="fas fa-eye"></i> Chi tiết</button>
                     <button type="button" class="btn btn-sm btn-outline-success" onclick="printPetProfile(${Number(petId)})"><i class="fas fa-print"></i> In hồ sơ</button>
                 </td>
