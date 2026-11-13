@@ -96,32 +96,41 @@ class InventoryController extends Controller
             'ngayhethan' => 'required|date|after:ngaynhap|after_or_equal:today',
         ]);
 
-        $batchId = DB::transaction(function () use ($fields) {
-            $item = DB::table('inventory')
-                ->where('item_id', $fields['item_id'])
-                ->lockForUpdate()
-                ->first();
-            if (!$item || $item->danhmuc === 'DICH_VU_SPA') {
-                throw new Exception('Chỉ được nhập lô cho mặt hàng hàng hóa trong kho.');
-            }
+        try {
+            $batchId = DB::transaction(function () use ($fields) {
+                $item = DB::table('inventory')
+                    ->where('item_id', $fields['item_id'])
+                    ->lockForUpdate()
+                    ->first();
 
-            $duplicateBatch = DB::table('inventory_batches')
-                ->where('item_id', $item->item_id)
-                ->where('solo', $fields['solo'])
-                ->exists();
-            if ($duplicateBatch) {
-                throw new Exception('Mã lô này đã tồn tại cho mặt hàng đã chọn.');
-            }
+                if (!$item || $item->danhmuc === 'DICH_VU_SPA') {
+                    throw new Exception('Chỉ được nhập lô cho mặt hàng hàng hóa trong kho.');
+                }
 
-            return DB::table('inventory_batches')->insertGetId([
-                'item_id'    => $fields['item_id'],
-                'solo'       => $fields['solo'],
-                'soluong'    => $fields['soluong'],
-                'ngaynhap'   => $fields['ngaynhap'],
-                'ngayhethan' => $fields['ngayhethan'],
-                'trangthai'  => 'DANG_SU_DUNG',
-            ]);
-        });
+                $duplicateBatch = DB::table('inventory_batches')
+                    ->where('item_id', $item->item_id)
+                    ->where('solo', $fields['solo'])
+                    ->exists();
+
+                if ($duplicateBatch) {
+                    throw new Exception('Mã lô này đã tồn tại cho mặt hàng đã chọn.');
+                }
+
+                return DB::table('inventory_batches')->insertGetId([
+                    'item_id'    => $fields['item_id'],
+                    'solo'       => $fields['solo'],
+                    'soluong'    => $fields['soluong'],
+                    'ngaynhap'   => $fields['ngaynhap'],
+                    'ngayhethan' => $fields['ngayhethan'],
+                    'trangthai'  => 'DANG_SU_DUNG',
+                ]);
+            });
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'status'  => 'success',
