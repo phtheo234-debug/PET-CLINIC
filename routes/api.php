@@ -104,6 +104,8 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     // Hóa đơn và xuất viện dành cho nhân viên/quản trị.
     Route::middleware('role:QUAN_TRI,NHAN_VIEN')->group(function () {
         Route::get('/payment/invoices', [PaymentController::class, 'index']);
+        Route::get('/payment/pets/{petId}/preview', [PaymentController::class, 'previewPetCharges']);
+        Route::post('/payment/checkout', [PaymentController::class, 'createUnifiedInvoice']);
         Route::get('/payment/invoices/{id}', [PaymentController::class, 'show']);
         Route::get('/payment/visits/pending', [PaymentController::class, 'pendingVisits']);
         Route::post('/payment/visits/checkout', [PaymentController::class, 'createVisitInvoice']);
