@@ -95,6 +95,33 @@
     </div>
 </div>
 
+<div class="modal fade" id="addMedicalQueueModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form id="addMedicalQueueForm" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-user-clock text-primary mr-2"></i>Đưa thú cưng vào chờ khám</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Đóng"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="queuePetId">
+                <div class="alert alert-light border mb-3">
+                    <div class="small text-muted">Thú cưng được chọn</div>
+                    <strong id="queuePetName">—</strong>
+                </div>
+                <div class="form-group mb-0">
+                    <label for="queuePetNote">Ghi chú khám <span class="text-muted font-weight-normal">(không bắt buộc)</span></label>
+                    <textarea id="queuePetNote" class="form-control" rows="3" maxlength="1000" placeholder="Ví dụ: Ưu tiên khám gấp, bỏ ăn, khó thở..."></textarea>
+                    <small class="form-text text-muted">Có thể để trống nếu không có lưu ý đặc biệt.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">Hủy</button>
+                <button type="submit" id="btnConfirmAddMedicalQueue" class="btn btn-danger"><i class="fas fa-check mr-1"></i>Xác nhận</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="modal fade" id="petDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
