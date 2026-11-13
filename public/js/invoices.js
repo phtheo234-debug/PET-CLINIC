@@ -27,12 +27,15 @@ function formatCurrency(value) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     initPage();
-    await Promise.all([loadPetsForInvoice(), loadInvoices()]);
+    await Promise.all([loadPetsForInvoice(), loadInvoices(), loadSpaUsageOptions(), loadSpaUsages()]);
 
     const petSelect = document.getElementById("pet_select");
     if (petSelect) {
         petSelect.addEventListener("change", updateSelectedOwner);
     }
+
+    document.getElementById("spa_usage_service")?.addEventListener("change", updateSpaServicePrice);
+    document.getElementById("spaUsageForm")?.addEventListener("submit", saveSpaUsage);
 
     const form = document.getElementById("invoiceForm");
     if (!form) return;
@@ -76,13 +79,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <div>Mã hóa đơn: <strong>${escapeInvoiceHtml(detail.mahoadon || "-")}</strong></div>
                     <div>Tiền thuốc: <strong>${formatCurrency(detail.tien_thuoc)}</strong></div>
                     <div>Phí lưu trú: <strong>${formatCurrency(detail.tien_long)}</strong></div>
+                    <div>Phí dịch vụ Spa: <strong>${formatCurrency(detail.tien_spa)}</strong></div>
                     <div class="mt-1">Tổng thanh toán: <strong class="text-danger">${formatCurrency(detail.tong_thanhtoan)}</strong></div>
                     <small class="d-block mt-2">Thú cưng đã được xuất viện và lồng lưu trú đã được giải phóng.</small>
                 </div>
             `;
 
             form.reset();
-            await Promise.all([loadPetsForInvoice(), loadInvoices()]);
+            await Promise.all([loadPetsForInvoice(), loadInvoices(), loadSpaUsages()]);
         } catch (err) {
             resultBox.innerHTML = `
                 <div class="alert alert-danger mb-0">
@@ -147,6 +151,103 @@ function updateSelectedOwner() {
         .catch(() => {
             ownerInput.value = "";
         });
+}
+
+
+let spaServiceOptions = [];
+
+async function loadSpaUsageOptions() {
+    const petSelect = document.getElementById("spa_usage_pet");
+    const serviceSelect = document.getElementById("spa_usage_service");
+    try {
+        const [petsResponse, inventoryResponse] = await Promise.all([
+            apiRequest("/pets"),
+            apiRequest("/inventory")
+        ]);
+        const pets = extractList(petsResponse);
+        const items = extractList(inventoryResponse);
+        petSelect.innerHTML = '<option value="">-- Chọn thú cưng --</option>' +
+            pets.map((pet) => {
+                const id = pet.pet_id ?? pet.id;
+                return `<option value="${Number(id)}">${escapeInvoiceHtml(pet.mathucung || `PET-${id}`)} - ${escapeInvoiceHtml(pet.ten_thucung || pet.name || "")}</option>`;
+            }).join("");
+
+        spaServiceOptions = items.filter((item) => item.danhmuc === "DICH_VU_SPA");
+        serviceSelect.innerHTML = '<option value="">-- Chọn dịch vụ --</option>' +
+            spaServiceOptions.map((service) =>
+                `<option value="${Number(service.item_id)}">${escapeInvoiceHtml(service.masanpham)} - ${escapeInvoiceHtml(service.ten_sanpham)}</option>`
+            ).join("");
+        updateSpaServicePrice();
+    } catch (error) {
+        petSelect.innerHTML = '<option value="">Không tải được danh sách thú cưng</option>';
+        serviceSelect.innerHTML = '<option value="">Không tải được danh sách dịch vụ</option>';
+        document.getElementById("spaUsageResult").innerHTML =
+            `<div class="alert alert-danger">${escapeInvoiceHtml(error.message)}</div>`;
+    }
+}
+
+function updateSpaServicePrice() {
+    const id = Number(document.getElementById("spa_usage_service")?.value);
+    const service = spaServiceOptions.find((item) => Number(item.item_id) === id);
+    document.getElementById("spa_usage_price").value = service ? formatCurrency(service.dongia) : "";
+}
+
+async function saveSpaUsage(event) {
+    event.preventDefault();
+    const petId = Number(document.getElementById("spa_usage_pet").value);
+    const itemId = Number(document.getElementById("spa_usage_service").value);
+    const quantity = Number(document.getElementById("spa_usage_quantity").value);
+    const button = document.getElementById("btnSaveSpaUsage");
+    const result = document.getElementById("spaUsageResult");
+
+    if (!petId || !itemId || !Number.isInteger(quantity) || quantity < 1) {
+        alert("Vui lòng chọn thú cưng, dịch vụ và số lần sử dụng hợp lệ.");
+        return;
+    }
+
+    button.disabled = true;
+    try {
+        const response = await apiRequest("/spa/usages", {
+            method: "POST",
+            body: JSON.stringify({
+                pet_id: petId,
+                item_id: itemId,
+                soluong: quantity,
+                ghichu: document.getElementById("spa_usage_note").value.trim()
+            })
+        });
+        result.innerHTML = `<div class="alert alert-success mb-0">${escapeInvoiceHtml(response?.message || "Đã ghi nhận dịch vụ Spa.")}</div>`;
+        document.getElementById("spaUsageForm").reset();
+        document.getElementById("spa_usage_quantity").value = 1;
+        updateSpaServicePrice();
+        await loadSpaUsages();
+    } catch (error) {
+        result.innerHTML = `<div class="alert alert-danger mb-0">${escapeInvoiceHtml(error.message)}</div>`;
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function loadSpaUsages() {
+    const tbody = document.getElementById("spaUsageTableBody");
+    if (!tbody) return;
+    try {
+        const response = await apiRequest("/spa/usages");
+        const rows = extractList(response);
+        tbody.innerHTML = rows.length ? rows.map((row) => `
+            <tr>
+                <td>${escapeInvoiceHtml(row.mathucung || "")} - ${escapeInvoiceHtml(row.ten_thucung || "")}</td>
+                <td>${escapeInvoiceHtml(row.ten_dichvu)}</td>
+                <td>${Number(row.soluong)}</td>
+                <td>${formatCurrency(row.thanhtien)}</td>
+                <td>${row.invoice_id ? '<span class="badge badge-success">Đã lên hóa đơn</span>' : '<span class="badge badge-warning">Chờ thanh toán</span>'}</td>
+                <td>${escapeInvoiceHtml(row.ten_nhanvien || "-")}</td>
+                <td>${escapeInvoiceHtml(row.created_at || "-")}</td>
+            </tr>
+        `).join("") : '<tr><td colspan="7" class="text-center text-muted">Chưa có dịch vụ Spa được ghi nhận</td></tr>';
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-danger text-center">${escapeInvoiceHtml(error.message)}</td></tr>`;
+    }
 }
 
 // Tải danh sách hóa đơn từ GET /payment/invoices
