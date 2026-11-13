@@ -120,7 +120,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("btnSelectPriorityQueue")?.addEventListener("click", async event => {
             const button = event.currentTarget;
             const queueId = Number(button.dataset.queueId || 0);
-            if (!queueId) return;
+            if (!queueId) {
+                alert("Hiện không có lượt ở trạng thái Chưa khám để chọn.");
+                return;
+            }
             button.disabled = true;
             try {
                 const response = await apiRequest("/medical/queue/" + queueId + "/start", {method:"POST"});
@@ -131,6 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     throw new Error("Không tìm thấy thú cưng tương ứng trong ô Thú cưng thăm khám.");
                 }
                 petSelect.value = String(petId);
+                petSelect.disabled = true;
                 petSelect.dispatchEvent(new Event("change", {bubbles:true}));
                 await loadMedicalQueue();
                 document.getElementById("medicalForm")?.scrollIntoView({behavior:"smooth", block:"start"});
@@ -249,6 +253,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
                 selectedMedicalItems = [];
                 renderSelectedMedicalItems();
+                const petSelectAfterSave = document.getElementById("pet_select");
+                if (petSelectAfterSave) petSelectAfterSave.value = "";
+                const weightAfterSave = document.getElementById("cannangkhi_kham");
+                if (weightAfterSave) weightAfterSave.value = "";
                 alert((res?.message || "Đã lưu phiếu khám bệnh thành công!") + (lastSavedMedicalRecordId ? " Bạn có thể nhấn nút In phiếu khám ngay cạnh nút lưu." : " Bạn có thể in trong danh sách lịch sử khám."));
             } catch (err) {
                 alert("Lỗi lưu phiếu khám: " + err.message);
@@ -295,46 +303,29 @@ function updateMedicalSections() {
 async function loadPetsDropdown() {
     const select = document.getElementById("pet_select");
     const weightInput = document.getElementById("cannangkhi_kham");
-
     try {
         const res = await apiRequest("/pets");
         const pets = extractList(res);
-
-        if (!pets.length) {
-            select.innerHTML =
-                '<option value="">-- Chưa có thú cưng trong CSDL --</option>';
-            return;
-        }
-
-        select.innerHTML =
-            '<option value="">-- Chọn thú cưng --</option>' +
-            pets
-                .map((p) => {
-                    const id = p.id ?? p.pet_id;
-                    const code = p.mathucung || `PET-${id}`;
-                    const species = p.species || p.loai || "";
-                    const name = p.name || p.ten_thucung || "";
-                    const weight = p.weight ?? p.can_nang ?? "";
-
-                    return `
-                    <option value="${id}" data-weight="${weight}">
-                        ${code} (${species}${species && name ? " - " : ""}${name})
-                    </option>
-                `;
-                })
-                .join("");
-
-        // Khi chọn thú cưng, tự động điền cân nặng hiện tại
+        select.innerHTML = '<option value="">-- Chỉ chọn thú cưng bằng nút Chọn trong danh sách chờ --</option>' +
+            pets.map((p) => {
+                const id = p.id ?? p.pet_id;
+                const code = p.mathucung || `PET-${id}`;
+                const species = p.species || p.loai || "";
+                const name = p.name || p.ten_thucung || "";
+                const weight = p.weight ?? p.can_nang ?? "";
+                return `<option value="${id}" data-weight="${weight}">${code} (${species}${species && name ? " - " : ""}${name})</option>`;
+            }).join("");
+        select.value = "";
+        select.disabled = true;
+        weightInput.value = "";
         select.addEventListener("change", function () {
             const selectedOption = this.options[this.selectedIndex];
-            const currentWeight = selectedOption?.dataset.weight || "";
-
-            weightInput.value = currentWeight;
-
+            weightInput.value = selectedOption?.dataset.weight || "";
             weightInput.dispatchEvent(new Event("input"));
         });
     } catch (err) {
         select.innerHTML = `<option value="">Lỗi tải danh sách: ${err.message}</option>`;
+        select.disabled = true;
     }
 }
 
@@ -518,11 +509,17 @@ async function loadMedicalQueue() {
         const rows = extractList(response);
         const active = rows.find(item => item.queue_status === "DANG_KHAM");
         const next = active || rows.find(item => item.queue_status === "CHO_KHAM");
-        if (active) {
-            const petSelect = document.getElementById("pet_select");
-            if (petSelect && Array.from(petSelect.options).some(option => Number(option.value) === Number(active.pet_id))) {
+        const petSelect = document.getElementById("pet_select");
+        if (petSelect) {
+            if (active && Array.from(petSelect.options).some(option => Number(option.value) === Number(active.pet_id))) {
                 petSelect.value = String(active.pet_id);
+                petSelect.disabled = true;
                 petSelect.dispatchEvent(new Event("change", {bubbles:true}));
+            } else {
+                petSelect.value = "";
+                petSelect.disabled = true;
+                const weightInput = document.getElementById("cannangkhi_kham");
+                if (weightInput) weightInput.value = "";
             }
         }
         if (featured) {
