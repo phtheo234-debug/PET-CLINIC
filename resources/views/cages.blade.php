@@ -251,6 +251,21 @@
 
                     </div>
 
+                    <div class="form-group">
+                        <label>Cân chứa tối đa (kg) <span class="text-danger">*</span></label>
+                        <input type="number" id="cage_tai_trong" class="form-control" min="0.1" step="0.1" max="99999" required>
+                        <small class="form-text text-muted">Thú cưng có cân nặng vượt giới hạn này sẽ không được xếp vào lồng.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Loài được phép lưu trú <span class="text-danger">*</span></label>
+                        <select id="cage_loai_ap_dung" class="form-control" required>
+                            <option value="Chó">Chó</option>
+                            <option value="Mèo">Mèo</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+
 
                     <div class="form-group">
 
