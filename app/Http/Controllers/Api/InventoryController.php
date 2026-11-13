@@ -33,14 +33,18 @@ class InventoryController extends Controller
                     ->where('item_id', $item->item_id)
                     ->where('trangthai', 'DANG_SU_DUNG')
                     ->where('soluong', '>', 0)
-                    ->where(function ($query) {
-                        $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+                    ->where(function ($query) use ($item) {
+                        if ($item->danhmuc === 'DO_DUNG') {
+                            $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+                        } else {
+                            $query->whereNotNull('ngayhethan')->whereDate('ngayhethan', '>=', now()->toDateString());
+                        }
                     })
                     ->sum('soluong');
                 $firstUsableBatch = $item->batches->first(function ($batch) {
                     return $batch->trangthai === 'DANG_SU_DUNG'
                         && (int) $batch->soluong > 0
-                        && (!$batch->ngayhethan || $batch->ngayhethan >= now()->toDateString());
+                        && ($item->danhmuc === 'DO_DUNG' ? (!$batch->ngayhethan || $batch->ngayhethan >= now()->toDateString()) : ($batch->ngayhethan && $batch->ngayhethan >= now()->toDateString()));
                 });
                 $item->solo = $firstUsableBatch->solo ?? null;
                 $item->ngayhethan = $firstUsableBatch->ngayhethan ?? null;
@@ -212,8 +216,12 @@ class InventoryController extends Controller
             ->where('item_id', $itemId)
             ->where('soluong', '>', 0)
             ->where('trangthai', 'DANG_SU_DUNG')
-            ->where(function ($query) {
-                $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+            ->where(function ($query) use ($item) {
+                if ($item->danhmuc === 'DO_DUNG') {
+                    $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+                } else {
+                    $query->whereNotNull('ngayhethan')->whereDate('ngayhethan', '>=', now()->toDateString());
+                }
             })
             ->orderByRaw('CASE WHEN ngayhethan IS NULL THEN 1 ELSE 0 END')
             ->orderBy('ngayhethan')
