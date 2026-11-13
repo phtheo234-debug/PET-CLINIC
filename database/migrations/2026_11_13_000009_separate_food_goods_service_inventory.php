@@ -20,6 +20,26 @@ return new class extends Migration
             DB::table('inventory_batches')->where('item_id', $item->item_id)->delete();
         });
 
+        // Giữ mã lô cũ nhưng thêm hậu tố ID cho các mã đang bị trùng trong cùng mặt hàng.
+        $duplicateLots = DB::table('inventory_batches')
+            ->select('item_id', 'solo')
+            ->groupBy('item_id', 'solo')
+            ->havingRaw('COUNT(*) > 1')
+            ->get();
+        foreach ($duplicateLots as $duplicate) {
+            $rows = DB::table('inventory_batches')
+                ->where('item_id', $duplicate->item_id)
+                ->where('solo', $duplicate->solo)
+                ->orderBy('batch_id')
+                ->skip(1)
+                ->take(10000)
+                ->get();
+            foreach ($rows as $row) {
+                DB::table('inventory_batches')->where('batch_id', $row->batch_id)
+                    ->update(['solo' => substr($duplicate->solo, 0, 38) . '-' . $row->batch_id]);
+            }
+        }
+
         // Mã lô tự sinh; unique trong phạm vi từng mặt hàng.
         Schema::table('inventory_batches', function (Blueprint $table) {
             $table->unique(['item_id', 'solo'], 'inventory_batches_item_solo_unique');
