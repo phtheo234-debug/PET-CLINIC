@@ -124,10 +124,11 @@
                     <th>Thanh toán</th>
                     <th>Trạng thái</th>
                     <th>Ngày tạo</th>
+                    <th>In hóa đơn</th>
                 </tr>
             </thead>
             <tbody id="invoicesTableBody">
-                <tr><td colspan="7" class="text-center text-muted">Đang tải danh sách hóa đơn...</td></tr>
+                <tr><td colspan="8" class="text-center text-muted">Đang tải danh sách hóa đơn...</td></tr>
             </tbody>
         </table>
     </div>

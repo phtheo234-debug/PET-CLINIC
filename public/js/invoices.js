@@ -1,3 +1,21 @@
+async function printInvoice(invoiceId) {
+    try {
+        const response = await apiRequest("/payment/invoices/" + invoiceId);
+        const invoice = response?.data?.data || response?.data || {};
+        const details = invoice.chi_tiet || [];
+        const labels = {THUOC:"Thuốc",VAC_XIN:"Vắc-xin",PHI_KHAM:"Phí khám",LUU_TRU:"Lưu trú",DICH_VU_SPA:"Dịch vụ"};
+        const rows = details.map((line,index) => "<tr><td>"+(index+1)+"</td><td>"+escapeInvoiceHtml(line.ten_sanpham)+"</td><td>"+(labels[line.loai_chiphi] || escapeInvoiceHtml(line.loai_chiphi))+"</td><td>"+Number(line.soluong)+" "+escapeInvoiceHtml(line.donvitinh || "")+"</td><td>"+formatCurrency(line.dongia)+"</td><td>"+formatCurrency(line.thanhtien)+"</td></tr>").join("");
+        const win = window.open("", "_blank", "width=900,height=750");
+        if (!win) { alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup rồi thử lại."); return; }
+        win.document.write("<!DOCTYPE html><html lang=\"vi\"><head><meta charset=\"UTF-8\"><title>Hóa đơn</title><style>body{font-family:Arial;padding:28px;color:#222}h2,h3{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #777;padding:8px;text-align:left}.total{text-align:right;font-size:18px;font-weight:bold;margin-top:20px}.sign{display:flex;justify-content:space-between;margin-top:55px}.sign div{width:40%;text-align:center}</style></head><body>" +
+            "<h2>PET CLINIC</h2><h3>HÓA ĐƠN THANH TOÁN</h3>" +
+            "<p><b>Mã hóa đơn:</b> "+escapeInvoiceHtml(invoice.mahoadon || "")+"</p><p><b>Ngày thanh toán:</b> "+escapeInvoiceHtml(invoice.ngaytao || "")+"</p>" +
+            "<p><b>Thú cưng:</b> "+escapeInvoiceHtml(invoice.ten_thucung || "")+" ("+escapeInvoiceHtml(invoice.mathucung || "")+")</p><p><b>Chủ nuôi:</b> "+escapeInvoiceHtml(invoice.ten_chu_nuoi || "")+" &nbsp; <b>Điện thoại:</b> "+escapeInvoiceHtml(invoice.phone || "")+"</p>" +
+            "<p><b>Phương thức:</b> "+escapeInvoiceHtml(invoice.phuongthucthanhtoan || "")+"</p><table><thead><tr><th>STT</th><th>Nội dung</th><th>Loại chi phí</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead><tbody>"+rows+"</tbody></table>" +
+            "<div class=\"total\">TỔNG CỘNG: "+formatCurrency(invoice.tongtien)+"</div><div class=\"sign\"><div>Nhân viên thanh toán<br><br><br>........................</div><div>Chủ nuôi<br><br><br>........................</div></div></body></html>");
+        win.document.close();
+    } catch (error) { alert("Không thể tải hóa đơn để in: " + error.message); }
+}
 // Các endpoint tương ứng routes/api.php
 const invoiceListEndpoint = "/payment/invoices";
 const checkoutEndpoint = "/payment/checkout";
@@ -77,7 +95,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <strong><i class="fas fa-check-circle mr-1"></i> ${escapeInvoiceHtml(response?.message || "Thanh toán thành công!")}</strong>
                     <hr>
                     <div>Mã hóa đơn: <strong>${escapeInvoiceHtml(detail.mahoadon || "-")}</strong></div>
-                    <div>Tiền thuốc: <strong>${formatCurrency(detail.tien_thuoc)}</strong></div>
+                    <div>Phí khám (${Number(detail.so_lan_kham || 0)} lần): <strong>${formatCurrency(detail.tien_kham)}</strong></div>
+                    <div>Tiền thuốc/vắc-xin: <strong>${formatCurrency(detail.tien_thuoc)}</strong></div>
                     <div>Phí lưu trú: <strong>${formatCurrency(detail.tien_long)}</strong></div>
                     <div>Phí dịch vụ Spa: <strong>${formatCurrency(detail.tien_spa)}</strong></div>
                     <div class="mt-1">Tổng thanh toán: <strong class="text-danger">${formatCurrency(detail.tong_thanhtoan)}</strong></div>
@@ -303,6 +322,7 @@ function renderInvoices(invoices) {
                 <td>${method}</td>
                 <td>${status}</td>
                 <td><small>${escapeInvoiceHtml(invoice.ngaytao || "-")}</small></td>
+                <td><button type="button" class="btn btn-sm btn-outline-primary" onclick="printInvoice(${Number(invoice.invoice_id)})"><i class="fas fa-print mr-1"></i>In phiếu</button></td>
             </tr>
         `;
     }).join("");

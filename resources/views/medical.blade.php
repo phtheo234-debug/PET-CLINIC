@@ -74,9 +74,16 @@
                     <label>Chẩn đoán bệnh <span class="text-danger">*</span></label>
                     <textarea id="chandoan" class="form-control" rows="2" placeholder="VD: Viêm đường hô hấp trên..." required></textarea>
                 </div>
-                <div class="form-group col-md-4">
-                    <label>Đơn thuốc / Vắc-xin chỉ định</label>
-                    <textarea id="don_thuoc" class="form-control" rows="2" placeholder="Tên thuốc, liều lượng, số ngày..."></textarea>
+                <div class="form-group col-md-12">
+                    <label class="font-weight-bold">Thuốc / Vắc-xin sử dụng từ kho</label>
+                    <div class="form-row align-items-end">
+                        <div class="form-group col-md-4 mb-2"><label for="medicalInventorySelect">Mặt hàng trong kho</label><select id="medicalInventorySelect" class="form-control"><option value="">-- Chọn thuốc hoặc vắc-xin --</option></select></div>
+                        <div class="form-group col-md-2 mb-2"><label for="medicalInventoryQty">Số lượng</label><input type="number" id="medicalInventoryQty" class="form-control" min="1" step="1" value="1"></div>
+                        <div class="form-group col-md-4 mb-2"><label for="medicalInventoryNote">Liều dùng / Hướng dẫn</label><input type="text" id="medicalInventoryNote" class="form-control" maxlength="1000" placeholder="VD: 1 viên/lần, ngày 2 lần..."></div>
+                        <div class="form-group col-md-2 mb-2"><button type="button" id="btnAddMedicalItem" class="btn btn-outline-primary btn-block"><i class="fas fa-plus mr-1"></i>Thêm</button></div>
+                    </div>
+                    <div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr><th>Loại</th><th>Tên mặt hàng</th><th>Số lượng</th><th>Hướng dẫn</th><th></th></tr></thead><tbody id="medicalItemsBody"><tr><td colspan="5" class="text-center text-muted">Chưa chọn thuốc/vắc-xin</td></tr></tbody></table></div>
+                    <small class="form-text text-muted">Chỉ chọn thuốc/vắc-xin đã có trong kho và còn tồn. Khi lưu phiếu, hệ thống tự xuất kho theo hạn sử dụng gần nhất (FEFO).</small>
                 </div>
             </div>
             <button type="submit" id="btnSaveMedical" class="btn btn-primary">
@@ -98,10 +105,11 @@
                     <th>Chẩn đoán</th>
                     <th>Hướng xử lý</th>
                     <th>Thời gian</th>
+                    <th>Phiếu khám</th>
                 </tr>
             </thead>
             <tbody id="medicalHistoryBody">
-                <tr><td colspan="6" class="text-center text-muted">Đang tải lịch sử khám...</td></tr>
+                <tr><td colspan="7" class="text-center text-muted">Đang tải lịch sử khám...</td></tr>
             </tbody>
         </table>
     </div>

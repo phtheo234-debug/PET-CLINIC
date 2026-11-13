@@ -1,4 +1,67 @@
+async function loadMedicalInventory() {
+    const select = document.getElementById("medicalInventorySelect");
+    try {
+        const response = await apiRequest("/inventory");
+        medicalInventoryItems = extractList(response).filter((item) => ["THUOC", "VAC_XIN"].includes(item.danhmuc) && Number(item.tong_ton_kho) > 0);
+        select.innerHTML = '<option value="">-- Chọn thuốc hoặc vắc-xin --</option>' + medicalInventoryItems.map((item) =>
+            '<option value="' + Number(item.item_id) + '">' + (item.danhmuc === "THUOC" ? "Thuốc" : "Vắc-xin") + " · " + escapeMedicalHtml(item.ten_sanpham) + " (còn " + Number(item.tong_ton_kho) + " " + escapeMedicalHtml(item.donvitinh) + ")</option>"
+        ).join("");
+        if (!medicalInventoryItems.length) select.innerHTML = '<option value="">Kho chưa có thuốc/vắc-xin còn hàng</option>';
+    } catch (error) { select.innerHTML = '<option value="">Không tải được danh mục kho</option>'; console.error(error); }
+}
+
+function escapeMedicalHtml(value) {
+    return String(value ?? "").replace(/[&<>"\']/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#039;"}[char]));
+}
+
+function addMedicalInventoryItem() {
+    const itemId = Number(document.getElementById("medicalInventorySelect").value);
+    const quantity = Number(document.getElementById("medicalInventoryQty").value);
+    const note = document.getElementById("medicalInventoryNote").value.trim();
+    const item = medicalInventoryItems.find((entry) => Number(entry.item_id) === itemId);
+    if (!item || !Number.isInteger(quantity) || quantity < 1) { alert("Vui lòng chọn mặt hàng trong kho và nhập số lượng hợp lệ."); return; }
+    const alreadySelected = selectedMedicalItems.filter((entry) => entry.item_id === itemId).reduce((sum, entry) => sum + entry.soluong, 0);
+    if (alreadySelected + quantity > Number(item.tong_ton_kho)) { alert("Số lượng chọn vượt quá tồn kho hiện tại."); return; }
+    selectedMedicalItems.push({item_id:itemId, soluong:quantity, huongdan:note});
+    renderSelectedMedicalItems();
+    document.getElementById("medicalInventoryQty").value = 1;
+    document.getElementById("medicalInventoryNote").value = "";
+}
+
+function renderSelectedMedicalItems() {
+    const tbody = document.getElementById("medicalItemsBody");
+    if (!selectedMedicalItems.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Chưa chọn thuốc/vắc-xin</td></tr>'; return; }
+    tbody.innerHTML = selectedMedicalItems.map((entry, index) => {
+        const item = medicalInventoryItems.find((row) => Number(row.item_id) === entry.item_id);
+        return '<tr><td>' + (item?.danhmuc === "VAC_XIN" ? "Vắc-xin" : "Thuốc") + '</td><td>' + escapeMedicalHtml(item?.ten_sanpham || "") + '</td><td>' + entry.soluong + " " + escapeMedicalHtml(item?.donvitinh || "") + '</td><td>' + escapeMedicalHtml(entry.huongdan || "-") + '</td><td><button type="button" class="btn btn-sm btn-outline-danger" data-remove-medical-item="' + index + '"><i class="fas fa-trash"></i></button></td></tr>';
+    }).join("");
+}
+
+async function printMedicalRecord(recordId) {
+    try {
+        const response = await apiRequest("/medical/records/" + recordId);
+        const record = response?.data?.data || response?.data || {};
+        const labels = {DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"};
+        const rows = (record.items || []).map((item, index) => "<tr><td>" + (index+1) + "</td><td>" + escapeMedicalHtml(item.ten_sanpham) + "</td><td>" + (item.danhmuc === "VAC_XIN" ? "Vắc-xin" : "Thuốc") + "</td><td>" + Number(item.soluong) + " " + escapeMedicalHtml(item.donvitinh) + "</td><td>" + escapeMedicalHtml(item.huongdan || "-") + "</td></tr>").join("");
+        const win = window.open("", "_blank", "width=900,height=750");
+        if (!win) { alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup rồi thử lại."); return; }
+        win.document.write("<!DOCTYPE html><html lang=\"vi\"><head><meta charset=\"UTF-8\"><title>Phiếu khám</title><style>body{font-family:Arial;padding:28px;color:#222}h2,h3{text-align:center}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #777;padding:8px;text-align:left}.sign{display:flex;justify-content:space-between;margin-top:55px}.sign div{width:40%;text-align:center}</style></head><body>" +
+            "<h2>PET CLINIC</h2><h3>PHIẾU KẾT QUẢ KHÁM BỆNH</h3>" +
+            "<p><b>Mã phiếu:</b> " + record.record_id + " &nbsp; <b>Ngày khám:</b> " + escapeMedicalHtml(record.ngaykham || "") + "</p>" +
+            "<p><b>Thú cưng:</b> " + escapeMedicalHtml(record.ten_thucung || "") + " (" + escapeMedicalHtml(record.mathucung || "") + ")</p>" +
+            "<p><b>Loài / Giống:</b> " + escapeMedicalHtml(record.loai || "") + " / " + escapeMedicalHtml(record.giong || "") + "</p>" +
+            "<p><b>Chủ nuôi:</b> " + escapeMedicalHtml(record.ten_chu_nuoi || "") + " &nbsp; <b>Điện thoại:</b> " + escapeMedicalHtml(record.sdt_chu_nuoi || "") + "</p>" +
+            "<p><b>Cân nặng khi khám:</b> " + escapeMedicalHtml(record.cannangkhi_kham) + " kg</p>" +
+            "<p><b>Triệu chứng:</b><br>" + escapeMedicalHtml(record.trieuchung || "-") + "</p><p><b>Chẩn đoán:</b><br>" + escapeMedicalHtml(record.chandoan || "-") + "</p>" +
+            "<p><b>Trạng thái:</b> " + escapeMedicalHtml(labels[record.trangthai] || record.trangthai || "-") + "</p>" +
+            "<h3>THUỐC / VẮC-XIN CHỈ ĐỊNH</h3><table><thead><tr><th>STT</th><th>Tên</th><th>Loại</th><th>Số lượng</th><th>Hướng dẫn</th></tr></thead><tbody>" + (rows || "<tr><td colspan=\"5\">Không kê thuốc/vắc-xin</td></tr>") + "</tbody></table>" +
+            "<div class=\"sign\"><div>Bác sĩ khám<br><br><br>" + escapeMedicalHtml(record.ten_bac_si || "") + "</div><div>Chủ nuôi xác nhận<br><br><br>........................</div></div><script>window.onload=function(){window.print();};<\\/script></body></html>");
+        win.document.close();
+    } catch (error) { alert("Không thể tải phiếu khám để in: " + error.message); }
+}
 let medicalEndpoint = "/medical/records";
+let medicalInventoryItems = [];
+let selectedMedicalItems = [];
 
 function extractList(res) {
     if (Array.isArray(res)) return res;
@@ -20,7 +83,14 @@ function mapActionToStatus(huongXuLy) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     initPage();
-    await Promise.all([loadPetsDropdown(), loadMedicalRecords()]);
+    await Promise.all([loadPetsDropdown(), loadMedicalRecords(), loadMedicalInventory()]);
+    document.getElementById("btnAddMedicalItem")?.addEventListener("click", addMedicalInventoryItem);
+    document.getElementById("medicalItemsBody")?.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-remove-medical-item]");
+        if (!button) return;
+        selectedMedicalItems.splice(Number(button.dataset.removeMedicalItem), 1);
+        renderSelectedMedicalItems();
+    });
 
     const actionSelect = document.getElementById("huong_xuly");
     actionSelect?.addEventListener("change", updateIsolationOption);
@@ -69,7 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 cannangkhi_kham: weight,
                 trieuchung: document.getElementById("trieuchung").value.trim(),
                 chandoan: document.getElementById("chandoan").value.trim(),
-                don_thuoc: document.getElementById("don_thuoc").value.trim(),
+                items: selectedMedicalItems,
                 huong_xuly: huongXuLy,
                 yeu_cau_cach_ly: document.getElementById("yeu_cau_cach_ly")
                     ?.checked
@@ -87,6 +157,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 document.getElementById("doseSuggestion").innerText =
                     "Nhập cân nặng để tự động tính liều mg/kg";
                 await loadMedicalRecords();
+                const savedRecord = res?.data?.data || res?.data || {};
+                if (savedRecord.record_id) await printMedicalRecord(savedRecord.record_id);
+                selectedMedicalItems = [];
+                renderSelectedMedicalItems();
                 alert(res?.message || "Đã lưu phiếu khám bệnh thành công!");
             } catch (err) {
                 alert("Lỗi lưu phiếu khám: " + err.message);
@@ -176,7 +250,7 @@ async function loadMedicalRecords() {
     }
 
     document.getElementById("medicalHistoryBody").innerHTML =
-        `<tr><td colspan="6" class="text-danger text-center">${lastError ? lastError.message : "Không tải được dữ liệu"}</td></tr>`;
+        `<tr><td colspan="7" class="text-danger text-center">${lastError ? lastError.message : "Không tải được dữ liệu"}</td></tr>`;
 }
 
 function renderMedicalHistory(records) {
@@ -205,7 +279,7 @@ function renderMedicalHistory(records) {
     const tbody = document.getElementById("medicalHistoryBody");
     if (!records.length) {
         tbody.innerHTML =
-            '<tr><td colspan="6" class="text-center text-muted">Chưa có lịch sử khám bệnh</td></tr>';
+            '<tr><td colspan="7" class="text-center text-muted">Chưa có lịch sử khám bệnh</td></tr>';
         return;
     }
 
@@ -237,6 +311,7 @@ function renderMedicalHistory(records) {
                 <td><strong>${r.chandoan || ""}</strong></td>
                 <td>${actionLabel}${boardingLabel}${cageBadge}</td>
                 <td><small>${r.ngaykham || r.created_at || ""}</small></td>
+                <td><button type="button" class="btn btn-sm btn-outline-primary" onclick="printMedicalRecord(${Number(r.record_id)})"><i class="fas fa-print mr-1"></i>In phiếu</button></td>
             </tr>
         `;
         })
