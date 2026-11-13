@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById("inventoryForm")?.addEventListener("submit", saveInventoryItem);
     document.getElementById("spaServiceForm")?.addEventListener("submit", saveSpaService);
+    document.getElementById("inventoryBatchForm")?.addEventListener("submit", saveInventoryBatch);
     document.getElementById("inventory_category")?.addEventListener("change", toggleMedicineDosageFields);
     toggleMedicineDosageFields();
     await loadInventory();
@@ -60,6 +61,9 @@ function renderInventory(items) {
                 : '<span class="badge badge-success">Khả dụng (FEFO)</span>';
             const actions = isAdminInventory ? `
                 <td class="text-nowrap">
+                    <button type="button" class="btn btn-sm btn-outline-success mr-1" onclick="openInventoryBatchForm(${Number(item.item_id)})">
+                        <i class="fas fa-boxes"></i> Nhập lô
+                    </button>
                     <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editInventoryItem(${Number(item.item_id)})">
                         <i class="fas fa-edit"></i> Sửa
                     </button>
@@ -104,6 +108,54 @@ function renderInventory(items) {
                 </tr>`;
         }).join("")
         : `<tr><td colspan="${isAdminSpa ? 4 : 3}" class="text-center text-muted">Chưa có dịch vụ Spa</td></tr>`;
+}
+
+
+function openInventoryBatchForm(itemId) {
+    if (!isAdminInventory) return;
+    const item = inventoryItems.find((row) => Number(row.item_id) === Number(itemId));
+    if (!item) { alert("Không tìm thấy mặt hàng."); return; }
+    const today = new Date();
+    const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    document.getElementById("inventoryBatchForm").reset();
+    document.getElementById("batch_item_id").value = item.item_id;
+    document.getElementById("batch_item_label").innerText = item.masanpham + " · " + item.ten_sanpham + " (" + item.donvitinh + ")";
+    document.getElementById("batch_import_date").value = localToday;
+    document.getElementById("batch_import_date").max = localToday;
+    document.getElementById("batch_expiry_date").min = localToday;
+    $("#inventoryBatchModal").modal("show");
+}
+
+async function saveInventoryBatch(event) {
+    event.preventDefault();
+    if (!isAdminInventory) return;
+    const payload = {
+        item_id: Number(document.getElementById("batch_item_id").value),
+        solo: document.getElementById("batch_code").value.trim(),
+        soluong: Number(document.getElementById("batch_quantity").value),
+        ngaynhap: document.getElementById("batch_import_date").value,
+        ngayhethan: document.getElementById("batch_expiry_date").value,
+    };
+    if (!payload.solo || !Number.isInteger(payload.soluong) || payload.soluong < 1) {
+        alert("Mã lô và số lượng nhập không hợp lệ."); return;
+    }
+    if (payload.ngayhethan <= payload.ngaynhap) {
+        alert("Hạn sử dụng phải sau ngày nhập."); return;
+    }
+    const button = document.getElementById("btnSaveInventoryBatch");
+    button.disabled = true;
+    button.innerText = "Đang nhập...";
+    try {
+        await apiRequest("/inventory/batch/import", {method:"POST", body:JSON.stringify(payload)});
+        $("#inventoryBatchModal").modal("hide");
+        await loadInventory();
+        alert("Đã nhập lô hàng. Tồn kho được cập nhật theo lô.");
+    } catch (error) {
+        alert("Không thể nhập lô: " + error.message);
+    } finally {
+        button.disabled = false;
+        button.innerText = "Xác nhận nhập lô";
+    }
 }
 
 function toggleMedicineDosageFields() {
