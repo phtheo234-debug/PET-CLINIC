@@ -117,11 +117,71 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
+
+    const loadInventoryAlerts = async () => {
+        const formatDate = (value) => {
+            if (!value) return "-";
+            const parts = String(value).substring(0, 10).split("-");
+            return parts.length === 3 ? parts.reverse().join("/") : value;
+        };
+        const categoryNames = {THUOC:"Thuốc", VAC_XIN:"Vắc-xin", THUC_AN:"Thức ăn"};
+        try {
+            const response = await apiRequest("/analytics/inventory-alerts");
+            const data = response.data || {};
+            document.getElementById("countSapHetHan").textContent = data.so_sap_het_han || 0;
+            document.getElementById("countDaHetHan").textContent = data.so_da_het_han || 0;
+
+            const soonBody = document.getElementById("tableSapHetHan");
+            soonBody.replaceChildren();
+            (data.sap_het_han || []).forEach(item => {
+                const tr = document.createElement("tr");
+                [item.ten_sanpham + " (" + (categoryNames[item.danhmuc] || item.danhmuc) + ")",
+                 item.solo, Number(item.soluong).toLocaleString("vi-VN"), formatDate(item.ngayhethan)]
+                    .forEach(value => tr.appendChild(cell(value)));
+                soonBody.appendChild(tr);
+            });
+            if (!soonBody.children.length) {
+                const tr = document.createElement("tr");
+                const td = cell("Không có lô hàng sắp hết hạn.");
+                td.colSpan = 4; td.className = "text-center text-muted"; tr.appendChild(td); soonBody.appendChild(tr);
+            }
+
+            const expiredBody = document.getElementById("tableDaHetHan");
+            expiredBody.replaceChildren();
+            (data.da_het_han || []).forEach(item => {
+                const tr = document.createElement("tr");
+                [item.ten_sanpham + " (" + (categoryNames[item.danhmuc] || item.danhmuc) + ")",
+                 item.solo, Number(item.soluong).toLocaleString("vi-VN"), formatDate(item.ngayhethan)]
+                    .forEach(value => tr.appendChild(cell(value)));
+                const action = document.createElement("td");
+                const button = document.createElement("button");
+                button.type = "button"; button.className = "btn btn-sm btn-outline-danger";
+                button.textContent = "Xóa lô";
+                button.addEventListener("click", async () => {
+                    if (!confirm("Xóa lô đã hết hạn này khỏi danh sách kho?")) return;
+                    try {
+                        await apiRequest("/admin/inventory/batches/" + Number(item.batch_id), {method:"DELETE"});
+                        await loadInventoryAlerts();
+                    } catch (error) { alert("Không thể xóa lô: " + error.message); }
+                });
+                action.appendChild(button); tr.appendChild(action); expiredBody.appendChild(tr);
+            });
+            if (!expiredBody.children.length) {
+                const tr = document.createElement("tr");
+                const td = cell("Không có lô hàng đã hết hạn.");
+                td.colSpan = 5; td.className = "text-center text-muted"; tr.appendChild(td); expiredBody.appendChild(tr);
+            }
+        } catch (error) {
+            document.getElementById("tableSapHetHan").innerHTML = '<tr><td colspan="4" class="text-danger text-center">Không tải được cảnh báo hạn sử dụng.</td></tr>';
+            document.getElementById("tableDaHetHan").innerHTML = '<tr><td colspan="5" class="text-danger text-center">Không tải được cảnh báo hạn sử dụng.</td></tr>';
+        }
+    };
+
     setThisMonth();
     document.getElementById("btnThongKe").addEventListener("click", loadStatistics);
     document.getElementById("btnThangNay").addEventListener("click", () => {
         setThisMonth();
         loadStatistics();
     });
-    await loadStatistics();
+    await Promise.all([loadStatistics(), loadInventoryAlerts()]);
 });
