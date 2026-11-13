@@ -12,6 +12,7 @@
         <button type="button" class="btn btn-primary btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'THUOC')"><i class="fas fa-plus mr-1"></i>Thêm thuốc / vắc-xin</button>
     </div>
     <div class="card-body table-responsive">
+        <div class="input-group input-group-sm mb-3 inventory-search" data-inventory-search="medical"><input type="text" class="form-control" id="searchInventory_medical" placeholder="Nhập tên hoặc mã thuốc / vắc-xin cần tìm"><div class="input-group-append"><button type="button" class="btn btn-outline-primary" data-search-inventory="medical"><i class="fas fa-search mr-1"></i>Tìm kiếm</button></div></div>
         <table class="table table-hover mb-0">
             <thead class="thead-light"><tr><th>Mã</th><th>Tên thuốc / vắc-xin</th><th class="inventoryLotColumn">Số lô</th><th>Số lượng</th><th>Ngày sản xuất</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
             <tbody id="medicalInventoryTableBody"></tbody>
@@ -25,6 +26,7 @@
         <button type="button" class="btn btn-success btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'THUC_AN')"><i class="fas fa-plus mr-1"></i>Thêm thức ăn</button>
     </div>
     <div class="card-body table-responsive">
+        <div class="input-group input-group-sm mb-3 inventory-search" data-inventory-search="food"><input type="text" class="form-control" id="searchInventory_food" placeholder="Nhập tên hoặc mã thức ăn cần tìm"><div class="input-group-append"><button type="button" class="btn btn-outline-primary" data-search-inventory="food"><i class="fas fa-search mr-1"></i>Tìm kiếm</button></div></div>
         <table class="table table-hover mb-0">
             <thead class="thead-light"><tr><th>Mã</th><th>Tên thức ăn</th><th class="inventoryLotColumn">Số lô</th><th>Số lượng</th><th>Ngày sản xuất</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
             <tbody id="foodInventoryTableBody"></tbody>
@@ -38,6 +40,7 @@
         <button type="button" class="btn btn-warning btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'DO_DUNG')"><i class="fas fa-plus mr-1"></i>Thêm đồ dùng</button>
     </div>
     <div class="card-body table-responsive">
+        <div class="input-group input-group-sm mb-3 inventory-search" data-inventory-search="goods"><input type="text" class="form-control" id="searchInventory_goods" placeholder="Nhập tên hoặc mã đồ dùng cần tìm"><div class="input-group-append"><button type="button" class="btn btn-outline-primary" data-search-inventory="goods"><i class="fas fa-search mr-1"></i>Tìm kiếm</button></div></div>
         <table class="table table-hover mb-0">
             <thead class="thead-light"><tr><th>Mã</th><th>Tên đồ dùng</th><th>Số lượng tồn</th><th>Giá bán</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
             <tbody id="goodsInventoryTableBody"></tbody>
