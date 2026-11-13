@@ -17,7 +17,10 @@ class PetController extends Controller
             ->select('wl1.pet_id', 'wl1.cannang')
             ->whereRaw('wl1.id = (SELECT MAX(wl2.id) FROM weight_logs wl2 WHERE wl2.pet_id = wl1.pet_id)');
 
+        $latestExam = DB::table('medical_records as mr1')->select('mr1.pet_id', 'mr1.record_id', 'mr1.trangthai as exam_status', 'mr1.ngaykham as exam_date')->whereRaw('mr1.record_id = (SELECT MAX(mr2.record_id) FROM medical_records mr2 WHERE mr2.pet_id = mr1.pet_id)');
+
         return DB::table('pets')
+            ->leftJoinSub($latestExam, 'latest_exam', function ($join) { $join->on('pets.pet_id', '=', 'latest_exam.pet_id'); })
             ->leftJoin('owners', 'owners.owner_id', '=', 'pets.owner_id')
             ->leftJoinSub($latestWeight, 'latest_weight', function ($join) {
                 $join->on('pets.pet_id', '=', 'latest_weight.pet_id');
@@ -26,7 +29,7 @@ class PetController extends Controller
                 'pets.*',
                 'owners.ho_ten as owner_name',
                 'owners.phone as owner_phone',
-                'latest_weight.cannang as current_weight'
+                'latest_weight.cannang as current_weight', 'latest_exam.exam_status as trangthai_kham', 'latest_exam.exam_date as ngaykham_gannhat'
             );
     }
 
@@ -50,7 +53,9 @@ class PetController extends Controller
             'weight'         => $p->current_weight ? (float)$p->current_weight : null,
             'owner_id'       => $p->owner_id,
             'cage_id'        => $p->cage_id,
-            'trangthai'      => $p->trangthai,
+            'trangthai' => $p->trangthai,
+            'trangthai_kham' => $p->trangthai_kham ?? null,
+            'ngaykham_gannhat' => $p->ngaykham_gannhat ?? null,
             'owner'          => [
                 'id'    => $p->owner_id,
                 'name'  => $p->owner_name,
@@ -181,32 +186,19 @@ class PetController extends Controller
     {
         $pet = $this->findOrFail($id);
 
-        // Lịch sử lưu trú được giữ nguyên qua mỗi lần trả lồng.
-        $boardingHistory = DB::table('pet_boardings')
-            ->leftJoin('cages', 'pet_boardings.cage_id', '=', 'cages.cage_id')
-            ->where('pet_boardings.pet_id', $id)
-            ->select(
-                'pet_boardings.id',
-                'pet_boardings.check_in',
-                'pet_boardings.check_out',
-                'pet_boardings.status',
-                'cages.malong',
-                'cages.ten_long'
-            )
-            ->orderByDesc('pet_boardings.check_in')
-            ->get();
-
-        $latestExam = DB::table('medical_records')
-            ->where('pet_id', $id)
-            ->orderByDesc('record_id')
-            ->select('record_id', 'trangthai', 'ngaykham')
-            ->first();
+        $medicalHistory = DB::table('medical_records as mr')
+            ->leftJoin('surgeries as s', 's.surgery_id', '=', 'mr.surgery_id')
+            ->leftJoin('invoices as i', 'i.invoice_id', '=', 'mr.invoice_id')
+            ->where('mr.pet_id', $id)
+            ->select('mr.record_id', 'mr.ngaykham', 'mr.chandoan', 'mr.huongxuly', 'mr.trangthai', 'mr.invoice_id', 'i.mahoadon', 's.ten_phauthuat')
+            ->orderByDesc('mr.ngaykham')->orderByDesc('mr.record_id')->get();
+        $latestExam = $medicalHistory->first();
 
         return response()->json([
             'status' => 'success',
             'data'   => array_merge($this->format($pet), [
-                'boarding_history' => $boardingHistory,
-                'latest_exam' => $latestExam,
+                'medical_history' => $medicalHistory,
+                'latest_exam' => $latestExam ? ['record_id' => $latestExam->record_id, 'trangthai' => $latestExam->trangthai, 'ngaykham' => $latestExam->ngaykham] : null,
             ]),
         ], 200);
     }
