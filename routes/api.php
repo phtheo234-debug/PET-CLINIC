@@ -97,6 +97,8 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::middleware('role:QUAN_TRI,NHAN_VIEN')->group(function () {
         Route::get('/payment/invoices', [PaymentController::class, 'index']);
         Route::get('/payment/invoices/{id}', [PaymentController::class, 'show']);
+        Route::get('/payment/visits/pending', [PaymentController::class, 'pendingVisits']);
+        Route::post('/payment/visits/checkout', [PaymentController::class, 'createVisitInvoice']);
         Route::post('/payment/checkout', [PaymentController::class, 'createInvoiceAndCheckout']);
     });
 

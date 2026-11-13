@@ -86,6 +86,83 @@ class PaymentController extends Controller
     }
 
 
+    /** Danh sách các phiếu khám ngoại trú chưa lập hóa đơn. */
+    public function pendingVisits()
+    {
+        $visits = DB::table('medical_records as mr')
+            ->join('pets as p', 'p.pet_id', '=', 'mr.pet_id')
+            ->leftJoin('owners as o', 'o.owner_id', '=', 'p.owner_id')
+            ->whereNull('mr.invoice_id')
+            ->where('mr.trangthai', 'HOAN_THANH')
+            ->where('p.trangthai', '!=', 'NOI_TRU')
+            ->select('mr.record_id', 'mr.pet_id', 'mr.ngaykham', 'mr.chandoan', 'p.mathucung', 'p.ten_thucung', 'o.ho_ten as ten_chu_nuoi')
+            ->orderByDesc('mr.ngaykham')
+            ->get();
+        return response()->json(['status' => 'success', 'data' => $visits]);
+    }
+
+    /** Lập hóa đơn riêng cho một lượt khám ngoại trú, không làm thủ tục xuất viện. */
+    public function createVisitInvoice(Request $request)
+    {
+        $fields = $request->validate([
+            'record_id' => 'required|integer|exists:medical_records,record_id',
+            'payment_method' => 'required|in:TIEN_MAT,CHUYEN_KHOAN,THE',
+        ]);
+
+        return DB::transaction(function () use ($fields) {
+            $record = DB::table('medical_records')->where('record_id', $fields['record_id'])->lockForUpdate()->first();
+            if (!$record || $record->invoice_id) {
+                return response()->json(['status' => 'error', 'message' => 'Phiếu khám này đã được thanh toán hoặc không còn tồn tại.'], 422);
+            }
+            if ($record->trangthai !== 'HOAN_THANH') {
+                return response()->json(['status' => 'error', 'message' => 'Chỉ thanh toán phiếu khám đã hoàn thành.'], 422);
+            }
+            $pet = DB::table('pets')->where('pet_id', $record->pet_id)->lockForUpdate()->first();
+            if (!$pet || $pet->trangthai === 'NOI_TRU') {
+                return response()->json(['status' => 'error', 'message' => 'Thú cưng đang nội trú phải thanh toán tại mục xuất viện.'], 422);
+            }
+            $items = DB::table('prescriptions as rx')
+                ->join('inventory as i', 'i.item_id', '=', 'rx.item_id')
+                ->where('rx.record_id', $record->record_id)
+                ->whereNull('rx.invoice_id')
+                ->select('rx.prescription_id', 'rx.soluong', 'i.danhmuc', 'i.ten_sanpham', 'i.donvitinh', 'i.dongia')
+                ->lockForUpdate()->get();
+            $examFee = 50000;
+            $medicineTotal = $items->sum(fn ($item) => (float) $item->soluong * (float) $item->dongia);
+            $invoiceId = DB::table('invoices')->insertGetId([
+                'mahoadon' => 'TMP' . uniqid(), 'pet_id' => $pet->pet_id, 'owner_id' => $pet->owner_id,
+                'tongtien' => $examFee + $medicineTotal, 'phuongthucthanhtoan' => $fields['payment_method'],
+                'trangthai' => 'DA_THANH_TOAN', 'ngaytao' => now(),
+            ]);
+            $code = sprintf('HD%05d', $invoiceId);
+            DB::table('invoices')->where('invoice_id', $invoiceId)->update(['mahoadon' => $code]);
+            DB::table('invoice_details')->insert([
+                'invoice_id' => $invoiceId, 'prescription_id' => null, 'loai_chiphi' => 'PHI_KHAM',
+                'ten_sanpham' => 'Phí khám bệnh - Phiếu #' . $record->record_id, 'donvitinh' => 'lần',
+                'soluong' => 1, 'dongia' => $examFee, 'thanhtien' => $examFee,
+                'ghichu' => 'Ngày khám: ' . Carbon::parse($record->ngaykham)->format('d/m/Y H:i'),
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+            foreach ($items as $item) {
+                DB::table('invoice_details')->insert([
+                    'invoice_id' => $invoiceId, 'prescription_id' => $item->prescription_id,
+                    'loai_chiphi' => $item->danhmuc === 'VAC_XIN' ? 'VAC_XIN' : 'THUOC',
+                    'ten_sanpham' => $item->ten_sanpham, 'donvitinh' => $item->donvitinh,
+                    'soluong' => $item->soluong, 'dongia' => $item->dongia,
+                    'thanhtien' => (float) $item->soluong * (float) $item->dongia,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+            if ($items->isNotEmpty()) {
+                DB::table('prescriptions')->whereIn('prescription_id', $items->pluck('prescription_id'))->update(['invoice_id' => $invoiceId]);
+            }
+            DB::table('medical_records')->where('record_id', $record->record_id)->update(['invoice_id' => $invoiceId]);
+            return response()->json(['status' => 'success', 'message' => 'Đã thanh toán lượt khám ngoại trú.', 'data' => [
+                'invoice_id' => $invoiceId, 'mahoadon' => $code, 'tien_kham' => $examFee,
+                'tien_thuoc' => $medicineTotal, 'tong_thanhtoan' => $examFee + $medicineTotal,
+            ]], 201);
+        });
+    }
     /**
      * FR-BILL-02: Lập Hóa đơn Thanh toán POS & Duyệt Xuất viện (BR-05, BR-06)
      */
