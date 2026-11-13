@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     document.getElementById("extraItem").addEventListener("change",updateExtraUnitPrice);
     document.getElementById("extraQuantity").addEventListener("input",recalculatePayment);
     document.getElementById("btnAddExtraItem").addEventListener("click",addExtraCharge);
+    document.getElementById("btnFinishExtra").addEventListener("click",function(){ document.getElementById("finalPaymentSection").classList.remove("d-none"); recalculatePayment(); });
     document.getElementById("btnPaymentSuccess").addEventListener("click",submitUnifiedPayment);
 });
 async function loadPaymentPets() {
@@ -48,7 +49,7 @@ async function choosePaymentPet(id) {
         renderExtraItemOptions();
         document.getElementById("medicalChargesSection").classList.toggle("d-none",medicalChargeLines.length===0);
         document.getElementById("extraServicesSection").classList.remove("d-none");
-        document.getElementById("finalPaymentSection").classList.remove("d-none");
+        document.getElementById("finalPaymentSection").classList.add("d-none");
         renderExtraCharges(); recalculatePayment();
     } catch(e) {
         paymentPreview=null; document.getElementById("paymentOwnerName").value="";
