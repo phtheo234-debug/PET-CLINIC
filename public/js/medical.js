@@ -87,6 +87,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     initPage();
     await Promise.all([loadPetsDropdown(), loadMedicalRecords(), loadMedicalInventory()]);
     document.getElementById("btnAddMedicalItem")?.addEventListener("click", addMedicalInventoryItem);
+    let lastSavedMedicalRecordId = null;
+    document.getElementById("btnPrintCurrentMedical")?.addEventListener("click", () => { if (lastSavedMedicalRecordId) printMedicalRecord(lastSavedMedicalRecordId); });
     document.getElementById("medicalItemsBody")?.addEventListener("click", (event) => {
         const button = event.target.closest("[data-remove-medical-item]");
         if (!button) return;
@@ -172,9 +174,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                     "Nhập cân nặng để tự động tính liều mg/kg";
                 await loadMedicalRecords();
                 const savedRecord = res?.data?.data || res?.data || {};
+                lastSavedMedicalRecordId = Number(savedRecord.record_id || savedRecord.id || 0) || null;
+                const printButton = document.getElementById("btnPrintCurrentMedical");
+                if (printButton) printButton.disabled = !lastSavedMedicalRecordId;
                 selectedMedicalItems = [];
                 renderSelectedMedicalItems();
-                alert((res?.message || "Đã lưu phiếu khám bệnh thành công!") + " Bạn có thể nhấn In phiếu trong danh sách lịch sử khám.");
+                alert((res?.message || "Đã lưu phiếu khám bệnh thành công!") + (lastSavedMedicalRecordId ? " Bạn có thể nhấn nút In phiếu khám ngay cạnh nút lưu." : " Bạn có thể in trong danh sách lịch sử khám."));
             } catch (err) {
                 alert("Lỗi lưu phiếu khám: " + err.message);
             } finally {
