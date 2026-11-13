@@ -111,10 +111,11 @@ function renderInventory(items) {
                 '<td><strong>' + escapeInventoryHtml(item.ten_sanpham) + '</strong></td>' +
                 '<td>' + escapeInventoryHtml(batch.solo || '—') + '</td>' +
                 '<td>' + quantity + '</td>' +
+                '<td>' + escapeInventoryHtml(batch.ngaysanxuat || '—') + '</td>' +
                 '<td>' + escapeInventoryHtml(batch.ngayhethan || '—') + '</td>' +
                 '<td>' + formatCurrency(item.dongia) + '</td><td>' + status + '</td>' + actions +
                 '</tr>';
-        }).join("") : '<tr><td colspan="' + (isAdminInventory ? 8 : 7) + '" class="text-center text-muted">Chưa có mặt hàng.</td></tr>';
+        }).join("") : '<tr><td colspan="' + (isAdminInventory ? 9 : 8) + '" class="text-center text-muted">Chưa có mặt hàng.</td></tr>';
     };
 
     renderBatchTable(items.filter(item => ["THUOC", "VAC_XIN"].includes(item.danhmuc)), "medicalInventoryTableBody");
@@ -202,7 +203,6 @@ async function saveInventoryBatch(event) {
     if (!Number.isInteger(payload.soluong) || payload.soluong < 1) {
         alert("Số lượng nhập không hợp lệ."); return;
     }
-    const batchItem = inventoryItems.find(item => Number(item.item_id) === payload.item_id);
     if (!payload.ngaysanxuat || !payload.ngayhethan) {
         alert("Vui lòng nhập ngày sản xuất và hạn sử dụng."); return;
     }
@@ -248,7 +248,7 @@ function toggleInventoryFields(isEditing = false) {
     if (expiryGroup) expiryGroup.classList.toggle("d-none", !hasBatch || isEditing);
     if (manufactureGroup) manufactureGroup.classList.toggle("d-none", !hasBatch || isEditing);
     if (batchFields) batchFields.classList.toggle("d-none", !hasBatch || isEditing);
-    if (stockLabel) stockLabel.textContent = isEditing && hasBatch ? "Tồn kho hiện tại" : (hasBatch ? "Số lượng nhập ban đầu" : "Số lượng");
+    if (stockLabel) stockLabel.textContent = isEditing && hasBatch ? "Tồn kho hiện tại" : "Số lượng";
     if (stockHelp) stockHelp.textContent = isEditing && hasBatch
         ? "Tồn kho được quản lý theo từng lô; dùng chức năng Nhập lô để bổ sung."
         : (hasBatch ? "Số lượng này sẽ được lưu thành một lô nhập ban đầu, mã lô tự động sinh." : "Số lượng ban đầu được lưu trực tiếp vào kho.");
