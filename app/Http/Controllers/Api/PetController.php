@@ -54,6 +54,7 @@ class PetController extends Controller
             'owner_id'       => $p->owner_id,
             'cage_id'        => $p->cage_id,
             'trangthai' => $p->trangthai,
+            'record_id' => $p->record_id ?? null,
             'trangthai_kham' => $p->trangthai_kham ?? null,
             'ngaykham_gannhat' => $p->ngaykham_gannhat ?? null,
             'kham_da_thanh_toan' => !empty($p->mahoadon_kham),
