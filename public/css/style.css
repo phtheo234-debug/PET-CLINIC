@@ -1,0 +1,68 @@
+body {
+    background-color: #f4f6f9;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background: #1e293b;
+    color: #fff;
+    transition: all 0.3s;
+}
+
+#sidebar .sidebar-header {
+    padding: 20px;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+}
+
+#sidebar ul.components {
+    padding: 15px 0;
+}
+
+#sidebar ul li a {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    display: block;
+    color: #cbd5e1;
+    text-decoration: none;
+    border-left: 4px solid transparent;
+}
+
+#sidebar ul li a:hover,
+#sidebar ul li.active > a {
+    color: #ffffff;
+    background: #334155;
+    border-left-color: #38bdf8;
+}
+
+#sidebar ul li a i {
+    width: 24px;
+}
+
+#content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cage-card {
+    border-radius: 8px;
+    transition: transform 0.15s ease;
+}
+
+.cage-card:hover {
+    transform: translateY(-2px);
+}
