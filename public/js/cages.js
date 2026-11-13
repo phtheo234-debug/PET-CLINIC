@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     document.getElementById("cageForm")?.addEventListener("submit", saveCage);
+    document.getElementById("cage_loailong")?.addEventListener("change", updateIsolationCageCapacity);
 
     if (canManageBoarding) {
         await loadPetsForSelect();
@@ -246,6 +247,15 @@ function renderCagesGrid() {
     }).join("");
 }
 
+function updateIsolationCageCapacity() {
+    const type = document.getElementById("cage_loailong");
+    const capacity = document.getElementById("cage_succhua");
+    if (!type || !capacity) return;
+    const isolation = type.value === "CACH_LY";
+    if (isolation) capacity.value = 1;
+    capacity.disabled = isolation;
+}
+
 function openCageForm(cage = null) {
     if (!isAdminCageUser()) return;
     document.getElementById("cageForm").reset();
@@ -258,6 +268,7 @@ function openCageForm(cage = null) {
     document.getElementById("cage_loai_phu_hop").value = cage ? (cage.loai_phu_hop || "TAT_CA") : "TAT_CA";
     document.getElementById("cage_tai_trong_toi_da").value = cage ? (cage.tai_trong_toi_da || "") : "";
     document.getElementById("cage_trangthai").value = cage ? cage.trangthai : "CON_TRONG";
+    updateIsolationCageCapacity();
     $("#cageFormModal").modal("show");
 }
 
