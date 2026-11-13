@@ -61,6 +61,14 @@ class AdminInventoryController extends Controller
             'mg_moi_don_vi' => 'nullable|numeric|gt:0',
         ]);
 
+        if ($item->danhmuc !== $fields['danhmuc']
+            && DB::table('inventory_batches')->where('item_id', $id)->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể đổi loại kho khi mặt hàng đã có lịch sử nhập lô. Hãy tạo mặt hàng mới để giữ đúng lịch sử tồn kho.',
+            ], 422);
+        }
+
         if ($item->danhmuc === 'THUOC' && $fields['danhmuc'] !== 'THUOC'
             && DB::table('prescriptions')->where('item_id', $id)->exists()) {
             return response()->json([
