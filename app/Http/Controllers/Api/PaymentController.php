@@ -86,6 +86,114 @@ class PaymentController extends Controller
     }
 
 
+
+    /**
+     * POS bán lẻ độc lập: chỉ cần hồ sơ chủ nuôi và thú cưng, không yêu cầu phiếu khám.
+     * Bán hàng hóa kho thức ăn/đồ dùng theo FEFO; dịch vụ Spa không trừ tồn kho.
+     */
+    public function createRetailInvoice(Request $request)
+    {
+        $fields = $request->validate([
+            'pet_id' => 'required|integer|exists:pets,pet_id',
+            'payment_method' => 'required|in:TIEN_MAT,CHUYEN_KHOAN,THE',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|integer|exists:inventory,item_id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($fields) {
+                $pet = DB::table('pets')->where('pet_id', $fields['pet_id'])->lockForUpdate()->first();
+                if (!$pet || !$pet->owner_id) {
+                    return response()->json(['status' => 'error', 'message' => 'Thú cưng phải có hồ sơ chủ nuôi hợp lệ.'], 422);
+                }
+
+                $cartLines = [];
+                $total = 0;
+                foreach ($fields['items'] as $line) {
+                    $item = DB::table('inventory')->where('item_id', $line['item_id'])->lockForUpdate()->first();
+                    if (!$item || !in_array($item->danhmuc, ['THUC_AN', 'DO_DUNG', 'DICH_VU_SPA'], true)) {
+                        throw new Exception('POS chỉ bán thức ăn, đồ dùng và dịch vụ Spa.');
+                    }
+
+                    $quantity = (int) $line['quantity'];
+                    if ($item->danhmuc !== 'DICH_VU_SPA') {
+                        $batches = DB::table('inventory_batches')
+                            ->where('item_id', $item->item_id)
+                            ->where('trangthai', 'DANG_SU_DUNG')
+                            ->where('soluong', '>', 0)
+                            ->where(function ($query) {
+                                $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+                            })
+                            ->orderByRaw('CASE WHEN ngayhethan IS NULL THEN 1 ELSE 0 END')
+                            ->orderBy('ngayhethan')
+                            ->orderBy('batch_id')
+                            ->lockForUpdate()
+                            ->get();
+
+                        $remaining = $quantity;
+                        foreach ($batches as $batch) {
+                            if ($remaining <= 0) break;
+                            $take = min((int) $batch->soluong, $remaining);
+                            DB::table('inventory_batches')->where('batch_id', $batch->batch_id)->decrement('soluong', $take);
+                            $remaining -= $take;
+                        }
+                        if ($remaining > 0) {
+                            throw new Exception('Không đủ tồn kho hợp lệ cho sản phẩm ' . $item->ten_sanpham . '. Thiếu ' . $remaining . ' ' . $item->donvitinh . '.');
+                        }
+                    }
+
+                    $lineTotal = $quantity * (float) $item->dongia;
+                    $total += $lineTotal;
+                    $cartLines[] = [
+                        'name' => $item->ten_sanpham,
+                        'category' => $item->danhmuc,
+                        'unit' => $item->donvitinh,
+                        'quantity' => $quantity,
+                        'price' => (float) $item->dongia,
+                        'total' => $lineTotal,
+                    ];
+                }
+
+                $invoiceId = DB::table('invoices')->insertGetId([
+                    'mahoadon' => 'TMP' . uniqid(),
+                    'pet_id' => $pet->pet_id,
+                    'owner_id' => $pet->owner_id,
+                    'tongtien' => $total,
+                    'phuongthucthanhtoan' => $fields['payment_method'],
+                    'trangthai' => 'DA_THANH_TOAN',
+                    'ngaytao' => now(),
+                ]);
+                $code = sprintf('HD%05d', $invoiceId);
+                DB::table('invoices')->where('invoice_id', $invoiceId)->update(['mahoadon' => $code]);
+
+                foreach ($cartLines as $line) {
+                    DB::table('invoice_details')->insert([
+                        'invoice_id' => $invoiceId,
+                        'prescription_id' => null,
+                        'loai_chiphi' => $line['category'],
+                        'ten_sanpham' => $line['name'],
+                        'donvitinh' => $line['unit'],
+                        'soluong' => $line['quantity'],
+                        'dongia' => $line['price'],
+                        'thanhtien' => $line['total'],
+                        'ghichu' => null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Đã thanh toán đơn bán lẻ.',
+                    'data' => ['invoice_id' => $invoiceId, 'mahoadon' => $code, 'tong_thanhtoan' => $total],
+                ], 201);
+            });
+        } catch (Exception $e) {
+            return response()->json(['status' => 'error', 'message' => 'Thanh toán thất bại: ' . $e->getMessage()], 422);
+        }
+    }
+
     /** Danh sách các phiếu khám ngoại trú chưa lập hóa đơn. */
     public function pendingVisits()
     {
