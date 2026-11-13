@@ -22,6 +22,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     initPage();
     await Promise.all([loadPetsDropdown(), loadMedicalRecords()]);
 
+    const treatmentSelect = document.getElementById("huong_xuly");
+    const isolationGroup = document.getElementById("isolationOptionGroup");
+    const isolationCheckbox = document.getElementById("isolation_required");
+
+    const updateIsolationVisibility = () => {
+        const inpatient = ["INPATIENT", "SURGERY"].includes(treatmentSelect.value);
+        isolationGroup?.classList.toggle("d-none", !inpatient);
+        if (!inpatient && isolationCheckbox) isolationCheckbox.checked = false;
+    };
+    treatmentSelect?.addEventListener("change", updateIsolationVisibility);
+    updateIsolationVisibility();
+
     document
         .getElementById("cannangkhi_kham")
         .addEventListener("input", (e) => {
@@ -68,6 +80,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 don_thuoc: document.getElementById("don_thuoc").value.trim(),
                 huong_xuly: huongXuLy,
                 trangthai: mapActionToStatus(huongXuLy),
+                isolation_required: ["INPATIENT", "SURGERY"].includes(huongXuLy)
+                    && document.getElementById("isolation_required").checked,
             };
 
             try {
@@ -76,6 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     body: JSON.stringify(payload),
                 });
                 e.target.reset();
+                updateIsolationVisibility();
                 document.getElementById("doseSuggestion").innerText =
                     "Nhập cân nặng để tự động tính liều mg/kg";
                 await loadMedicalRecords();
