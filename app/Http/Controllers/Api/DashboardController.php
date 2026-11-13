@@ -64,20 +64,56 @@ class DashboardController extends Controller
      */
     public function getRevenueReport(Request $request)
     {
-        $tuNgay  = $request->query('tu_ngay', Carbon::now()->startOfMonth()->toDateString());
-        $denNgay = $request->query('den_ngay', Carbon::now()->toDateString());
+        $validated = $request->validate([
+            'tu_ngay' => 'nullable|date',
+            'den_ngay' => 'nullable|date|after_or_equal:tu_ngay',
+        ]);
 
-        $doanhThu = DB::table('invoices')
-            ->select(DB::raw('DATE(ngaytao) as ngay'), DB::raw('SUM(tongtien) as tong_doanh_thu'))
+        $tuNgay = $validated['tu_ngay'] ?? Carbon::now()->startOfMonth()->toDateString();
+        $denNgay = $validated['den_ngay'] ?? Carbon::now()->toDateString();
+
+        $invoiceQuery = DB::table('invoices')
             ->where('trangthai', 'DA_THANH_TOAN')
-            ->whereBetween(DB::raw('DATE(ngaytao)'), [$tuNgay, $denNgay])
+            ->whereBetween(DB::raw('DATE(ngaytao)'), [$tuNgay, $denNgay]);
+
+        $tongDoanhThu = (clone $invoiceQuery)->sum('tongtien');
+        $soHoaDon = (clone $invoiceQuery)->count();
+
+        $doanhThuTheoNgay = (clone $invoiceQuery)
+            ->select(
+                DB::raw('DATE(ngaytao) as ngay'),
+                DB::raw('SUM(tongtien) as tong_doanh_thu'),
+                DB::raw('COUNT(*) as so_hoa_don')
+            )
             ->groupBy(DB::raw('DATE(ngaytao)'))
             ->orderBy('ngay', 'asc')
             ->get();
 
+        $doanhThuTheoLoai = DB::table('invoice_details as detail')
+            ->join('invoices as invoice', 'invoice.invoice_id', '=', 'detail.invoice_id')
+            ->where('invoice.trangthai', 'DA_THANH_TOAN')
+            ->whereBetween(DB::raw('DATE(invoice.ngaytao)'), [$tuNgay, $denNgay])
+            ->select(
+                'detail.loai_chiphi',
+                DB::raw('SUM(detail.thanhtien) as tong_doanh_thu'),
+                DB::raw('COUNT(DISTINCT invoice.invoice_id) as so_hoa_don')
+            )
+            ->groupBy('detail.loai_chiphi')
+            ->orderByDesc('tong_doanh_thu')
+            ->get();
+
         return response()->json([
             'status' => 'success',
-            'data'   => $doanhThu
+            'data' => [
+                'tu_ngay' => $tuNgay,
+                'den_ngay' => $denNgay,
+                'tong_doanh_thu' => (float) $tongDoanhThu,
+                'so_hoa_don' => (int) $soHoaDon,
+                'doanh_thu_trung_binh' => $soHoaDon > 0 ? (float) $tongDoanhThu / $soHoaDon : 0,
+                'theo_ngay' => $doanhThuTheoNgay,
+                'theo_loai_chi_phi' => $doanhThuTheoLoai,
+            ],
         ]);
     }
+}
 }
