@@ -227,11 +227,12 @@ class BoardingController extends Controller
             ->where('loailong', $boardingRequest->loai_long_yeu_cau)
             ->whereNotIn('trangthai', ['DANG_VE_SINH', 'BAO_TRI']);
 
+        if (Schema::hasColumn('cages', 'loai_ap_dung')) {
+            $query->whereRaw('LOWER(loai_ap_dung) = ?', [mb_strtolower((string) $pet->loai)]);
+        }
+
         if ($hasMaxWeightColumn && $weight > 0) {
-            $query->where(function ($subQuery) use ($weight) {
-                $subQuery->whereNull('tai_trong_toi_da')
-                    ->orWhere('tai_trong_toi_da', '>=', $weight);
-            });
+            $query->where('tai_trong_toi_da', '>=', $weight);
         }
 
         if ($lock) {
