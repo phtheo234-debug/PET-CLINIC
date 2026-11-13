@@ -138,7 +138,7 @@ async function confirmBoardingRequest(requestId) {
 
     if (
         !confirm(
-            `Xác nhận xếp ${petName} vào lồng ${cage.malong} - ${cage.ten_long}? Hệ thống sẽ kiểm tra lại sức chứa trước khi lưu.`,
+            `Xác nhận xếp ${petName} vào lồng ${cage.malong} - ${cage.ten_long}? Hệ thống sẽ kiểm tra lại loại lồng, loài, cân nặng tối đa và sức chứa trước khi lưu.`,
         )
     ) {
         return;
