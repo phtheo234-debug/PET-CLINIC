@@ -346,9 +346,9 @@ async function openPetDetail(petId) {
         const pet = response?.data?.data || response?.data || response;
         const history = Array.isArray(pet.medical_history) ? pet.medical_history : [];
         const exam = pet.latest_exam || null;
-        const canUpdateExam = ["QUAN_TRI", "BAC_SI"].includes(currentUserRole);
 
         const examStatusLabels = {
+            CHUA_KHAM: "Chưa khám",
             DANG_DIEU_TRI: "Đang điều trị",
             HOAN_THANH: "Hoàn thành",
             CHUYEN_VIEN: "Chuyển viện",
