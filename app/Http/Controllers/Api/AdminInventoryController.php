@@ -22,11 +22,13 @@ class AdminInventoryController extends Controller
             'dongia' => 'required|numeric|min:0',
             'soluong' => 'required|integer|min:0',
             'ngaynhap' => 'nullable|date|before_or_equal:today',
-            'ngayhethan' => 'nullable|date|after:ngaynhap|after_or_equal:today',
+            'ngaysanxuat' => 'nullable|date|before_or_equal:ngaynhap|before_or_equal:today',
+            'ngayhethan' => 'nullable|date|after:ngaysanxuat|after:ngaynhap|after_or_equal:today',
+            'solo' => 'nullable|string|max:50|regex:/^LO-[0-9]{8}-[0-9]{6}$/',
         ]);
 
-        if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0 && empty($fields['ngayhethan'])) {
-            return response()->json(['status' => 'error', 'message' => 'Khi thêm số lượng thuốc, vắc-xin hoặc thức ăn, cần nhập hạn sử dụng cho lô hàng.'], 422);
+        if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0 && (empty($fields['ngaysanxuat']) || empty($fields['ngayhethan']))) {
+            return response()->json(['status' => 'error', 'message' => 'Khi thêm số lượng thuốc, vắc-xin hoặc thức ăn, cần nhập ngày sản xuất và hạn sử dụng.'], 422);
         }
 
         $item = DB::transaction(function () use ($fields) {
@@ -38,16 +40,19 @@ class AdminInventoryController extends Controller
             DB::table('inventory')->where('item_id', $id)->update(['masanpham' => $code]);
 
             if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0) {
-                $batchId = DB::table('inventory_batches')->insertGetId([
+                $lotCode = $fields['solo'] ?? ('LO-' . now()->format('Ymd') . '-' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT));
+                if (DB::table('inventory_batches')->where('item_id', $id)->where('solo', $lotCode)->exists()) {
+                    throw new \\RuntimeException('Mã lô vừa tạo đã tồn tại. Vui lòng thử lưu lại để tạo mã mới.');
+                }
+                DB::table('inventory_batches')->insert([
                     'item_id' => $id,
-                    'solo' => 'TMP' . Str::upper(Str::random(16)),
+                    'solo' => $lotCode,
                     'soluong' => (int) $fields['soluong'],
                     'ngaynhap' => $fields['ngaynhap'] ?? now()->toDateString(),
+                    'ngaysanxuat' => $fields['ngaysanxuat'],
                     'ngayhethan' => $fields['ngayhethan'],
                     'trangthai' => 'DANG_SU_DUNG',
                 ]);
-                $lotCode = 'LO-' . now()->format('Ymd') . '-' . str_pad((string) $batchId, 6, '0', STR_PAD_LEFT);
-                DB::table('inventory_batches')->where('batch_id', $batchId)->update(['solo' => $lotCode]);
             }
 
             return DB::table('inventory')->where('item_id', $id)->first();
