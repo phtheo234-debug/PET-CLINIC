@@ -63,9 +63,8 @@ function renderMedicalCharges(c) {
     (c.prescriptions||[]).forEach(x=>medicalChargeLines.push({name:x.ten_sanpham,quantity:Number(x.soluong),price:Number(x.dongia),unit:x.donvitinh||""}));
     (c.surgeries||[]).forEach(x=>medicalChargeLines.push({name:x.name,quantity:1,price:Number(x.price),unit:"ca"}));
     (c.boardings||[]).forEach(x=>medicalChargeLines.push({
-        name:"Lưu trú lồng "+(x.malong||"")+" - "+(x.ten_long||""),
-        quantity:Number(x.days),price:Number(x.rate),unit:"ngày",
-        note:"Từ "+(x.check_in||"")+" đến "+(x.check_out||"đang lưu trú")
+        name:"Lưu trú lồng "+(x.malong||"")+" - "+(x.ten_long||"")+" ("+(String(x.check_in||"").slice(0,10))+" → "+(x.check_out?String(x.check_out).slice(0,10):"hiện tại")+")",
+        quantity:Number(x.days),price:Number(x.rate),unit:"ngày"
     }));
     document.getElementById("medicalChargesBody").innerHTML=medicalChargeLines.length?medicalChargeLines.map(x=>"<tr><td>"+escapeInvoiceHtml(x.name)+"</td><td>"+x.quantity+" "+escapeInvoiceHtml(x.unit)+"</td><td>"+invoiceMoney(x.price)+"</td><td>"+invoiceMoney(x.quantity*x.price)+"</td></tr>").join(""):'<tr><td colspan="4" class="text-center text-muted">Không có chi phí khám hoặc điều trị chưa thanh toán.</td></tr>';
     document.getElementById("medicalChargesTotal").textContent=invoiceMoney(medicalChargeLines.reduce((s,x)=>s+x.quantity*x.price,0));
