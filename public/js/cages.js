@@ -2,6 +2,7 @@ let cagesList = [];
 let boardingRequests = [];
 let isAdminCage = false;
 let canConfirmBoarding = false;
+let manualBoardingRequestId = null;
 
 function getCurrentRole() {
     const user = getCurrentUser();
@@ -39,6 +40,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             .getElementById("cageForm")
             ?.addEventListener("submit", saveCage);
     }
+
+    document.getElementById("btnConfirmManualCage")?.addEventListener("click", submitManualCageAssignment);
 
     await initPage();
     await Promise.all([loadCages(), loadBoardingRequests()]);
@@ -347,7 +350,7 @@ async function deleteCage(cageId) {
  * Cho nhân viên/quản trị tự chọn lồng khác khi đề xuất tự động chưa phù hợp.
  * Danh sách trên giao diện chỉ để hỗ trợ chọn; backend vẫn xác thực lại tuyệt đối.
  */
-async function manualAssignBoardingRequest(requestId) {
+function manualAssignBoardingRequest(requestId) {
     if (!canConfirmBoarding) {
         alert("Chỉ nhân viên hoặc quản trị viên được tự xếp lồng.");
         return;
@@ -356,7 +359,10 @@ async function manualAssignBoardingRequest(requestId) {
     const requestItem = boardingRequests.find(
         (item) => Number(item.request_id) === Number(requestId),
     );
-    if (!requestItem) return;
+    if (!requestItem) {
+        alert("Không tìm thấy yêu cầu lưu trú. Vui lòng làm mới danh sách.");
+        return;
+    }
 
     const weight = Number(requestItem.cannangkhi_kham || 0);
     const petType = String(requestItem.loai || "").trim().toLowerCase();
@@ -373,38 +379,54 @@ async function manualAssignBoardingRequest(requestId) {
     });
 
     if (!options.length) {
-        alert("Không có lồng nào đang đáp ứng các điều kiện cơ bản. Hãy kiểm tra sức chứa, loại lồng, loài và cân nặng.");
+        alert("Không có lồng nào đáp ứng điều kiện. Hãy kiểm tra loại lồng, loài, cân nặng và sức chứa.");
         return;
     }
 
-    const menu = options.map((cage, index) =>
-        `${index + 1}. ${cage.malong} - ${cage.ten_long} (${cage.soluonghientai}/${cage.succhua} chỗ, tối đa ${cage.tai_trong_toi_da} kg)`
-    ).join("\n");
-    const answer = window.prompt(
-        "Chọn lồng phù hợp bằng cách nhập SỐ THỨ TỰ:\n\n" + menu,
-        "1"
-    );
-    if (answer === null) return;
-
-    const selectedIndex = Number(answer) - 1;
-    if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= options.length) {
-        alert("Số thứ tự lồng không hợp lệ.");
+    const select = document.getElementById("manualCageSelect");
+    const petInfo = document.getElementById("manualCagePetInfo");
+    if (!select || !petInfo || !window.jQuery || !jQuery.fn.modal) {
+        alert("Không tải được cửa sổ chọn lồng. Vui lòng tải lại trang (Ctrl + F5).");
         return;
     }
 
-    const selectedCage = options[selectedIndex];
-    const petName = requestItem.ten_thucung || `thú cưng #${requestItem.pet_id}`;
-    if (!confirm(`Tự xếp ${petName} vào lồng ${selectedCage.malong} - ${selectedCage.ten_long}? Hệ thống sẽ kiểm tra lại điều kiện và chỉ giữ chỗ khi thành công.`)) return;
+    manualBoardingRequestId = Number(requestId);
+    petInfo.textContent = `Thú cưng: ${requestItem.mathucung || requestItem.pet_id} - ${requestItem.ten_thucung || "Chưa có tên"} · Cân nặng: ${weight || "Chưa ghi nhận"} kg`;
+    select.innerHTML = options.map((cage) => {
+        const label = `${cage.malong} - ${cage.ten_long} | ${cage.soluonghientai}/${cage.succhua} chỗ | tối đa ${cage.tai_trong_toi_da} kg | ${cage.loai_ap_dung}`;
+        return `<option value="${Number(cage.cage_id)}">${label}</option>`;
+    }).join("");
+
+    $("#manualCageModal").modal("show");
+}
+
+async function submitManualCageAssignment() {
+    if (!canConfirmBoarding || !manualBoardingRequestId) return;
+
+    const button = document.getElementById("btnConfirmManualCage");
+    const cageId = Number(document.getElementById("manualCageSelect")?.value);
+    if (!cageId) {
+        alert("Vui lòng chọn lồng.");
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Đang kiểm tra...';
 
     try {
-        const response = await apiRequest(`/boarding/requests/${requestId}/confirm`, {
+        const response = await apiRequest(`/boarding/requests/${manualBoardingRequestId}/confirm`, {
             method: "POST",
-            body: JSON.stringify({ cage_id: Number(selectedCage.cage_id) }),
+            body: JSON.stringify({ cage_id: cageId }),
         });
+        $("#manualCageModal").modal("hide");
+        manualBoardingRequestId = null;
         await Promise.all([loadCages(), loadBoardingRequests()]);
         alert(response?.message || "Đã tự xếp lồng thành công.");
     } catch (error) {
         alert("Không thể tự xếp lồng: " + error.message);
         await Promise.all([loadCages(), loadBoardingRequests()]);
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-check mr-1"></i> Xác nhận xếp lồng';
     }
 }
