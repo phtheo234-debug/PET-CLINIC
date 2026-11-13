@@ -281,10 +281,8 @@ function renderPetsTable(items) {
                 </td>
 
                 <td>
-                    <button type="button" class="btn btn-sm btn-outline-primary"
-                        onclick="openPetDetail(${Number(petId)})">
-                        <i class="fas fa-eye"></i> Chi tiết
-                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="openPetDetail(${Number(petId)})"><i class="fas fa-eye"></i> Chi tiết</button>
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="printPetProfile(${Number(petId)})"><i class="fas fa-print"></i> In hồ sơ</button>
                 </td>
             </tr>
         `;
@@ -457,4 +455,32 @@ async function openPetDetail(petId) {
     } catch (err) {
         content.innerHTML = `<div class="alert alert-danger mb-0">Không tải được chi tiết thú cưng: ${escapePetHtml(err.message)}</div>`;
     }
+}
+
+
+/** In hồ sơ thú cưng và lịch sử lưu trú. */
+async function printPetProfile(petId) {
+    try {
+        const response = await apiRequest("/pets/" + petId);
+        const pet = response?.data?.data || response?.data || {};
+        const history = pet.boarding_history || [];
+        const historyRows = history.map((item, index) =>
+            "<tr><td>" + (index + 1) + "</td><td>" + escapePetHtml(item.malong || "-") + " " + escapePetHtml(item.ten_long || "") +
+            "</td><td>" + formatPetDate(item.check_in) + "</td><td>" + formatPetDate(item.check_out) +
+            "</td><td>" + escapePetHtml(item.status || "-") + "</td></tr>"
+        ).join("");
+        const w = window.open("", "_blank", "width=900,height=750");
+        if (!w) { alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup rồi thử lại."); return; }
+        w.document.write("<!DOCTYPE html><html lang='vi'><head><meta charset='UTF-8'><title>Hồ sơ thú cưng</title><style>body{font-family:Arial;padding:28px;color:#222}h2,h3{text-align:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #777;padding:8px;text-align:left}</style></head><body>" +
+            "<h2>PET CLINIC</h2><h3>HỒ SƠ THÚ CƯNG</h3><div class='grid'>" +
+            "<div><b>Mã thú cưng:</b> " + escapePetHtml(pet.mathucung || "-") + "</div><div><b>Tên:</b> " + escapePetHtml(pet.name || "-") + "</div>" +
+            "<div><b>Loài:</b> " + escapePetHtml(pet.species || "-") + "</div><div><b>Giống:</b> " + escapePetHtml(pet.breed || "-") + "</div>" +
+            "<div><b>Giới tính:</b> " + escapePetHtml(pet.gender || "-") + "</div><div><b>Ngày sinh:</b> " + escapePetHtml(pet.dob || "-") + "</div>" +
+            "<div><b>Cân nặng hiện tại:</b> " + escapePetHtml(pet.weight || "-") + " kg</div><div><b>Trạng thái:</b> " + escapePetHtml(pet.trangthai || "-") + "</div>" +
+            "<div><b>Chủ nuôi:</b> " + escapePetHtml(pet.owner?.name || "-") + "</div><div><b>Số điện thoại:</b> " + escapePetHtml(pet.owner?.phone || "-") + "</div></div>" +
+            "<h3>LỊCH SỬ LƯU TRÚ / TRẢ LỒNG</h3><table><thead><tr><th>STT</th><th>Lồng</th><th>Nhận lồng</th><th>Trả lồng</th><th>Trạng thái</th></tr></thead><tbody>" +
+            (historyRows || "<tr><td colspan='5'>Chưa có lịch sử lưu trú.</td></tr>") +
+            "</tbody></table><script>window.onload=function(){window.print();};<\\/script></body></html>");
+        w.document.close();
+    } catch (error) { alert("Không thể in hồ sơ thú cưng: " + error.message); }
 }
