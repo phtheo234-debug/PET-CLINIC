@@ -158,5 +158,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/medical.js') }}"></script>
+<script src="{{ asset('js/medical.js') }}?v={{ filemtime(public_path('js/medical.js')) }}"></script>
 @endpush
