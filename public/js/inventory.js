@@ -17,8 +17,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("inventoryForm")?.addEventListener("submit", saveInventoryItem);
     document.getElementById("spaServiceForm")?.addEventListener("submit", saveSpaService);
     document.getElementById("inventoryBatchForm")?.addEventListener("submit", saveInventoryBatch);
-    document.getElementById("inventory_category")?.addEventListener("change", toggleMedicineDosageFields);
-    toggleMedicineDosageFields();
+    document.getElementById("inventory_category")?.addEventListener("change", () => toggleInventoryFields(false));
+    document.getElementById("inventory_stock")?.addEventListener("input", () => toggleInventoryFields(false));
+    toggleInventoryFields(false);
     await loadInventory();
 });
 
@@ -192,15 +193,40 @@ async function saveInventoryBatch(event) {
     }
 }
 
-function toggleMedicineDosageFields() {
+function toggleInventoryFields(isEditing = false) {
     const category = document.getElementById("inventory_category")?.value;
+    const isMedical = ["THUOC", "VAC_XIN"].includes(category);
     const isGoods = category === "DO_DUNG";
+    const hasBatch = ["THUOC", "VAC_XIN", "THUC_AN"].includes(category);
+    const categoryGroup = document.getElementById("inventoryCategoryGroup");
     const unitGroup = document.getElementById("inventoryUnitGroup");
-    const stockGroup = document.getElementById("inventoryStockGroup");
-    if (unitGroup) unitGroup.classList.toggle("d-none", isGoods);
-    if (stockGroup) stockGroup.classList.toggle("d-none", !isGoods);
+    const expiryGroup = document.getElementById("inventoryExpiryGroup");
     const unit = document.getElementById("inventory_unit");
+    const stock = document.getElementById("inventory_stock");
+    const stockLabel = document.getElementById("inventoryStockLabel");
+    const stockHelp = document.getElementById("inventoryStockHelp");
+    if (categoryGroup) categoryGroup.classList.toggle("d-none", !isMedical);
+    if (unitGroup) unitGroup.classList.toggle("d-none", isGoods);
     if (unit) unit.required = !isGoods;
+    if (expiryGroup) expiryGroup.classList.toggle("d-none", !hasBatch || isEditing);
+    if (stockLabel) stockLabel.textContent = isEditing && hasBatch ? "Tồn kho hiện tại" : (hasBatch ? "Số lượng nhập ban đầu" : "Số lượng");
+    if (stockHelp) stockHelp.textContent = isEditing && hasBatch
+        ? "Tồn kho được quản lý theo từng lô; dùng chức năng Nhập lô để bổ sung."
+        : (hasBatch ? "Số lượng này sẽ được lưu thành một lô nhập ban đầu, mã lô tự động sinh." : "Số lượng ban đầu được lưu trực tiếp vào kho.");
+    if (stock) {
+        stock.readOnly = isEditing && hasBatch;
+        if (isEditing && hasBatch) {
+            const item = inventoryItems.find(row => Number(row.item_id) === Number(document.getElementById("inventory_form_id").value));
+            stock.value = Number(item?.tong_ton_kho ?? 0);
+        }
+    }
+    const expiry = document.getElementById("inventory_expiry");
+    if (expiry) {
+        const today = new Date();
+        const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        expiry.min = localToday;
+        expiry.required = hasBatch && !isEditing && Number(stock?.value || 0) > 0;
+    }
 }
 
 function openInventoryForm(item = null, category = null) {
@@ -213,9 +239,10 @@ function openInventoryForm(item = null, category = null) {
     document.getElementById("inventory_category").value = item?.danhmuc || category || "THUOC";
     document.getElementById("inventory_unit").value = item?.donvitinh || "";
     document.getElementById("inventory_price").value = item?.dongia ?? "";
-    document.getElementById("inventory_minimum").value = item?.tonkhotoithieu ?? 10;
-    document.getElementById("inventory_stock").value = item?.soluongton ?? 0;
-    toggleMedicineDosageFields();
+    document.getElementById("inventory_stock").value = item
+        ? (item.danhmuc === "DO_DUNG" ? Number(item.soluongton || 0) : Number(item.tong_ton_kho || 0))
+        : 0;
+    toggleInventoryFields(!!item);
     $("#inventoryFormModal").modal("show");
 }
 
@@ -238,16 +265,37 @@ async function saveInventoryItem(event) {
 
     const id = document.getElementById("inventory_form_id").value;
     const category = document.getElementById("inventory_category").value;
+    const isBatchCategory = ["THUOC", "VAC_XIN", "THUC_AN"].includes(category);
+    const quantity = Number(document.getElementById("inventory_stock").value || 0);
+    const expiry = document.getElementById("inventory_expiry").value;
+    const todayDate = new Date();
+    const localToday = new Date(todayDate.getTime() - todayDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    if (!id && isBatchCategory && quantity > 0 && !expiry) {
+        alert("Vui lòng nhập hạn sử dụng cho lô hàng ban đầu.");
+        return;
+    }
+    if (!id && isBatchCategory && expiry && expiry <= localToday) {
+        alert("Hạn sử dụng phải sau ngày nhập hiện tại.");
+        return;
+    }
     const payload = {
         ten_sanpham: document.getElementById("inventory_name").value.trim(),
         danhmuc: category,
         donvitinh: category === "DO_DUNG" ? "" : document.getElementById("inventory_unit").value.trim(),
-        soluongton: category === "DO_DUNG" ? Number(document.getElementById("inventory_stock").value || 0) : 0,
+        soluong: quantity,
         dongia: Number(document.getElementById("inventory_price").value),
-        tonkhotoithieu: Number(document.getElementById("inventory_minimum").value || 0),
         lieu_mg_kg: null,
         mg_moi_don_vi: null,
     };
+    if (!id && isBatchCategory) {
+        payload.ngaynhap = localToday;
+        payload.ngayhethan = expiry || null;
+    }
+    if (id && category === "DO_DUNG") {
+        payload.soluong = quantity;
+    } else if (id) {
+        delete payload.soluong;
+    }
 
     const button = document.getElementById("btnSaveInventory");
     button.disabled = true;
