@@ -75,6 +75,13 @@ class SpaUsageController extends Controller
                 ], 404);
             }
 
+            if ($pet->trangthai !== 'NOI_TRU') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Chỉ ghi nhận dịch vụ Spa cho thú cưng đang nội trú để tính vào hóa đơn xuất viện.',
+                ], 422);
+            }
+
             $unitPrice = (float) $service->dongia;
             $quantity = (int) $fields['soluong'];
             $total = $unitPrice * $quantity;
