@@ -8,11 +8,16 @@ function escapeInvoiceHtml(v) { return String(v??"").replace(/[&<>"']/g,c=>({"&"
 function invoiceCategoryLabel(c) { return ({DICH_VU_SPA:"Dịch vụ",THUC_AN:"Thức ăn",DO_DUNG:"Đồ dùng",THUOC:"Thuốc",VAC_XIN:"Vắc-xin",PHI_KHAM:"Phí khám",PHAU_THUAT:"Phẫu thuật",LUU_TRU:"Lưu trú"}[c]||c); }
 
 document.addEventListener("DOMContentLoaded", async function() {
-    await initPage();
-
-    // Tải danh sách hóa đơn độc lập với việc chọn/tải hồ sơ thú cưng.
-    // Nếu API danh sách thú cưng lỗi hoặc chưa nhập Bảng 1, hóa đơn cũ vẫn hiển thị.
+    // Danh sách hóa đơn là khu vực độc lập, tải ngay khi trang mở,
+    // không chờ khởi tạo hồ sơ hay dữ liệu Bảng 1.
     loadInvoices();
+
+    try {
+        await initPage();
+    } catch (e) {
+        console.error("Không khởi tạo được trang thanh toán:", e);
+    }
+
     loadPaymentPets().catch(function(e) {
         console.error("Không tải được danh sách thú cưng:", e);
         document.getElementById("paymentPetInfo").textContent = "Không tải được danh sách thú cưng: " + e.message;
