@@ -144,7 +144,7 @@ class MedicalController extends Controller
                 $boardingRequest = null;
                 $alreadyBoarded = false;
 
-                if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)) {
+                if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true) || $needsIsolation) {
                     if ($pet->cage_id) {
                         $alreadyBoarded = true;
                         $boardingRequest = DB::table('boarding_requests')
