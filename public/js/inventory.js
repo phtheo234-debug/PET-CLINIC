@@ -55,7 +55,7 @@ function renderExpiryNotice(items) {
     const expired = [];
     items.filter(item => ["THUOC", "VAC_XIN", "THUC_AN"].includes(item.danhmuc))
         .forEach(item => (item.batches || []).forEach(batch => {
-            if (!batch.ngayhethan || Number(batch.soluong) <= 0) return;
+            if (!batch.ngayhethan || Number(batch.soluong) <= 0 || !["DANG_SU_DUNG", "HET_HAN"].includes(batch.trangthai)) return;
             const date = new Date(batch.ngayhethan + "T00:00:00");
             const info = {name: item.ten_sanpham, lot: batch.solo, qty: batch.soluong, date: batch.ngayhethan};
             if (date < today) expired.push(info);
