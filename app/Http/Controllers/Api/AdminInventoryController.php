@@ -17,11 +17,12 @@ class AdminInventoryController extends Controller
         $fields = $request->validate([
             'ten_sanpham' => 'required|string|max:100',
             'danhmuc' => ['required', Rule::in(self::CATEGORIES)],
-            'donvitinh' => 'required|string|max:20',
+            'donvitinh' => 'nullable|string|max:20',
             'dongia' => 'required|numeric|min:0',
             'tonkhotoithieu' => 'nullable|integer|min:0',
-            'lieu_mg_kg' => 'required_if:danhmuc,THUOC|nullable|numeric|gt:0',
-            'mg_moi_don_vi' => 'required_if:danhmuc,THUOC|nullable|numeric|gt:0',
+            'soluongton' => 'required_if:danhmuc,DO_DUNG|nullable|integer|min:0',
+            'lieu_mg_kg' => 'nullable|numeric|gt:0',
+            'mg_moi_don_vi' => 'nullable|numeric|gt:0',
         ]);
 
         $item = DB::transaction(function () use ($fields) {
@@ -127,7 +128,8 @@ class AdminInventoryController extends Controller
         return [
             'ten_sanpham' => $fields['ten_sanpham'],
             'danhmuc' => $fields['danhmuc'],
-            'donvitinh' => $fields['donvitinh'],
+            'donvitinh' => $fields['donvitinh'] ?? '',
+            'soluongton' => $fields['danhmuc'] === 'DO_DUNG' ? (int) ($fields['soluongton'] ?? 0) : 0,
             'dongia' => $fields['dongia'],
             'tonkhotoithieu' => $fields['tonkhotoithieu'] ?? 10,
             'lieu_mg_kg' => $fields['danhmuc'] === 'THUOC' ? ($fields['lieu_mg_kg'] ?? null) : null,
