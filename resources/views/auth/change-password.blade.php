@@ -6,8 +6,9 @@
     <title>Đổi mật khẩu lần đầu - Pet Clinic</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}">
 </head>
-<body class="bg-light d-flex align-items-center" style="min-height: 100vh;">
+<body class="auth-page">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
