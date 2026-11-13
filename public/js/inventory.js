@@ -17,7 +17,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("inventoryForm")?.addEventListener("submit", saveInventoryItem);
     document.getElementById("spaServiceForm")?.addEventListener("submit", saveSpaService);
     document.getElementById("inventoryBatchForm")?.addEventListener("submit", saveInventoryBatch);
-    document.getElementById("inventory_category")?.addEventListener("change", () => toggleInventoryFields(false));
+    document.getElementById("inventory_category")?.addEventListener("change", () => {
+        if (!document.getElementById("inventory_form_id").value) {
+            document.getElementById("inventory_code").value = generateInventoryItemCode(document.getElementById("inventory_category").value);
+        }
+        toggleInventoryFields(false);
+    });
     document.getElementById("inventory_stock")?.addEventListener("input", () => toggleInventoryFields(false));
     document.getElementById("inventory_import_date")?.addEventListener("change", updateInitialDateLimits);
     document.getElementById("inventory_manufacture")?.addEventListener("change", updateInitialDateLimits);
@@ -155,6 +160,20 @@ function generateInventoryLotCode() {
     return "LO-" + date + "-" + suffix;
 }
 
+function generateInventoryItemCode(category) {
+    const prefixes = {THUOC:"THUOC", VAC_XIN:"VACXIN", THUC_AN:"THUCAN", DO_DUNG:"DODUNG"};
+    const prefix = prefixes[category] || "SP";
+    const date = localInventoryDate().replaceAll("-", "");
+    const suffix = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+    return prefix + "-" + date + "-" + suffix;
+}
+
+function generateSpaServiceCode() {
+    const date = localInventoryDate().replaceAll("-", "");
+    const suffix = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+    return "SPA-" + date + "-" + suffix;
+}
+
 function updateInitialDateLimits() {
     const importDate = document.getElementById("inventory_import_date")?.value || localInventoryDate();
     const importInput = document.getElementById("inventory_import_date");
@@ -285,9 +304,9 @@ function openInventoryForm(item = null, category = null) {
     document.getElementById("inventoryForm").reset();
     document.getElementById("inventory_form_id").value = item ? item.item_id : "";
     document.getElementById("inventoryFormTitle").innerText = item ? "Cập nhật mặt hàng kho" : "Thêm mặt hàng kho";
-    document.getElementById("inventory_code").value = item?.masanpham || "";
-    document.getElementById("inventory_name").value = item?.ten_sanpham || "";
     document.getElementById("inventory_category").value = item?.danhmuc || category || "THUOC";
+    document.getElementById("inventory_code").value = item?.masanpham || generateInventoryItemCode(document.getElementById("inventory_category").value);
+    document.getElementById("inventory_name").value = item?.ten_sanpham || "";
     document.getElementById("inventory_unit").value = item?.donvitinh || "";
     document.getElementById("inventory_price").value = item ? (Number(item.dongia || 0) / 1000) : "";
     document.getElementById("inventory_stock").value = item
@@ -346,6 +365,7 @@ async function saveInventoryItem(event) {
         return;
     }
     const payload = {
+        masanpham: document.getElementById("inventory_code").value,
         ten_sanpham: document.getElementById("inventory_name").value.trim(),
         danhmuc: category,
         donvitinh: category === "DO_DUNG" ? "" : document.getElementById("inventory_unit").value.trim(),
@@ -406,7 +426,7 @@ function openSpaServiceForm(service = null) {
     document.getElementById("spaServiceForm").reset();
     document.getElementById("spa_service_form_id").value = service ? service.item_id : "";
     document.getElementById("spaServiceFormTitle").innerText = service ? "Cập nhật dịch vụ Spa" : "Thêm dịch vụ Spa";
-    document.getElementById("spa_service_code").value = service?.masanpham || "";
+    document.getElementById("spa_service_code").value = service?.masanpham || generateSpaServiceCode();
     document.getElementById("spa_service_name").value = service?.ten_sanpham || "";
     document.getElementById("spa_service_price").value = service ? (Number(service.dongia || 0) / 1000) : "";
     $("#spaServiceFormModal").modal("show");
@@ -433,6 +453,7 @@ async function saveSpaService(event) {
 
     const id = document.getElementById("spa_service_form_id").value;
     const payload = {
+        masanpham: document.getElementById("spa_service_code").value,
         ten_sanpham: document.getElementById("spa_service_name").value.trim(),
         dongia: Number(document.getElementById("spa_service_price").value) * 1000,
     };
