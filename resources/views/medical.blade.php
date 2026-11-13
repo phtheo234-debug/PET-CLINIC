@@ -32,6 +32,19 @@
                     </select>
                 </div>
             </div>
+            <div class="form-row d-none" id="isolationOption">
+                <div class="form-group col-md-12 mb-2">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="yeu_cau_cach_ly">
+                        <label class="custom-control-label font-weight-bold text-danger" for="yeu_cau_cach_ly">
+                            Yêu cầu lồng cách ly
+                        </label>
+                    </div>
+                    <small class="form-text text-muted">
+                        Chọn khi thú cưng có nguy cơ lây nhiễm. Hệ thống chỉ đề xuất lồng cách ly còn trống.
+                    </small>
+                </div>
+            </div>
             <div class="form-row">
                 <div class="form-group col-md-4">
                     <label>Triệu chứng lâm sàng <span class="text-danger">*</span></label>
