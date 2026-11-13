@@ -650,9 +650,12 @@ class PaymentController extends Controller
             ->select('rx.prescription_id', 'rx.soluong', 'i.ten_sanpham', 'i.donvitinh', 'i.dongia', 'i.danhmuc')
             ->get();
 
-        $examCount = $records->where('trangthai', 'HOAN_THANH')->count();
+        // Bảng xem trước phải khớp với quy tắc thanh toán: mọi phiếu chưa lập hóa đơn,
+        // trừ phiếu chuyển viện, sẽ được chốt hoàn thành khi thanh toán thành công.
+        $billableRecords = $records->reject(fn($r) => $r->trangthai === 'CHUYEN_VIEN');
+        $examCount = $billableRecords->count();
         $examFee = $examCount * 50000;
-        $surgeryTotal = $records->where('trangthai', 'HOAN_THANH')->sum(fn($r) => (float)($r->surgery_price ?? 0));
+        $surgeryTotal = $billableRecords->sum(fn($r) => (float)($r->surgery_price ?? 0));
         $medicineTotal = $prescriptions->sum(fn($r) => (float)$r->soluong * (float)$r->dongia);
 
         // Tính toàn bộ các lượt lưu trú, bao gồm cả lồng cũ đã chuyển đi.
@@ -733,10 +736,10 @@ class PaymentController extends Controller
 
                 $records = DB::table('medical_records')->where('pet_id', $pet->pet_id)
                     ->whereNull('invoice_id')->orderBy('ngaykham')->lockForUpdate()->get();
-                if ($records->contains(fn($r) => $r->trangthai === 'DANG_DIEU_TRI')) {
-                    throw new Exception('Vẫn còn phiếu khám đang điều trị. Bác sĩ cần hoàn thành phiếu trước khi thanh toán.');
-                }
-                $records = $records->where('trangthai', 'HOAN_THANH');
+                // Thanh toán thành công là mốc chốt ca khám/xuất viện.
+                // Các phiếu đang điều trị được chốt HOAN_THANH trong cùng transaction;
+                // phiếu chuyển viện không được tự chuyển thành hoàn thành tại phòng khám này.
+                $records = $records->reject(fn($r) => $r->trangthai === 'CHUYEN_VIEN')->values();
 
                 $prescriptions = DB::table('prescriptions as rx')
                     ->join('medical_records as mr', 'mr.record_id', '=', 'rx.record_id')
@@ -834,7 +837,12 @@ class PaymentController extends Controller
                     ]);
                 }
                 if ($prescriptions->isNotEmpty()) DB::table('prescriptions')->whereIn('prescription_id',$prescriptions->pluck('prescription_id'))->update(['invoice_id'=>$invoiceId]);
-                if ($records->isNotEmpty()) DB::table('medical_records')->whereIn('record_id',$records->pluck('record_id'))->update(['invoice_id'=>$invoiceId]);
+                if ($records->isNotEmpty()) {
+                    DB::table('medical_records')->whereIn('record_id',$records->pluck('record_id'))->update([
+                        'trangthai' => 'HOAN_THANH',
+                        'invoice_id' => $invoiceId,
+                    ]);
+                }
 
                 if ($activeBoarding && $cage) {
                     DB::table('pet_boardings')->where('id',$activeBoarding->id)->update(['check_out'=>now(),'status'=>'checked_out','updated_at'=>now()]);
