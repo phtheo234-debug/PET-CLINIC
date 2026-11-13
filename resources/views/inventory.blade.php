@@ -1,17 +1,24 @@
 @extends('layouts.app')
 
-@section('title', 'Kho thuốc & Dịch vụ Spa - Pet Clinic')
-@section('page_title', 'Quản lý Kho Thuốc (FEFO) & Dịch vụ Spa')
+@section('title', 'Quản lý kho - Pet Clinic')
+@section('page_title', 'Quản lý các kho hàng & Dịch vụ')
 
 @section('content')
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <strong class="text-primary">Kho Thuốc, Vắc-xin, Thức ăn & Vật tư (Kiểm soát Lô & Hạn sử dụng FEFO)</strong>
+        <strong class="text-primary">Kho thuốc & vắc-xin (FEFO)</strong>
         <button type="button" id="btnAddInventory" class="btn btn-primary btn-sm d-none" onclick="openInventoryForm()">
             <i class="fas fa-plus mr-1"></i> Thêm mặt hàng
         </button>
     </div>
-    <div class="card-body table-responsive">
+    <div class="card-body">
+        <div id="inventoryExpiryNotice" class="mb-3"></div>
+        <div class="btn-group mb-3" role="group" aria-label="Chọn kho">
+            <button type="button" class="btn btn-primary" id="btnWarehouseMedical" onclick="filterInventoryWarehouse('medical')">Kho thuốc & vắc-xin</button>
+            <button type="button" class="btn btn-outline-primary" id="btnWarehouseRetail" onclick="filterInventoryWarehouse('retail')">Kho thức ăn & đồ dùng</button>
+            <button type="button" class="btn btn-outline-secondary" id="btnWarehouseAll" onclick="filterInventoryWarehouse('all')">Tất cả hàng hóa</button>
+        </div>
+        <div class="table-responsive">
         <table class="table table-hover">
             <thead class="thead-light">
                 <tr>
@@ -28,12 +35,13 @@
             </thead>
             <tbody id="inventoryTableBody"></tbody>
         </table>
+        </div>
     </div>
 </div>
 
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <strong class="text-info">Bảng giá Dịch vụ Spa & Grooming</strong>
+        <strong class="text-info">Kho dịch vụ Spa & Grooming (thanh toán riêng)</strong>
         <button type="button" id="btnAddSpaService" class="btn btn-info btn-sm d-none" onclick="openSpaServiceForm()">
             <i class="fas fa-plus mr-1"></i> Thêm dịch vụ
         </button>
@@ -117,7 +125,7 @@
                                 <option value="THUOC">Thuốc</option>
                                 <option value="VAC_XIN">Vắc-xin</option>
                                 <option value="THUC_AN">Thức ăn</option>
-                                <option value="VAT_TU">Vật tư</option>
+                                <option value="DO_DUNG">Đồ dùng</option>
                             </select>
                         </div>
                         <div class="form-group col-md-6">
@@ -182,10 +190,10 @@
                     </div>
                     <div class="form-group col-md-6">
                         <label for="batch_expiry_date">Hạn sử dụng</label>
-                        <input id="batch_expiry_date" type="date" class="form-control" required>
+                        <input id="batch_expiry_date" type="date" class="form-control">
                     </div>
                 </div>
-                <small class="text-muted">Hệ thống xuất lô còn hạn theo FEFO: lô có hạn sử dụng gần nhất được xuất trước.</small>
+                <small class="text-muted">Thuốc, vắc-xin và thức ăn bắt buộc có hạn sử dụng. Đồ dùng không bắt buộc. Hệ thống xuất theo FEFO.</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
