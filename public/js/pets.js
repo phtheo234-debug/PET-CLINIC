@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("petsTableBody").addEventListener("click", async event => {
         const button = event.target.closest("[data-add-medical-queue]");
         if (!button) return;
-        const note = prompt("Ghi chú khám (để trống nếu không cần ưu tiên):", "");
+        const note = prompt("Ghi chú khám (để trống nếu không cần ưu tiên):", button.dataset.queueNote || "");
         if (note === null) return;
         button.disabled = true;
         try {
@@ -300,7 +300,7 @@ function renderPetsTable(items) {
                 </td>
 
                 <td>
-                    ${["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole) ? '<button type="button" class="btn btn-sm btn-outline-danger mr-1" data-add-medical-queue data-pet-id="' + Number(petId) + '">Chờ khám</button>' : ""}
+                    ${["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole) ? '<button type="button" class="btn btn-sm btn-outline-danger mr-1" data-add-medical-queue data-pet-id="' + Number(petId) + '" data-queue-note="' + escapePetHtml(p.ghi_chu_cho_kham || "") + '">' + (p.dang_cho_kham ? "Sửa ghi chú chờ khám" : "Đưa vào chờ khám") + '</button>' : ""}
                     <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="openPetDetail(${Number(petId)})"><i class="fas fa-eye"></i> Chi tiết</button>
                     <button type="button" class="btn btn-sm btn-outline-success" onclick="printPetProfile(${Number(petId)})"><i class="fas fa-print"></i> In hồ sơ</button>
                 </td>
