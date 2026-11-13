@@ -56,6 +56,52 @@ class MedicalController extends Controller
         }
     }
 
+    /** Danh sách ca đang chờ bác sĩ tiếp nhận, ưu tiên ghi chú khẩn cấp. */
+    public function queue()
+    {
+        $records = DB::table('medical_records as mr')
+            ->join('pets as p', 'p.pet_id', '=', 'mr.pet_id')
+            ->leftJoin('owners as o', 'o.owner_id', '=', 'p.owner_id')
+            ->whereNull('mr.invoice_id')
+            ->whereIn('mr.trangthai', ['CHUA_KHAM', 'DANG_DIEU_TRI'])
+            ->select('mr.record_id', 'mr.pet_id', 'mr.ngaykham', 'mr.trieuchung', 'mr.chandoan',
+                'mr.ghi_chu_kham', 'mr.trangthai', 'p.mathucung', 'p.ten_thucung', 'p.loai', 'p.giong',
+                'o.ho_ten as ten_chu_nuoi', 'o.phone as sdt_chu_nuoi')
+            ->orderByRaw("CASE WHEN mr.ghi_chu_kham IS NOT NULL AND TRIM(mr.ghi_chu_kham) <> '' THEN 0 ELSE 1 END")
+            ->orderBy('mr.ngaykham')
+            ->get();
+
+        return response()->json(['status' => 'success', 'data' => $records]);
+    }
+
+    /** Bác sĩ tiếp nhận một ca trong danh sách chờ. */
+    public function startQueueRecord(Request $request, $id)
+    {
+        $record = DB::table('medical_records')->where('record_id', $id)->lockForUpdate()->first();
+        abort_if(!$record, 404, 'Không tìm thấy phiếu khám.');
+        if ($record->invoice_id || $record->trangthai === 'HOAN_THANH') {
+            return response()->json(['status' => 'error', 'message' => 'Ca khám đã hoàn thành hoặc thanh toán.'], 409);
+        }
+        if ($record->trangthai === 'CHUYEN_VIEN') {
+            return response()->json(['status' => 'error', 'message' => 'Ca khám đã chuyển viện.'], 409);
+        }
+        DB::table('medical_records')->where('record_id', $id)->update(['trangthai' => 'DANG_DIEU_TRI']);
+        return response()->json(['status' => 'success', 'message' => 'Đã tiếp nhận ca khám.', 'data' => DB::table('medical_records')->where('record_id', $id)->first()]);
+    }
+
+    /** Nhân viên/quản trị ghi chú mức độ ưu tiên cho ca khám. */
+    public function updateQueueNote(Request $request, $id)
+    {
+        $fields = $request->validate(['ghi_chu_kham' => 'nullable|string|max:2000']);
+        $record = DB::table('medical_records')->where('record_id', $id)->first();
+        abort_if(!$record, 404, 'Không tìm thấy phiếu khám.');
+        if ($record->invoice_id) {
+            return response()->json(['status' => 'error', 'message' => 'Ca khám đã thanh toán, không thể sửa ghi chú ưu tiên.'], 409);
+        }
+        DB::table('medical_records')->where('record_id', $id)->update(['ghi_chu_kham' => trim($fields['ghi_chu_kham'] ?? '') ?: null]);
+        return response()->json(['status' => 'success', 'message' => 'Đã cập nhật ghi chú khám.']);
+    }
+
     /**
      * FR-MED-01: Tạo phiếu khám và tạo yêu cầu lưu trú khi bác sĩ chỉ định nhập viện.
      * Việc chọn lồng chỉ diễn ra sau khi nhân viên xác nhận đề xuất của hệ thống.
@@ -67,7 +113,7 @@ class MedicalController extends Controller
             'cannangkhi_kham' => 'required|numeric|min:0.1',
             'trieuchung' => 'nullable|string',
             'chandoan' => 'required|string',
-            'trangthai' => 'required|in:DANG_DIEU_TRI,HOAN_THANH,CHUYEN_VIEN',
+            'trangthai' => 'nullable|in:CHUA_KHAM,DANG_DIEU_TRI,HOAN_THANH,CHUYEN_VIEN',
             'huong_xuly' => 'nullable|in:OUTPATIENT,INPATIENT,SURGERY,TRANSFER',
             'yeu_cau_cach_ly' => 'nullable|boolean',
             'surgery_id' => 'nullable|required_if:huong_xuly,SURGERY|integer|exists:surgeries,surgery_id',
@@ -112,7 +158,7 @@ class MedicalController extends Controller
                     'trieuchung' => $fields['trieuchung'] ?? null,
                     'chandoan' => $fields['chandoan'],
                     'cannangkhi_kham' => $fields['cannangkhi_kham'],
-                    'trangthai' => $fields['trangthai'],
+                    'trangthai' => $huongXuLy === 'TRANSFER' ? 'CHUYEN_VIEN' : 'CHUA_KHAM',
                     'huong_xuly' => $huongXuLy,
                     'yeu_cau_cach_ly' => $needsIsolation,
                     'surgery_id' => $surgery->surgery_id ?? null,
