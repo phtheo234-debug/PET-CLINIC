@@ -118,6 +118,11 @@ class MedicalController extends Controller
 
                 // 4. Nếu chẩn đoán kết luận CHUYEN_VIEN -> Tự động giải phóng lồng lưu trú
                 if ($fields['trangthai'] === 'CHUYEN_VIEN' || $huongXuLy === 'TRANSFER') {
+                    DB::table('pet_cage_waitlist')
+                        ->where('pet_id', $pet->pet_id)
+                        ->where('status', 'WAITING')
+                        ->update(['status' => 'CANCELLED', 'updated_at' => now()]);
+
                     if ($pet->cage_id) {
                         $oldCageId = (int) $pet->cage_id;
                         $activeBoarding = DB::table('pet_boardings')
