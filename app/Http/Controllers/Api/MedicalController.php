@@ -70,6 +70,10 @@ class MedicalController extends Controller
             'trangthai' => 'required|in:DANG_DIEU_TRI,HOAN_THANH,CHUYEN_VIEN',
             'huong_xuly' => 'nullable|in:OUTPATIENT,INPATIENT,SURGERY,TRANSFER',
             'yeu_cau_cach_ly' => 'nullable|boolean',
+            'items' => 'nullable|array',
+            'items.*.item_id' => 'required|integer|exists:inventory,item_id',
+            'items.*.soluong' => 'required|integer|min:1',
+            'items.*.huongdan' => 'nullable|string|max:1000',
         ]);
 
         try {
@@ -109,6 +113,20 @@ class MedicalController extends Controller
                     'ghichu' => 'Ghi nhận từ phiếu khám bệnh #' . $recordId,
                 ]);
 
+                // Chọn thuốc/vắc-xin từ kho và trừ tồn theo FEFO ngay khi lưu phiếu khám.
+                foreach (($fields['items'] ?? []) as $usedItem) {
+                    $inventoryItem = DB::table('inventory')->where('item_id', $usedItem['item_id'])->lockForUpdate()->first();
+                    if (!$inventoryItem || !in_array($inventoryItem->danhmuc, ['THUOC', 'VAC_XIN'], true)) {
+                        throw new Exception('Chỉ được sử dụng thuốc hoặc vắc-xin có trong danh mục kho.');
+                    }
+                    $quantity = (int) $usedItem['soluong'];
+                    $this->inventory->fefoDeduct((int) $inventoryItem->item_id, $quantity);
+                    DB::table('prescriptions')->insert([
+                        'record_id' => $recordId, 'item_id' => $inventoryItem->item_id,
+                        'soluong' => $quantity, 'huongdan' => $usedItem['huongdan'] ?? null,
+                        'created_at' => now(), 'updated_at' => now(),
+                    ]);
+                }
                 $boardingRequest = null;
                 $alreadyBoarded = false;
 
@@ -233,6 +251,25 @@ class MedicalController extends Controller
         }
     }
 
+    /** Chi tiết phiếu khám để in kết quả khám và đơn thuốc/vắc-xin. */
+    public function show($id)
+    {
+        $record = DB::table('medical_records as mr')
+            ->join('pets as p', 'p.pet_id', '=', 'mr.pet_id')
+            ->leftJoin('owners as o', 'o.owner_id', '=', 'p.owner_id')
+            ->leftJoin('users as u', 'u.user_id', '=', 'mr.doctor_id')
+            ->where('mr.record_id', $id)
+            ->select('mr.*', 'p.mathucung', 'p.ten_thucung', 'p.loai', 'p.giong', 'p.gioitinh', 'p.ngaysinh',
+                'o.ho_ten as ten_chu_nuoi', 'o.phone as sdt_chu_nuoi', 'u.ho_ten as ten_bac_si')
+            ->first();
+        abort_if(!$record, 404, 'Không tìm thấy phiếu khám.');
+        $record->items = DB::table('prescriptions as rx')
+            ->join('inventory as i', 'i.item_id', '=', 'rx.item_id')
+            ->where('rx.record_id', $id)
+            ->select('i.danhmuc', 'i.masanpham', 'i.ten_sanpham', 'i.donvitinh', 'rx.soluong', 'rx.huongdan', 'i.dongia')
+            ->get();
+        return response()->json(['status' => 'success', 'data' => $record]);
+    }
     /**
      * Cập nhật trạng thái của một phiếu khám hiện có.
      */
