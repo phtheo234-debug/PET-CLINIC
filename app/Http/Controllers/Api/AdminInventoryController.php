@@ -1,16 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\\Http\\Controllers\\Api;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use App\\Http\\Controllers\\Controller;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Str;
+use Illuminate\\Validation\\Rule;
 
 class AdminInventoryController extends Controller
 {
     private const CATEGORIES = ['THUOC', 'VAC_XIN', 'THUC_AN', 'DO_DUNG'];
+    private const BATCH_CATEGORIES = ['THUOC', 'VAC_XIN', 'THUC_AN'];
 
     public function store(Request $request)
     {
@@ -19,11 +20,14 @@ class AdminInventoryController extends Controller
             'danhmuc' => ['required', Rule::in(self::CATEGORIES)],
             'donvitinh' => 'nullable|string|max:20',
             'dongia' => 'required|numeric|min:0',
-            'tonkhotoithieu' => 'nullable|integer|min:0',
-            'soluongton' => 'required_if:danhmuc,DO_DUNG|nullable|integer|min:0',
-            'lieu_mg_kg' => 'nullable|numeric|gt:0',
-            'mg_moi_don_vi' => 'nullable|numeric|gt:0',
+            'soluong' => 'required|integer|min:0',
+            'ngaynhap' => 'nullable|date|before_or_equal:today',
+            'ngayhethan' => 'nullable|date|after:ngaynhap|after_or_equal:today',
         ]);
+
+        if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0 && empty($fields['ngayhethan'])) {
+            return response()->json(['status' => 'error', 'message' => 'Khi thêm số lượng thuốc, vắc-xin hoặc thức ăn, cần nhập hạn sử dụng cho lô hàng.'], 422);
+        }
 
         $item = DB::transaction(function () use ($fields) {
             $temporaryCode = 'TMP' . Str::upper(Str::random(16));
@@ -32,6 +36,19 @@ class AdminInventoryController extends Controller
             );
             $code = $this->generatedCode($fields['danhmuc'], $id);
             DB::table('inventory')->where('item_id', $id)->update(['masanpham' => $code]);
+
+            if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0) {
+                $batchId = DB::table('inventory_batches')->insertGetId([
+                    'item_id' => $id,
+                    'solo' => 'TMP' . Str::upper(Str::random(16)),
+                    'soluong' => (int) $fields['soluong'],
+                    'ngaynhap' => $fields['ngaynhap'] ?? now()->toDateString(),
+                    'ngayhethan' => $fields['ngayhethan'],
+                    'trangthai' => 'DANG_SU_DUNG',
+                ]);
+                $lotCode = 'LO-' . now()->format('Ymd') . '-' . str_pad((string) $batchId, 6, '0', STR_PAD_LEFT);
+                DB::table('inventory_batches')->where('batch_id', $batchId)->update(['solo' => $lotCode]);
+            }
 
             return DB::table('inventory')->where('item_id', $id)->first();
         });
@@ -55,10 +72,7 @@ class AdminInventoryController extends Controller
             'danhmuc' => ['required', Rule::in(self::CATEGORIES)],
             'donvitinh' => 'nullable|string|max:20',
             'dongia' => 'required|numeric|min:0',
-            'tonkhotoithieu' => 'nullable|integer|min:0',
-            'soluongton' => 'required_if:danhmuc,DO_DUNG|nullable|integer|min:0',
-            'lieu_mg_kg' => 'nullable|numeric|gt:0',
-            'mg_moi_don_vi' => 'nullable|numeric|gt:0',
+            'soluong' => 'nullable|integer|min:0',
         ]);
 
         if ($item->danhmuc === 'DO_DUNG' && $fields['danhmuc'] !== 'DO_DUNG' && (int) $item->soluongton > 0) {
@@ -84,7 +98,15 @@ class AdminInventoryController extends Controller
             ], 422);
         }
 
-        DB::table('inventory')->where('item_id', $id)->update($this->values($fields));
+        $values = $this->values($fields);
+        if ($fields['danhmuc'] === 'DO_DUNG') {
+            $values['soluongton'] = (int) ($fields['soluong'] ?? $item->soluongton);
+        } else {
+            // Tồn thuốc, vắc-xin và thức ăn được tính từ các lô, không sửa trực tiếp ở màn hình mặt hàng.
+            $values['soluongton'] = 0;
+        }
+
+        DB::table('inventory')->where('item_id', $id)->update($values);
 
         return response()->json([
             'status' => 'success',
@@ -152,11 +174,12 @@ class AdminInventoryController extends Controller
             'ten_sanpham' => $fields['ten_sanpham'],
             'danhmuc' => $fields['danhmuc'],
             'donvitinh' => $fields['donvitinh'] ?? '',
-            'soluongton' => $fields['danhmuc'] === 'DO_DUNG' ? (int) ($fields['soluongton'] ?? 0) : 0,
+            'soluongton' => $fields['danhmuc'] === 'DO_DUNG' ? (int) ($fields['soluong'] ?? 0) : 0,
             'dongia' => $fields['dongia'],
-            'tonkhotoithieu' => $fields['tonkhotoithieu'] ?? 10,
-            'lieu_mg_kg' => $fields['danhmuc'] === 'THUOC' ? ($fields['lieu_mg_kg'] ?? null) : null,
-            'mg_moi_don_vi' => $fields['danhmuc'] === 'THUOC' ? ($fields['mg_moi_don_vi'] ?? null) : null,
+            // Không còn sử dụng tồn kho tối thiểu; giữ cột cũ ở mức 0 để tương thích DB.
+            'tonkhotoithieu' => 0,
+            'lieu_mg_kg' => null,
+            'mg_moi_don_vi' => null,
         ];
     }
 }
