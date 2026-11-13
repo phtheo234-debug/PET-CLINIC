@@ -100,6 +100,40 @@
     </div>
 </div>
 
+@php
+    $medicalUser = request()->attributes->get('web_authenticated_user');
+    $isMedicalAdmin = $medicalUser && strtoupper(trim($medicalUser->vaitro ?? '')) === 'QUAN_TRI';
+@endphp
+@if($isMedicalAdmin)
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-scalpel mr-1"></i> Danh mục phẫu thuật</span>
+        <button type="button" class="btn btn-sm btn-primary" onclick="openSurgeryForm()"><i class="fas fa-plus mr-1"></i>Thêm loại phẫu thuật</button>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-bordered table-sm mb-0">
+            <thead class="thead-light"><tr><th>Mã</th><th>Tên phẫu thuật</th><th>Giá (VNĐ)</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+            <tbody id="surgeryCatalogBody"><tr><td colspan="5" class="text-center text-muted">Đang tải danh mục...</td></tr></tbody>
+        </table>
+    </div>
+</div>
+<div class="modal fade" id="surgeryFormModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form id="surgeryForm" class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="surgeryFormTitle">Thêm loại phẫu thuật</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="surgery_form_id">
+                <div class="form-group"><label>Mã phẫu thuật</label><input id="surgery_code" class="form-control" maxlength="30" required></div>
+                <div class="form-group"><label>Tên phẫu thuật</label><input id="surgery_name" class="form-control" maxlength="100" required></div>
+                <div class="form-group"><label>Giá (VNĐ)</label><input type="number" id="surgery_price" class="form-control" min="0" step="1000" required></div>
+                <div class="form-group"><label>Trạng thái</label><select id="surgery_status" class="form-control"><option value="1">Đang áp dụng</option><option value="0">Ngừng áp dụng</option></select></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button><button type="submit" class="btn btn-primary" id="btnSaveSurgery">Lưu</button></div>
+        </form>
+    </div>
+</div>
+@endif
+
 <div class="card shadow-sm">
     <div class="card-header bg-white font-weight-bold">Lịch sử Khám bệnh gần đây</div>
     <div class="card-body table-responsive">
