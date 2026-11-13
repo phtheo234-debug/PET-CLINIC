@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 
 class AdminInventoryController extends Controller
 {
-    private const CATEGORIES = ['THUOC', 'VAC_XIN', 'THUC_AN', 'VAT_TU'];
+    private const CATEGORIES = ['THUOC', 'VAC_XIN', 'THUC_AN', 'DO_DUNG'];
 
     public function store(Request $request)
     {
@@ -110,7 +110,7 @@ class AdminInventoryController extends Controller
             'THUOC' => 'THUOC',
             'VAC_XIN' => 'VACXIN',
             'THUC_AN' => 'THUCAN',
-            'VAT_TU' => 'VATTU',
+            'DO_DUNG' => 'DODUNG',
         ];
         $prefix = $prefixes[$category] ?? 'SP';
         $code = $prefix . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
