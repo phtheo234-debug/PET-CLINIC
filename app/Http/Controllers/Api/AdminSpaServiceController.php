@@ -13,7 +13,7 @@ class AdminSpaServiceController extends Controller
     {
         $fields = $request->validate([
             'ten_sanpham' => 'required|string|max:100',
-            'donvitinh' => 'required|string|max:20',
+            'donvitinh' => 'nullable|string|max:20',
             'dongia' => 'required|numeric|min:0',
         ]);
 
@@ -23,7 +23,7 @@ class AdminSpaServiceController extends Controller
                 'masanpham' => $temporaryCode,
                 'ten_sanpham' => $fields['ten_sanpham'],
                 'danhmuc' => 'DICH_VU_SPA',
-                'donvitinh' => $fields['donvitinh'],
+                'donvitinh' => '',
                 'dongia' => $fields['dongia'],
                 'tonkhotoithieu' => 0,
                 'lieu_mg_kg' => null,
