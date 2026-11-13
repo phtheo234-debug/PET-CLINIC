@@ -17,7 +17,7 @@ class PetController extends Controller
             ->select('wl1.pet_id', 'wl1.cannang')
             ->whereRaw('wl1.id = (SELECT MAX(wl2.id) FROM weight_logs wl2 WHERE wl2.pet_id = wl1.pet_id)');
 
-        $latestExam = DB::table('medical_records as mr1')->select('mr1.pet_id', 'mr1.record_id', 'mr1.trangthai as exam_status', 'mr1.ngaykham as exam_date')->whereRaw('mr1.record_id = (SELECT MAX(mr2.record_id) FROM medical_records mr2 WHERE mr2.pet_id = mr1.pet_id)');
+        $latestExam = DB::table('medical_records as mr1')->select('mr1.pet_id', 'mr1.record_id', 'mr1.trangthai as exam_status', 'mr1.ngaykham as exam_date', 'mr1.invoice_id as exam_invoice_id')->whereRaw('mr1.record_id = (SELECT MAX(mr2.record_id) FROM medical_records mr2 WHERE mr2.pet_id = mr1.pet_id)');
 
         return DB::table('pets')
             ->leftJoinSub($latestExam, 'latest_exam', function ($join) { $join->on('pets.pet_id', '=', 'latest_exam.pet_id'); })
@@ -29,7 +29,7 @@ class PetController extends Controller
                 'pets.*',
                 'owners.ho_ten as owner_name',
                 'owners.phone as owner_phone',
-                'latest_weight.cannang as current_weight', 'latest_exam.exam_status as trangthai_kham', 'latest_exam.exam_date as ngaykham_gannhat'
+                'latest_weight.cannang as current_weight', 'latest_exam.exam_status as trangthai_kham', 'latest_exam.exam_date as ngaykham_gannhat', 'latest_exam.exam_invoice_id as mahoadon_kham'
             );
     }
 
@@ -56,6 +56,7 @@ class PetController extends Controller
             'trangthai' => $p->trangthai,
             'trangthai_kham' => $p->trangthai_kham ?? null,
             'ngaykham_gannhat' => $p->ngaykham_gannhat ?? null,
+            'kham_da_thanh_toan' => !empty($p->mahoadon_kham),
             'owner'          => [
                 'id'    => $p->owner_id,
                 'name'  => $p->owner_name,
