@@ -325,14 +325,6 @@ class PaymentController extends Controller
                     ], 422);
                 }
 
-                // Không cho xuất viện khi vẫn đang điều trị
-                if ($latestRecord->trangthai === 'DANG_DIEU_TRI') {
-                    return response()->json([
-                        'status'  => 'error',
-                        'message' => 'Vi phạm BR-06: Thú cưng đang trong quá trình điều trị tích cực, Bác sĩ chưa cho phép xuất viện!'
-                    ], 422);
-                }
-
                 // Không cho xuất viện nếu đã có kết luận chuyển viện
                 if ($latestRecord->trangthai === 'CHUYEN_VIEN') {
                     return response()->json([
@@ -341,13 +333,7 @@ class PaymentController extends Controller
                     ], 422);
                 }
 
-                // Chỉ cho phép xuất viện khi bác sĩ đã hoàn thành hồ sơ
-                if ($latestRecord->trangthai !== 'HOAN_THANH') {
-                    return response()->json([
-                        'status'  => 'error',
-                        'message' => 'Hồ sơ khám chưa đủ điều kiện xuất viện!'
-                    ], 422);
-                }
+                // Thanh toán thành công sẽ tự động chốt các phiếu khám chưa lập hóa đơn thành HOAN_THANH.
 
                 // 3. Kiểm tra thú cưng nội trú phải có lồng lưu trú
                 if (!$pet->cage_id) {
