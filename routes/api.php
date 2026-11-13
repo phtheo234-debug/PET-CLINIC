@@ -68,10 +68,11 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::delete('/pets/{pet}', [PetController::class, 'destroy'])->middleware('role:QUAN_TRI,NHAN_VIEN');
     Route::get('/owners', [PetController::class, 'owners']);
 
-    // Lồng: tất cả được xem; chỉ nhân viên/quản trị thực hiện xếp và trả lồng.
+    // Lồng: tất cả được xem; hệ thống đề xuất, nhân viên/quản trị xác nhận xếp lồng.
     Route::get('/boarding/cages', [BoardingController::class, 'index']);
-    Route::post('/boarding/assign', [BoardingController::class, 'assignCage'])->middleware('role:QUAN_TRI,NHAN_VIEN');
-    Route::post('/boarding/release', [BoardingController::class, 'releaseCage'])->middleware('role:QUAN_TRI,NHAN_VIEN');
+    Route::get('/boarding/requests', [BoardingController::class, 'requests']);
+    Route::post('/boarding/requests/{id}/confirm', [BoardingController::class, 'confirmRequest'])
+        ->middleware('role:QUAN_TRI,NHAN_VIEN');
 
     // Ghi nhận Spa và thanh toán thuộc nghiệp vụ nhân viên/quản trị.
     Route::get('/spa/usages', [SpaUsageController::class, 'index'])->middleware('role:QUAN_TRI,NHAN_VIEN');
