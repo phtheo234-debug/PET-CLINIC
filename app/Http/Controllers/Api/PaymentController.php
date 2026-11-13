@@ -122,8 +122,12 @@ class PaymentController extends Controller
                             ->where('item_id', $item->item_id)
                             ->where('trangthai', 'DANG_SU_DUNG')
                             ->where('soluong', '>', 0)
-                            ->where(function ($query) {
-                                $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+                            ->where(function ($query) use ($item) {
+                                if ($item->danhmuc === 'DO_DUNG') {
+                                    $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
+                                } else {
+                                    $query->whereNotNull('ngayhethan')->whereDate('ngayhethan', '>=', now()->toDateString());
+                                }
                             })
                             ->orderByRaw('CASE WHEN ngayhethan IS NULL THEN 1 ELSE 0 END')
                             ->orderBy('ngayhethan')
