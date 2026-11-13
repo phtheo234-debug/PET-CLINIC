@@ -151,13 +151,22 @@ class BoardingController extends Controller
                     ], 409);
                 }
 
-                // Luôn tìm lại lồng mới nhất tại thời điểm xác nhận.
-                $cage = $this->findSuitableCage($boardingRequest, true, $oldCageId);
+                // Xác nhận đề xuất tự động hoặc lồng do nhân viên/quản trị tự chọn.
+                // Backend luôn kiểm tra lại toàn bộ điều kiện trong transaction.
+                $manualCageId = $request->input('cage_id');
+                $cage = $this->findSuitableCage(
+                    $boardingRequest,
+                    true,
+                    $oldCageId,
+                    $manualCageId ? (int) $manualCageId : null
+                );
 
                 if (!$cage) {
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'Hiện không còn lồng phù hợp. Yêu cầu vẫn được giữ ở trạng thái chờ.',
+                        'message' => $manualCageId
+                            ? 'Lồng bạn chọn không phù hợp, đã hết chỗ hoặc không còn khả dụng. Yêu cầu vẫn được giữ ở trạng thái chờ.'
+                            : 'Hiện không còn lồng phù hợp. Yêu cầu vẫn được giữ ở trạng thái chờ.',
                     ], 422);
                 }
 
@@ -221,7 +230,7 @@ class BoardingController extends Controller
      * Tìm lồng theo loại được bác sĩ chỉ định, sức chứa, cân nặng,
      * yêu cầu cách ly và khả năng ở chung an toàn.
      */
-    private function findSuitableCage(object $boardingRequest, bool $lock, ?int $excludeCageId = null): ?object
+    private function findSuitableCage(object $boardingRequest, bool $lock, ?int $excludeCageId = null, ?int $specificCageId = null): ?object
     {
         $pet = DB::table('pets')
             ->where('pet_id', $boardingRequest->pet_id)
@@ -249,6 +258,9 @@ class BoardingController extends Controller
             ->whereNotIn('trangthai', ['DANG_VE_SINH', 'BAO_TRI']);
         if ($excludeCageId) {
             $query->where('cage_id', '!=', $excludeCageId);
+        }
+        if ($specificCageId) {
+            $query->where('cage_id', $specificCageId);
         }
 
         if (Schema::hasColumn('cages', 'loai_ap_dung')) {
