@@ -10,6 +10,11 @@ Route::get('/', function () {
 Route::view('/login', 'auth.login')->name('login');
 Route::view('/forgot-password', 'auth.forgot-password')->name('forgot-password');
 
+// Trang tra cứu QR công khai: không tạo tài khoản cho chủ nuôi và không mở API quản trị.
+Route::get('/pet-qr/{qrCode}', [PetQrController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('pets.qr.show');
+
 Route::middleware('web.token')->group(function () {
     Route::view('/change-password', 'auth.change-password')->name('change-password');
     Route::view('/profile', 'profile')->name('profile');
@@ -17,7 +22,6 @@ Route::middleware('web.token')->group(function () {
     // Các vai trò đều được xem tổng quan, hồ sơ thú cưng và danh sách lồng.
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::view('/pets', 'pets')->name('pets');
-    Route::get('/pet-qr/{qrCode}', [PetQrController::class, 'show'])->name('pets.qr.show');
     Route::view('/cages', 'cages')->name('cages');
 
     // Bác sĩ và quản trị viên được truy cập nghiệp vụ khám, chẩn đoán, kê đơn.
