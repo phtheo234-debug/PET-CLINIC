@@ -25,8 +25,9 @@
             <div class="modal-body">
                 <input type="hidden" id="cage_form_id">
                 <div class="form-group">
-                    <label>Mã lồng <span class="text-danger">*</span></label>
-                    <input type="text" id="cage_malong" class="form-control" maxlength="20" required>
+                    <label>Mã lồng</label>
+                    <input type="text" id="cage_malong" class="form-control" maxlength="20" readonly>
+                    <small class="form-text text-muted">Mã được hệ thống tự động tạo khi lưu lồng mới; mã đã cấp không thay đổi.</small>
                 </div>
                 <div class="form-group">
                     <label>Tên lồng <span class="text-danger">*</span></label>
