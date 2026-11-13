@@ -226,7 +226,18 @@ class PaymentController extends Controller
                 });
 
 
-                // 3. Tính tiền lồng lưu trú (nếu có nội trú)
+                // 3. Lấy các dịch vụ Spa đã ghi nhận nhưng chưa đưa vào hóa đơn
+                $spaLines = DB::table('spa_usages')
+                    ->where('pet_id', $pet->pet_id)
+                    ->whereNull('invoice_id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $totalSpa = $spaLines->sum(function ($line) {
+                    return (float) $line->thanhtien;
+                });
+
+                // 4. Tính tiền lồng lưu trú (nếu có nội trú)
                 $checkInDate = Carbon::parse($activeBoarding->check_in);
 
                 // Tính số ngày lưu trú, làm tròn lên và tối thiểu 1 ngày
@@ -239,7 +250,7 @@ class PaymentController extends Controller
                 $totalBoarding = $days * $pricePerDay;
 
 
-                $grandTotal = $totalMedicine + $totalBoarding;
+                $grandTotal = $totalMedicine + $totalBoarding + $totalSpa;
 
                 if ($grandTotal <= 0 && $lines->isEmpty()) {
                     return response()->json([
@@ -316,7 +327,31 @@ class PaymentController extends Controller
                     ]);
                 }
 
-                // 6. Trả lồng và cập nhật trạng thái
+                // 7. Lưu chi tiết dịch vụ Spa và đánh dấu đã lập hóa đơn
+                if ($spaLines->isNotEmpty()) {
+                    foreach ($spaLines as $spaLine) {
+                        DB::table('invoice_details')->insert([
+                            'invoice_id'      => $invoiceId,
+                            'prescription_id' => null,
+                            'loai_chiphi'     => 'DICH_VU_SPA',
+                            'ten_sanpham'     => $spaLine->ten_dichvu,
+                            'donvitinh'       => $spaLine->donvitinh,
+                            'soluong'         => $spaLine->soluong,
+                            'dongia'          => $spaLine->dongia,
+                            'thanhtien'       => $spaLine->thanhtien,
+                            'ghichu'          => $spaLine->ghichu,
+                            'created_at'      => now(),
+                            'updated_at'      => now(),
+                        ]);
+                    }
+
+                    DB::table('spa_usages')
+                        ->whereIn('spa_usage_id', $spaLines->pluck('spa_usage_id'))
+                        ->whereNull('invoice_id')
+                        ->update(['invoice_id' => $invoiceId, 'updated_at' => now()]);
+                }
+
+                // 8. Trả lồng và cập nhật trạng thái
                 DB::table('pet_boardings')
                     ->where('id', $activeBoarding->id)
                     ->whereNull('check_out')
@@ -342,6 +377,7 @@ class PaymentController extends Controller
                         'mahoadon'       => $code,
                         'tien_thuoc'     => $totalMedicine,
                         'tien_long'      => $totalBoarding,
+                        'tien_spa'       => $totalSpa,
                         'tong_thanhtoan' => $grandTotal,
                     ],
                 ], 200);
