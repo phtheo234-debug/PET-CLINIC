@@ -35,6 +35,45 @@ async function loadInventory() {
     }
 }
 
+
+function filterInventoryWarehouse(filter) {
+    warehouseFilter = filter;
+    document.getElementById("btnWarehouseMedical").className = filter === "medical" ? "btn btn-primary" : "btn btn-outline-primary";
+    document.getElementById("btnWarehouseRetail").className = filter === "retail" ? "btn btn-primary" : "btn btn-outline-primary";
+    document.getElementById("btnWarehouseAll").className = filter === "all" ? "btn btn-secondary" : "btn btn-outline-secondary";
+    renderInventory(inventoryItems);
+}
+
+function renderExpiryNotice(items) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const limit = new Date(today);
+    limit.setMonth(limit.getMonth() + 6);
+    const soon = [];
+    const expired = [];
+    items.filter(item => ["THUOC", "VAC_XIN", "THUC_AN"].includes(item.danhmuc))
+        .forEach(item => (item.batches || []).forEach(batch => {
+            if (!batch.ngayhethan || Number(batch.soluong) <= 0) return;
+            const date = new Date(batch.ngayhethan + "T00:00:00");
+            const info = {name: item.ten_sanpham, lot: batch.solo, qty: batch.soluong, date: batch.ngayhethan};
+            if (date < today) expired.push(info);
+            else if (date <= limit) soon.push(info);
+        }));
+    const box = document.getElementById("inventoryExpiryNotice");
+    if (!box) return;
+    if (!soon.length && !expired.length) {
+        box.innerHTML = '<div class="alert alert-success mb-0">Không có lô sắp hết hạn trong 6 tháng tới.</div>';
+        return;
+    }
+    const rows = list => list.slice(0, 8).map(item =>
+        '<li><strong>' + escapeInventoryHtml(item.name) + '</strong> · Lô ' + escapeInventoryHtml(item.lot) +
+        ' · Tồn ' + Number(item.qty) + ' · HSD ' + escapeInventoryHtml(item.date) + '</li>'
+    ).join("");
+    box.innerHTML =
+        (expired.length ? '<div class="alert alert-danger"><strong>' + expired.length + ' lô đã hết hạn — đã tự khóa, không thể xuất/bán.</strong><ul class="mb-0 mt-2">' + rows(expired) + '</ul></div>' : '') +
+        (soon.length ? '<div class="alert alert-warning"><strong>' + soon.length + ' lô còn hạn dưới 6 tháng.</strong><ul class="mb-0 mt-2">' + rows(soon) + '</ul></div>' : '');
+}
+
 function escapeInventoryHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, (char) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
