@@ -166,6 +166,7 @@ class MedicalController extends Controller
                     throw new Exception('Chuyển viện không được kê thuốc/vắc-xin tại phiếu này.');
                 }
 
+                $queueInProgress = DB::table('medical_queue')->where('pet_id', $fields['pet_id'])->where('trangthai', 'DANG_KHAM')->exists();
                 DB::table('medical_queue')->where('pet_id', $fields['pet_id'])->whereIn('trangthai', ['CHO_KHAM', 'DANG_KHAM'])->update(['trangthai' => 'DA_KHAM', 'updated_at' => now()]);
 
                 $recordId = DB::table('medical_records')->insertGetId([
@@ -175,7 +176,7 @@ class MedicalController extends Controller
                     'trieuchung' => $fields['trieuchung'] ?? null,
                     'chandoan' => $fields['chandoan'],
                     'cannangkhi_kham' => $fields['cannangkhi_kham'],
-                    'trangthai' => $huongXuLy === 'TRANSFER' ? 'CHUYEN_VIEN' : 'CHUA_KHAM',
+                    'trangthai' => $huongXuLy === 'TRANSFER' ? 'CHUYEN_VIEN' : ($queueInProgress ? 'DANG_DIEU_TRI' : 'CHUA_KHAM'),
                     'huong_xuly' => $huongXuLy,
                     'yeu_cau_cach_ly' => $needsIsolation,
                     'surgery_id' => $surgery->surgery_id ?? null,
