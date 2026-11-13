@@ -32,6 +32,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("batch_import_date")?.addEventListener("change", updateBatchDateLimits);
     document.getElementById("batch_manufacture_date")?.addEventListener("change", updateBatchDateLimits);
     toggleInventoryFields(false);
+    document.querySelectorAll("[data-search-inventory]").forEach(button => button.addEventListener("click", () => searchInventoryTable(button.dataset.searchInventory)));
+    document.querySelectorAll(".inventory-search input").forEach(input => input.addEventListener("keydown", event => { if (event.key === "Enter") searchInventoryTable(input.closest(".inventory-search").dataset.inventorySearch); }));
     await loadInventory();
 });
 
@@ -496,4 +498,19 @@ async function deleteSpaService(serviceId) {
     } catch (error) {
         alert("Không thể xóa dịch vụ Spa: " + error.message);
     }
+}
+
+
+function searchInventoryTable(type) {
+    const input = document.getElementById("searchInventory_" + type);
+    const keyword = String(input?.value || "").trim().toLocaleLowerCase("vi");
+    const config = {medical:["medicalInventoryTableBody"],food:["foodInventoryTableBody"],goods:["goodsInventoryTableBody"]};
+    (config[type] || []).forEach(id => {
+        const body = document.getElementById(id);
+        if (!body) return;
+        body.querySelectorAll("tr").forEach(row => {
+            const text = row.textContent.toLocaleLowerCase("vi");
+            row.classList.toggle("d-none", !!keyword && !text.includes(keyword));
+        });
+    });
 }
