@@ -7,16 +7,24 @@
 @php
     $medicalUser = request()->attributes->get('web_authenticated_user');
     $medicalCurrentRole = strtoupper(trim($medicalUser->vaitro ?? ''));
-    $isMedicalDoctor = $medicalCurrentRole === 'BAC_SI';
+    $canUseMedicalQueue = in_array($medicalCurrentRole, ['QUAN_TRI', 'BAC_SI'], true);
 @endphp
-@if($isMedicalDoctor)
+@if($canUseMedicalQueue)
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white font-weight-bold text-danger"><i class="fas fa-clipboard-list mr-1"></i> DANH SÁCH CHỜ KHÁM</div>
+    <div class="card-header bg-white">
+        <div class="font-weight-bold text-danger"><i class="fas fa-clipboard-list mr-1"></i> DANH SÁCH CHỜ KHÁM</div>
+        <button type="button" id="btnSelectPriorityQueue" class="btn btn-danger btn-sm mt-2" disabled>
+            <i class="fas fa-hand-pointer mr-1"></i> Đang tải ca khám...
+        </button>
+        <div id="medicalQueueFeatured" class="mt-3 p-3 rounded border border-danger bg-light">
+            <span class="text-muted">Đang tải thú cưng cần khám ưu tiên...</span>
+        </div>
+    </div>
     <div class="card-body table-responsive">
-        <p class="text-muted small">Ca có ghi chú ưu tiên sẽ được xếp lên đầu. Bác sĩ nhấn Chọn để tiếp nhận từng ca.</p>
+        <p class="text-muted small mb-2">Ca có ghi chú ưu tiên được xếp trước. Mỗi lần chỉ tiếp nhận một ca đang chờ.</p>
         <table class="table table-bordered table-hover mb-0">
-            <thead class="thead-light"><tr><th>Thú cưng</th><th>Chủ nuôi</th><th>Triệu chứng</th><th>Ghi chú ưu tiên</th><th>Trạng thái</th><th>Thời gian chờ</th><th></th></tr></thead>
-            <tbody id="medicalQueueBody"><tr><td colspan="7" class="text-center text-muted">Đang tải danh sách chờ...</td></tr></tbody>
+            <thead class="thead-light"><tr><th>Thú nuôi</th><th>Chủ nuôi</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead>
+            <tbody id="medicalQueueBody"><tr><td colspan="4" class="text-center text-muted">Đang tải danh sách chờ...</td></tr></tbody>
         </table>
     </div>
 </div>
