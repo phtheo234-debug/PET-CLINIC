@@ -155,7 +155,6 @@ async function saveInventoryItem(event) {
     const id = document.getElementById("inventory_form_id").value;
     const category = document.getElementById("inventory_category").value;
     const payload = {
-        masanpham: document.getElementById("inventory_code").value.trim(),
         ten_sanpham: document.getElementById("inventory_name").value.trim(),
         danhmuc: category,
         donvitinh: document.getElementById("inventory_unit").value.trim(),
@@ -233,7 +232,6 @@ async function saveSpaService(event) {
 
     const id = document.getElementById("spa_service_form_id").value;
     const payload = {
-        masanpham: document.getElementById("spa_service_code").value.trim(),
         ten_sanpham: document.getElementById("spa_service_name").value.trim(),
         donvitinh: document.getElementById("spa_service_unit").value.trim(),
         dongia: Number(document.getElementById("spa_service_price").value),
