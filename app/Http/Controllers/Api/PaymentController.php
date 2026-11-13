@@ -757,26 +757,23 @@ class PaymentController extends Controller
                 }
 
                 // Khóa và tính phí tất cả lượt lưu trú của thú cưng, không chỉ lồng hiện tại.
-                $boardingRows = DB::table('pet_boardings as pb')
-                    ->leftJoin('cages as c', 'c.cage_id', '=', 'pb.cage_id')
-                    ->where('pb.pet_id', $pet->pet_id)
-                    ->whereNotNull('pb.check_in')
-                    ->orderBy('pb.check_in')
+                $boardingRows = DB::table('pet_boardings')
+                    ->where('pet_id', $pet->pet_id)
+                    ->whereNotNull('check_in')
+                    ->orderBy('check_in')
                     ->lockForUpdate()
-                    ->get([
-                        'pb.id', 'pb.cage_id', 'pb.check_in', 'pb.check_out', 'pb.status',
-                        'c.malong', 'c.loailong'
-                    ]);
+                    ->get(['id', 'cage_id', 'check_in', 'check_out', 'status']);
                 $rateMap = ['THUONG'=>50000, 'CAP_CUU_ICU'=>80000, 'CACH_LY'=>100000];
                 $activeBoarding = null;
                 foreach ($boardingRows as $stay) {
                     $checkIn = Carbon::parse($stay->check_in);
                     $checkOut = $stay->check_out ? Carbon::parse($stay->check_out) : now();
                     $days = max(1, (int) $checkIn->copy()->startOfDay()->diffInDays($checkOut->copy()->startOfDay()) + 1);
-                    $rate = $rateMap[$stay->loailong ?? ''] ?? 50000;
+                    $stayCage = DB::table('cages')->where('cage_id', $stay->cage_id)->first();
+                    $rate = $rateMap[$stayCage->loailong ?? ''] ?? 50000;
                     $detailRows[] = [
                         'type' => 'LUU_TRU',
-                        'name' => 'Phí lưu trú lồng ' . ($stay->malong ?? ''),
+                        'name' => 'Phí lưu trú lồng ' . ($stayCage->malong ?? ('#' . $stay->cage_id)),
                         'unit' => 'ngày',
                         'qty' => $days,
                         'price' => $rate,
