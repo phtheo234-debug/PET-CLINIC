@@ -329,7 +329,7 @@ async function openPetDetail(petId) {
     try {
         const response = await apiRequest(`/pets/${petId}`);
         const pet = response?.data?.data || response?.data || response;
-        const history = Array.isArray(pet.medical_history) ? pet.boarding_history : [];
+        const history = Array.isArray(pet.medical_history) ? pet.medical_history : [];
         const exam = pet.latest_exam || null;
         const canUpdateExam = ["QUAN_TRI", "BAC_SI"].includes(currentUserRole);
 
@@ -456,7 +456,7 @@ async function printPetProfile(petId) {
     try {
         const response = await apiRequest("/pets/" + petId);
         const pet = response?.data?.data || response?.data || {};
-        const history = pet.boarding_history || [];
+        const history = Array.isArray(pet.medical_history) ? pet.medical_history : [];
         const historyRows = history.map((item, index) =>
             "<tr><td>" + (index + 1) + "</td><td>#" + escapePetHtml(item.record_id) + "</td><td>" + formatPetDate(item.ngaykham) +
             "</td><td>" + escapePetHtml(item.chandoan || "-") + "</td><td>" + escapePetHtml(item.trangthai || "-") +
