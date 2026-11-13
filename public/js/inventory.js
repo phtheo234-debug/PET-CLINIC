@@ -19,7 +19,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("inventoryBatchForm")?.addEventListener("submit", saveInventoryBatch);
     document.getElementById("inventory_category")?.addEventListener("change", () => toggleInventoryFields(false));
     document.getElementById("inventory_stock")?.addEventListener("input", () => toggleInventoryFields(false));
-    document.getElementById("inventory_manufacture")?.addEventListener("change", () => updateInitialExpiryMinimum());
+    document.getElementById("inventory_import_date")?.addEventListener("change", updateInitialDateLimits);
+    document.getElementById("inventory_manufacture")?.addEventListener("change", updateInitialDateLimits);
     document.getElementById("batch_import_date")?.addEventListener("change", updateBatchDateLimits);
     document.getElementById("batch_manufacture_date")?.addEventListener("change", updateBatchDateLimits);
     toggleInventoryFields(false);
@@ -154,10 +155,14 @@ function generateInventoryLotCode() {
     return "LO-" + date + "-" + suffix;
 }
 
-function updateInitialExpiryMinimum() {
-    const manufacture = document.getElementById("inventory_manufacture")?.value;
+function updateInitialDateLimits() {
+    const importDate = document.getElementById("inventory_import_date")?.value || localInventoryDate();
+    const importInput = document.getElementById("inventory_import_date");
+    const manufacture = document.getElementById("inventory_manufacture");
     const expiry = document.getElementById("inventory_expiry");
-    if (expiry) expiry.min = manufacture || localInventoryDate();
+    if (importInput) importInput.max = localInventoryDate();
+    if (manufacture) manufacture.max = importDate;
+    if (expiry) expiry.min = manufacture?.value || importDate;
 }
 
 function updateBatchDateLimits() {
@@ -240,6 +245,7 @@ function toggleInventoryFields(isEditing = false) {
     });
     const unitGroup = document.getElementById("inventoryUnitGroup");
     const expiryGroup = document.getElementById("inventoryExpiryGroup");
+    const importGroup = document.getElementById("inventoryImportGroup");
     const manufactureGroup = document.getElementById("inventoryManufactureGroup");
     const batchFields = document.getElementById("inventoryBatchFields");
     const unit = document.getElementById("inventory_unit");
@@ -249,6 +255,7 @@ function toggleInventoryFields(isEditing = false) {
     if (categoryGroup) categoryGroup.classList.toggle("d-none", !isMedical);
     if (unitGroup) unitGroup.classList.toggle("d-none", isGoods);
     if (unit) unit.required = !isGoods;
+    if (importGroup) importGroup.classList.toggle("d-none", !hasBatch || isEditing);
     if (expiryGroup) expiryGroup.classList.toggle("d-none", !hasBatch || isEditing);
     if (manufactureGroup) manufactureGroup.classList.toggle("d-none", !hasBatch || isEditing);
     if (batchFields) batchFields.classList.toggle("d-none", !hasBatch || isEditing);
@@ -263,16 +270,14 @@ function toggleInventoryFields(isEditing = false) {
             stock.value = Number(item?.tong_ton_kho ?? 0);
         }
     }
+    const importDate = document.getElementById("inventory_import_date");
     const manufacture = document.getElementById("inventory_manufacture");
     const expiry = document.getElementById("inventory_expiry");
-    if (manufacture) {
-        manufacture.max = localInventoryDate();
-        manufacture.required = hasBatch && !isEditing && Number(stock?.value || 0) > 0;
-    }
-    if (expiry) {
-        expiry.min = manufacture?.value || localInventoryDate();
-        expiry.required = hasBatch && !isEditing && Number(stock?.value || 0) > 0;
-    }
+    const datesRequired = hasBatch && !isEditing && Number(stock?.value || 0) > 0;
+    if (importDate) importDate.required = datesRequired;
+    if (manufacture) manufacture.required = datesRequired;
+    if (expiry) expiry.required = datesRequired;
+    updateInitialDateLimits();
 }
 
 function openInventoryForm(item = null, category = null) {
@@ -290,6 +295,7 @@ function openInventoryForm(item = null, category = null) {
         : 0;
     if (!item && ["THUOC", "VAC_XIN", "THUC_AN"].includes(category || "THUOC")) {
         document.getElementById("inventory_lot_preview").value = generateInventoryLotCode();
+        document.getElementById("inventory_import_date").value = localInventoryDate();
         document.getElementById("inventory_manufacture").value = localInventoryDate();
     }
     toggleInventoryFields(!!item);
@@ -317,20 +323,25 @@ async function saveInventoryItem(event) {
     const category = document.getElementById("inventory_category").value;
     const isBatchCategory = ["THUOC", "VAC_XIN", "THUC_AN"].includes(category);
     const quantity = Number(document.getElementById("inventory_stock").value || 0);
+    const importDate = document.getElementById("inventory_import_date").value;
     const expiry = document.getElementById("inventory_expiry").value;
     const manufacture = document.getElementById("inventory_manufacture").value;
     const lotCode = document.getElementById("inventory_lot_preview").value;
     const todayDate = new Date();
     const localToday = new Date(todayDate.getTime() - todayDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    if (!id && isBatchCategory && quantity > 0 && (!manufacture || !expiry)) {
-        alert("Vui lòng nhập ngày sản xuất và hạn sử dụng cho lô ban đầu.");
+    if (!id && isBatchCategory && quantity > 0 && (!importDate || !manufacture || !expiry)) {
+        alert("Vui lòng nhập ngày nhập, ngày sản xuất và hạn sử dụng cho lô ban đầu.");
         return;
     }
-    if (!id && isBatchCategory && quantity > 0 && manufacture > localToday) {
-        alert("Ngày sản xuất không được sau ngày hiện tại.");
+    if (!id && isBatchCategory && quantity > 0 && importDate > localToday) {
+        alert("Ngày nhập không được sau ngày hiện tại.");
         return;
     }
-    if (!id && isBatchCategory && quantity > 0 && (expiry <= manufacture || expiry <= localToday)) {
+    if (!id && isBatchCategory && quantity > 0 && manufacture > importDate) {
+        alert("Ngày sản xuất không được sau ngày nhập.");
+        return;
+    }
+    if (!id && isBatchCategory && quantity > 0 && (expiry <= manufacture || expiry <= importDate)) {
         alert("Hạn sử dụng phải sau ngày sản xuất và ngày nhập.");
         return;
     }
@@ -344,7 +355,7 @@ async function saveInventoryItem(event) {
         mg_moi_don_vi: null,
     };
     if (!id && isBatchCategory) {
-        payload.ngaynhap = localToday;
+        payload.ngaynhap = importDate || localToday;
         payload.ngaysanxuat = manufacture || null;
         payload.ngayhethan = expiry || null;
         payload.solo = lotCode;
