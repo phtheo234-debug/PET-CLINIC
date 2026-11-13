@@ -298,7 +298,10 @@ function renderPetsTable(items) {
                     ${statusBadges[p.trangthai] || escapePetHtml(p.trangthai || "Ngoại trú")}
                 </td>
                 <td>
-                    ${p.trangthai_hangdoi ? '<span class="badge ' + (p.trangthai_hangdoi === "DANG_KHAM" ? "badge-warning" : p.trangthai_hangdoi === "DA_KHAM" ? "badge-success" : "badge-secondary") + '">' + ({CHO_KHAM:"Chưa khám",DANG_KHAM:"Đang khám",DA_KHAM:"Đã khám"})[p.trangthai_hangdoi] + '</span>' : p.trangthai_kham ? '<span class="badge badge-info">' + escapePetHtml(({CHUA_KHAM:"Chưa khám",DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"})[p.trangthai_kham] || p.trangthai_kham) + '</span>' : '<span class="text-muted">Chưa khám</span>'} + (p.kham_da_thanh_toan ? '<br><small class="text-success">Đã thanh toán</small>' : '') + (p.ngaykham_gannhat ? '<br><small class="text-muted">' + formatPetDate(p.ngaykham_gannhat) + '</small>' : '')
+                    ${p.trangthai_hangdoi ? '<span class="badge ' + (p.trangthai_hangdoi === "DANG_KHAM" ? "badge-warning" : p.trangthai_hangdoi === "DA_KHAM" ? "badge-success" : "badge-secondary") + '">' + ({CHO_KHAM:"Chưa khám",DANG_KHAM:"Đang khám",DA_KHAM:"Đã khám"})[p.trangthai_hangdoi] + '</span>' : p.trangthai_kham ? '<span class="badge badge-info">' + escapePetHtml(({CHUA_KHAM:"Chưa khám",DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"})[p.trangthai_kham] || p.trangthai_kham) + '</span>' : '<span class="text-muted">Chưa khám</span>'}
+                    ${p.kham_da_thanh_toan ? '<br><small class="text-success">Đã thanh toán</small>' : ''}
+                    ${p.ngaykham_gannhat ? '<br><small class="text-muted">' + formatPetDate(p.ngaykham_gannhat) + '</small>' : ''}
+
                 </td>
 
                 <td>
