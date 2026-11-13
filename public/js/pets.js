@@ -50,14 +50,14 @@ function extractList(res) {
 document.addEventListener("DOMContentLoaded", async () => {
     await initPage();
 
-    // Tải danh sách thú cưng ngay khi mở trang
-    await loadPets();
-
     const currentUser = getCurrentUser();
 
     currentUserRole = String(currentUser?.vaitro || "")
         .trim()
         .toUpperCase();
+
+    // Tải danh sách sau khi xác định vai trò để hiển thị đúng quyền cập nhật.
+    await loadPets();
 
     const canReceivePets = ["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole);
 
@@ -73,6 +73,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (codeInput) {
             codeInput.value = generateNextPetCode();
+        }
+    });
+
+    // Cập nhật trạng thái khám trực tiếp tại dòng hồ sơ (bác sĩ/quản trị).
+    document.getElementById("petsTableBody").addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-update-exam-status]");
+        if (!button) return;
+        const petId = Number(button.dataset.petId);
+        const recordId = Number(button.dataset.recordId);
+        const select = document.getElementById("petExamStatus_" + petId);
+        if (!recordId || !select) return;
+        button.disabled = true;
+        try {
+            await apiRequest("/medical/records/" + recordId + "/status", {
+                method: "PUT",
+                body: JSON.stringify({ trangthai: select.value }),
+            });
+            await loadPets();
+        } catch (error) {
+            alert("Không cập nhật được trạng thái khám: " + error.message);
+            button.disabled = false;
         }
     });
 
@@ -280,8 +301,17 @@ function renderPetsTable(items) {
                     ${statusBadges[p.trangthai] || escapePetHtml(p.trangthai || "Ngoại trú")}
                 </td>
                 <td>
-                    ${p.trangthai_kham ? '<span class="badge badge-info">' + escapePetHtml(({DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"})[p.trangthai_kham] || p.trangthai_kham) + '</span>' : '<span class="text-muted">Chưa khám</span>'}
-                    ${p.ngaykham_gannhat ? '<br><small class="text-muted">' + formatPetDate(p.ngaykham_gannhat) + '</small>' : ''}
+                    ${p.trangthai_kham ? (
+                        (["QUAN_TRI", "BAC_SI"].includes(currentUserRole) && p.record_id
+                            ? '<select class="form-control form-control-sm mb-1" id="petExamStatus_' + Number(p.id) + '">' +
+                                '<option value="DANG_DIEU_TRI" ' + (p.trangthai_kham === "DANG_DIEU_TRI" ? "selected" : "") + '>Đang điều trị</option>' +
+                                '<option value="HOAN_THANH" ' + (p.trangthai_kham === "HOAN_THANH" ? "selected" : "") + '>Hoàn thành</option>' +
+                                '<option value="CHUYEN_VIEN" ' + (p.trangthai_kham === "CHUYEN_VIEN" ? "selected" : "") + '>Chuyển viện</option></select>' +
+                              '<button type="button" class="btn btn-sm btn-outline-primary btn-block" data-update-exam-status data-pet-id="' + Number(p.id) + '" data-record-id="' + Number(p.record_id) + '">Lưu trạng thái</button>'
+                            : '<span class="badge badge-info">' + escapePetHtml(({DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"})[p.trangthai_kham] || p.trangthai_kham) + '</span>') +
+                        (p.kham_da_thanh_toan ? '<br><small class="text-success">Đã thanh toán</small>' : '') +
+                        (p.ngaykham_gannhat ? '<br><small class="text-muted">' + formatPetDate(p.ngaykham_gannhat) + '</small>' : '')
+                    ) : '<span class="text-muted">Chưa có phiếu khám</span>'}
                 </td>
 
                 <td>
