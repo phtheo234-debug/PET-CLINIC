@@ -26,7 +26,7 @@
     </div>
     <div class="card-body table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="thead-light"><tr><th>Mã</th><th>Tên thức ăn</th><th>Số lô</th><th>Số lượng</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
+            <thead class="thead-light"><tr><th>Mã</th><th>Tên thức ăn</th><th>Số lô</th><th>Số lượng</th><th>Ngày sản xuất</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
             <tbody id="foodInventoryTableBody"></tbody>
         </table>
     </div>
