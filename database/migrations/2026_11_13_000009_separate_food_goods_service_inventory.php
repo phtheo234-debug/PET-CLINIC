@@ -31,6 +31,17 @@ return new class extends Migration
 
     public function down(): void
     {
+        DB::table('inventory')->where('danhmuc', 'DO_DUNG')->where('soluongton', '>', 0)->orderBy('item_id')->each(function ($item) {
+            DB::table('inventory_batches')->insert([
+                'item_id' => $item->item_id,
+                'solo' => 'ROLLBACK-' . $item->item_id,
+                'soluong' => $item->soluongton,
+                'ngaynhap' => now()->toDateString(),
+                'ngayhethan' => null,
+                'trangthai' => 'DANG_SU_DUNG',
+            ]);
+        });
+
         Schema::table('inventory_batches', function (Blueprint $table) {
             $table->dropUnique('inventory_batches_item_solo_unique');
         });
