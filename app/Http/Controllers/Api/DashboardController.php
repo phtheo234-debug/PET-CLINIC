@@ -59,7 +59,7 @@ class DashboardController extends Controller
         $soonExpiry = (clone $base)
             ->where('b.trangthai', 'DANG_SU_DUNG')
             ->whereDate('b.ngayhethan', '>=', $today->toDateString())
-            ->whereDate('b.ngayhethan', '<=', $sixMonths->toDateString())
+            ->whereDate('b.ngayhethan', '<', $sixMonths->toDateString())
             ->orderBy('b.ngayhethan')
             ->get();
 
