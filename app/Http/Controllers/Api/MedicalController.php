@@ -52,17 +52,19 @@ class MedicalController extends Controller
     }
 
     /**
-     * FR-MED-01: Tạo phiếu khám bệnh & Tự động xếp lồng nếu Nhập viện / Phẫu thuật
+     * FR-MED-01: Tạo phiếu khám và tạo yêu cầu lưu trú khi bác sĩ chỉ định nhập viện.
+     * Việc chọn lồng chỉ diễn ra sau khi nhân viên xác nhận đề xuất của hệ thống.
      */
     public function store(Request $request)
     {
         $fields = $request->validate([
-            'pet_id'          => 'required|integer|exists:pets,pet_id',
+            'pet_id' => 'required|integer|exists:pets,pet_id',
             'cannangkhi_kham' => 'required|numeric|min:0.1',
-            'trieuchung'      => 'nullable|string',
-            'chandoan'        => 'required|string',
-            'trangthai'       => 'required|in:DANG_DIEU_TRI,HOAN_THANH,CHUYEN_VIEN',
-            'huong_xuly'      => 'nullable|in:OUTPATIENT,INPATIENT,SURGERY,TRANSFER',
+            'trieuchung' => 'nullable|string',
+            'chandoan' => 'required|string',
+            'trangthai' => 'required|in:DANG_DIEU_TRI,HOAN_THANH,CHUYEN_VIEN',
+            'huong_xuly' => 'nullable|in:OUTPATIENT,INPATIENT,SURGERY,TRANSFER',
+            'yeu_cau_cach_ly' => 'nullable|boolean',
         ]);
 
         try {
@@ -72,196 +74,150 @@ class MedicalController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                // 1. Tạo phiếu khám trong bảng medical_records
+                if (!$pet) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Không tìm thấy thú cưng.',
+                    ], 404);
+                }
+
+                $huongXuLy = $fields['huong_xuly'] ?? 'OUTPATIENT';
+                $needsIsolation = (bool) ($fields['yeu_cau_cach_ly'] ?? false);
+
                 $recordId = DB::table('medical_records')->insertGetId([
-                    'pet_id'          => $fields['pet_id'],
-                    'doctor_id'       => $request->user()->user_id ?? 1,
-                    'ngaykham'        => now(),
-                    'trieuchung'      => $fields['trieuchung'] ?? null,
-                    'chandoan'        => $fields['chandoan'],
+                    'pet_id' => $fields['pet_id'],
+                    'doctor_id' => $request->user()->user_id,
+                    'ngaykham' => now(),
+                    'trieuchung' => $fields['trieuchung'] ?? null,
+                    'chandoan' => $fields['chandoan'],
                     'cannangkhi_kham' => $fields['cannangkhi_kham'],
-                    'trangthai'       => $fields['trangthai'],
+                    'trangthai' => $fields['trangthai'],
+                    'huong_xuly' => $huongXuLy,
+                    'yeu_cau_cach_ly' => $needsIsolation,
                 ]);
 
-                // 2. Tự động lưu lịch sử cân nặng vào weight_logs (BR-04)
                 DB::table('weight_logs')->insert([
-                    'pet_id'  => $fields['pet_id'],
+                    'pet_id' => $fields['pet_id'],
                     'cannang' => $fields['cannangkhi_kham'],
-                    'ngaydo'  => now(),
-                    'nguoido' => $request->user()->user_id ?? 1,
-                    'ghichu'  => 'Ghi nhận từ phiếu khám bệnh #' . $recordId,
+                    'ngaydo' => now(),
+                    'nguoido' => $request->user()->user_id,
+                    'ghichu' => 'Ghi nhận từ phiếu khám bệnh #' . $recordId,
                 ]);
 
-                $assignedCage = null;
-                $huongXuLy = $fields['huong_xuly'] ?? null;
+                $boardingRequest = null;
+                $alreadyBoarded = false;
 
-                // 3. Nếu chọn Nhập viện (INPATIENT) hoặc Phẫu thuật (SURGERY) -> Tự động tìm & xếp lồng phù hợp
                 if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)) {
                     if ($pet->cage_id) {
-                        $assignedCage = $this->cageOccupancy->sync((int) $pet->cage_id);
+                        $alreadyBoarded = true;
+                        $boardingRequest = DB::table('boarding_requests')
+                            ->where('pet_id', $pet->pet_id)
+                            ->where('status', 'checked_in')
+                            ->orderByDesc('request_id')
+                            ->first();
                     } else {
-                        $assignedCage = $this->autoAssignSuitableCage(
-                            $pet,
-                            (float) $fields['cannangkhi_kham'],
-                            $huongXuLy
-                        );
+                        $requiredCageType = $needsIsolation
+                            ? 'CACH_LY'
+                            : ($huongXuLy === 'SURGERY' ? 'CAP_CUU_ICU' : 'THUONG');
+
+                        $pendingRequest = DB::table('boarding_requests')
+                            ->where('pet_id', $pet->pet_id)
+                            ->where('status', 'pending')
+                            ->lockForUpdate()
+                            ->first();
+
+                        $requestData = [
+                            'medical_record_id' => $recordId,
+                            'loai_long_yeu_cau' => $requiredCageType,
+                            'yeu_cau_cach_ly' => $needsIsolation,
+                            'ghi_chu' => $needsIsolation
+                                ? 'Bác sĩ chỉ định cách ly.'
+                                : ($huongXuLy === 'SURGERY' ? 'Lưu trú theo chỉ định phẫu thuật.' : 'Lưu trú điều trị nội trú.'),
+                            'updated_at' => now(),
+                        ];
+
+                        if ($pendingRequest) {
+                            DB::table('boarding_requests')
+                                ->where('request_id', $pendingRequest->request_id)
+                                ->update($requestData);
+                            $requestId = $pendingRequest->request_id;
+                        } else {
+                            $requestId = DB::table('boarding_requests')->insertGetId(array_merge(
+                                $requestData,
+                                [
+                                    'pet_id' => $pet->pet_id,
+                                    'status' => 'pending',
+                                    'created_at' => now(),
+                                ]
+                            ));
+                        }
+
+                        $boardingRequest = DB::table('boarding_requests')
+                            ->where('request_id', $requestId)
+                            ->first();
                     }
                 }
 
-                // 4. Nếu chẩn đoán kết luận CHUYEN_VIEN -> Tự động giải phóng lồng lưu trú
-                if ($fields['trangthai'] === 'CHUYEN_VIEN' || $huongXuLy === 'TRANSFER') {
+                $isTransfer = $fields['trangthai'] === 'CHUYEN_VIEN' || $huongXuLy === 'TRANSFER';
+
+                if ($isTransfer) {
                     if ($pet->cage_id) {
                         $oldCageId = (int) $pet->cage_id;
-                        $activeBoarding = DB::table('pet_boardings')
+
+                        DB::table('pet_boardings')
                             ->where('pet_id', $pet->pet_id)
                             ->where('cage_id', $oldCageId)
                             ->where('status', 'checked_in')
                             ->whereNull('check_out')
-                            ->lockForUpdate()
-                            ->first();
-
-                        if ($activeBoarding) {
-                            DB::table('pet_boardings')
-                                ->where('id', $activeBoarding->id)
-                                ->update([
-                                    'check_out' => now(),
-                                    'status' => 'checked_out',
-                                    'updated_at' => now(),
-                                ]);
-                        }
-
-                        DB::table('pets')->where('pet_id', $pet->pet_id)->update([
-                            'trangthai' => 'CHUYEN_VIEN',
-                            'cage_id' => null,
-                        ]);
+                            ->update([
+                                'check_out' => now(),
+                                'status' => 'checked_out',
+                                'updated_at' => now(),
+                            ]);
 
                         $this->cageOccupancy->sync($oldCageId);
                     }
 
-                    DB::table('pets')->where('pet_id', $fields['pet_id'])->update([
+                    DB::table('boarding_requests')
+                        ->where('pet_id', $pet->pet_id)
+                        ->where('status', 'pending')
+                        ->update(['status' => 'cancelled', 'updated_at' => now()]);
+
+                    DB::table('boarding_requests')
+                        ->where('pet_id', $pet->pet_id)
+                        ->where('status', 'checked_in')
+                        ->update(['status' => 'completed', 'updated_at' => now()]);
+
+                    DB::table('pets')->where('pet_id', $pet->pet_id)->update([
                         'trangthai' => 'CHUYEN_VIEN',
-                        'cage_id'   => null
+                        'cage_id' => null,
                     ]);
                 }
 
-                $msg = 'Tạo phiếu khám bệnh thành công!';
-                if ($assignedCage) {
-                    $msg .= " Đã tự động xếp vào lồng {$assignedCage->malong} ({$assignedCage->ten_long}).";
-                } elseif (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)) {
-                    $msg .= ' Lưu ý: Hiện không còn lồng trống phù hợp tiêu chí, vui lòng xếp lồng thủ công!';
+                $message = 'Tạo phiếu khám bệnh thành công!';
+                if ($boardingRequest && !$alreadyBoarded) {
+                    $message .= ' Đã tạo yêu cầu lưu trú. Hệ thống sẽ đề xuất lồng để nhân viên xác nhận.';
+                } elseif ($alreadyBoarded) {
+                    $message .= ' Thú cưng đang có lồng lưu trú, không tạo lượt xếp lồng trùng.';
+                } elseif ($isTransfer) {
+                    $message .= ' Đã cập nhật trạng thái chuyển viện và giải phóng lồng (nếu có).';
                 }
 
                 return response()->json([
-                    'status'        => 'success',
-                    'message'       => $msg,
-                    'assigned_cage' => $assignedCage,
-                    'data'          => DB::table('medical_records')->where('record_id', $recordId)->first()
+                    'status' => 'success',
+                    'message' => $message,
+                    'boarding_request' => $boardingRequest,
+                    'data' => DB::table('medical_records')->where('record_id', $recordId)->first(),
                 ], 201);
             });
         } catch (Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Lỗi tạo phiếu khám: ' . $e->getMessage()
+                'status' => 'error',
+                'message' => 'Lỗi tạo phiếu khám: ' . $e->getMessage(),
             ], 500);
         }
-    }
-
-    /**
-     * Tự động chọn lồng trống phù hợp theo: loại lồng, sức chứa (BR-03), cân nặng, loài/giống & giới tính
-     */
-    private function autoAssignSuitableCage(object $pet, float $weight, string $huongXuLy): ?object
-    {
-        $hasMaxWeightCol = Schema::hasColumn('cages', 'tai_trong_toi_da');
-
-        // Ưu tiên lồng ICU/Hậu phẫu nếu chỉ định phẫu thuật, lồng thường nếu nhập viện nội trú
-        $preferredTypes = ($huongXuLy === 'SURGERY')
-            ? ['CAP_CUU_ICU', 'THUONG']
-            : ['THUONG', 'CAP_CUU_ICU'];
-
-        $cages = DB::table('cages')
-            ->whereNotIn('trangthai', ['DANG_VE_SINH', 'BAO_TRI'])
-            ->when($hasMaxWeightCol, function ($q) use ($weight) {
-                $q->where(function ($sub) use ($weight) {
-                    $sub->whereNull('tai_trong_toi_da')
-                        ->orWhere('tai_trong_toi_da', '>=', $weight);
-                });
-            })
-            ->lockForUpdate()
-            ->get();
-
-        // Đếm thú thực tế để không bị ảnh hưởng bởi số lượng cũ đang lệch.
-        foreach ($cages as $cage) {
-            $cage->soluonghientai = DB::table('pets')
-                ->where('cage_id', $cage->cage_id)
-                ->count();
-        }
-
-        // Lọc lồng phù hợp với đặc điểm loài/giống, giới tính, cân nặng và sức chứa.
-        $suitable = $cages->filter(function ($cage) use ($pet, $weight, $hasMaxWeightCol) {
-            if ((int) $cage->soluonghientai >= (int) $cage->succhua) {
-                return false;
-            }
-            // Nếu bảng cages chưa có cột tai_trong_toi_da, kiểm tra theo tên/kích thước lồng
-            if (!$hasMaxWeightCol) {
-                $cageLabel = mb_strtolower(($cage->ten_long ?? '') . ' ' . ($cage->malong ?? ''));
-                if (str_contains($cageLabel, 'nhỏ') && $weight > 10) {
-                    return false;
-                }
-                if ((str_contains($cageLabel, 'vừa') || str_contains($cageLabel, 'trung')) && $weight > 25) {
-                    return false;
-                }
-            }
-
-            // Nếu lồng trống hoàn toàn -> đạt điều kiện
-            if ((int) $cage->soluonghientai === 0) {
-                return true;
-            }
-
-            // Nếu lồng có sức chứa > 1 và đang có thú ở chung -> phải cùng loài, cùng giống (nếu có) và cùng giới tính
-            $occupants = DB::table('pets')->where('cage_id', $cage->cage_id)->get();
-            foreach ($occupants as $other) {
-                if (mb_strtolower($other->loai) !== mb_strtolower($pet->loai)) {
-                    return false;
-                }
-                if ($pet->giong && $other->giong && mb_strtolower($other->giong) !== mb_strtolower($pet->giong)) {
-                    return false;
-                }
-                if ($pet->gioitinh !== 'CHUA_XAC_DINH' && $other->gioitinh !== 'CHUA_XAC_DINH' && $other->gioitinh !== $pet->gioitinh) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
-        // Sắp xếp ưu tiên: đúng loại lồng (ICU/Thường) -> lồng trống hoàn toàn trước -> lồng phù hợp cân nặng nhất
-        $selected = $suitable->sortBy(function ($cage) use ($preferredTypes) {
-            $typePriority = array_search($cage->loailong, $preferredTypes, true);
-            $typePriority = ($typePriority === false) ? 99 : $typePriority;
-            $emptyPriority = ((int) $cage->soluonghientai === 0) ? 0 : 1;
-            return [$typePriority, $emptyPriority, $cage->cage_id];
-        })->first();
-
-        if (!$selected) {
-            return null;
-        }
-
-        // Ghi nhận xếp lồng vào pet_boardings, pets và cages (giống BoardingController::assignCage)
-        DB::table('pet_boardings')->insert([
-            'pet_id'     => $pet->pet_id,
-            'cage_id'    => $selected->cage_id,
-            'check_in'   => now(),
-            'status'     => 'checked_in',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::table('pets')->where('pet_id', $pet->pet_id)->update([
-            'cage_id'   => $selected->cage_id,
-            'trangthai' => 'NOI_TRU',
-        ]);
-
-        return $this->cageOccupancy->sync((int) $selected->cage_id);
     }
 
     /**
