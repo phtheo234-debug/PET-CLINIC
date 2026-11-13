@@ -143,6 +143,7 @@ class MedicalController extends Controller
                         ]);
 
                         $this->cageOccupancy->sync($oldCageId);
+                        $this->cageWaitingList->dispatchWaiting();
                     }
 
                     DB::table('pets')->where('pet_id', $fields['pet_id'])->update([
