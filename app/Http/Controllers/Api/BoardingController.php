@@ -312,8 +312,9 @@ class BoardingController extends Controller
                     'trangthai' => 'NGOAI_TRU',
                 ]);
 
-                $updatedCage = $this->cageOccupancy->sync((int) $cage->cage_id);
+                $this->cageOccupancy->sync((int) $cage->cage_id);
                 $assignedFromWaiting = $this->cageWaitingList->dispatchWaiting();
+                $updatedCage = $this->cageOccupancy->sync((int) $cage->cage_id);
 
                 return response()->json([
                     'status' => 'success',
