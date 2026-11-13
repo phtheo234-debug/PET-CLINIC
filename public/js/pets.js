@@ -113,6 +113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             await apiRequest("/medical/queue", {method:"POST", body:JSON.stringify({pet_id:Number(button.dataset.petId), ghi_chu:note.trim()})});
             alert("Đã đưa thú cưng vào danh sách chờ khám.");
+            await loadPets();
         } catch (error) { alert("Không thể thêm vào danh sách chờ: " + error.message); }
         finally { button.disabled = false; }
     });
