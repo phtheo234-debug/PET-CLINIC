@@ -104,7 +104,8 @@ class MedicalController extends Controller
                 $isolationRequired = (bool) ($fields['isolation_required'] ?? false);
                 $waitingForCage = false;
 
-                if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)) {
+                if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)
+                    && $fields['trangthai'] !== 'CHUYEN_VIEN') {
                     $assignment = $this->cageWaitingList->assignOrQueue(
                         (int) $pet->pet_id,
                         (float) $fields['cannangkhi_kham'],
