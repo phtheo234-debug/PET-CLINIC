@@ -9,6 +9,7 @@
         <i class="fas fa-spa mr-1"></i> GHI NHẬN DỊCH VỤ SPA ĐÃ SỬ DỤNG
     </div>
     <div class="card-body">
+        <p class="text-muted small">Chỉ ghi nhận cho thú cưng đang nội trú. Chi phí sẽ được cộng vào hóa đơn khi thanh toán và xuất viện.</p>
         <form id="spaUsageForm">
             <div class="form-row">
                 <div class="form-group col-md-4">
