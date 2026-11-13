@@ -4,6 +4,10 @@
 @section('page_title', 'Tổng quan Hoạt động Phòng khám')
 
 @section('content')
+@php
+    $dashboardUser = request()->attributes->get('web_authenticated_user');
+    $isDashboardDoctor = strtoupper(trim($dashboardUser->vaitro ?? '')) === 'BAC_SI';
+@endphp
 <div class="row">
     <div class="col-md-3 mb-3">
         <div class="card stat-card border-left border-primary p-3">
@@ -23,12 +27,14 @@
             <h3 id="so_long_trong" class="text-info font-weight-bold mt-2">0</h3>
         </div>
     </div>
+    @unless($isDashboardDoctor)
     <div class="col-md-3 mb-3">
         <div class="card stat-card border-left border-success p-3">
             <small class="text-muted font-weight-bold">DOANH THU NGÀY</small>
             <h3 id="doanh_thu_ngay" class="text-success font-weight-bold mt-2">0 đ</h3>
         </div>
     </div>
+    @endunless
 </div>
 @endsection
 
