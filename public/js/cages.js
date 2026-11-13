@@ -98,9 +98,7 @@ function renderBoardingRequests() {
                 ? `<strong>${cage.malong}</strong> - ${cage.ten_long}<br><small class="text-muted">${Number(cage.soluonghientai || 0)}/${Number(cage.succhua || 0)} chỗ · tối đa ${Number(cage.tai_trong_toi_da || 0)} kg · loài ${cage.loai_ap_dung || "?"}</small>`
                 : '<span class="text-danger">Chưa có lồng phù hợp</span><br><small class="text-muted">Yêu cầu vẫn được giữ chờ, hệ thống sẽ tìm lại khi làm mới.</small>';
             const action = canConfirmBoarding
-                ? cage
-                    ? `<button type="button" class="btn btn-sm btn-success" onclick="confirmBoardingRequest(${Number(item.request_id)})"><i class="fas fa-check mr-1"></i> Xác nhận xếp</button>`
-                    : '<button type="button" class="btn btn-sm btn-secondary" disabled>Chưa thể xếp</button>'
+                ? `<div class="d-flex flex-column" style="gap:6px;">${cage ? `<button type="button" class="btn btn-sm btn-success" onclick="confirmBoardingRequest(${Number(item.request_id)})"><i class="fas fa-check mr-1"></i> Xác nhận xếp</button>` : '<span class="small text-danger">Chưa có đề xuất phù hợp</span>'}<button type="button" class="btn btn-sm btn-outline-primary" onclick="manualAssignBoardingRequest(${Number(item.request_id)})"><i class="fas fa-hand-pointer mr-1"></i> Tự xếp lồng</button></div>`
                 : '<span class="text-muted small">Chỉ xem</span>';
 
             return `
@@ -341,5 +339,72 @@ async function deleteCage(cageId) {
         alert("Đã xóa lồng lưu trú.");
     } catch (err) {
         alert("Không thể xóa lồng: " + err.message);
+    }
+}
+
+
+/**
+ * Cho nhân viên/quản trị tự chọn lồng khác khi đề xuất tự động chưa phù hợp.
+ * Danh sách trên giao diện chỉ để hỗ trợ chọn; backend vẫn xác thực lại tuyệt đối.
+ */
+async function manualAssignBoardingRequest(requestId) {
+    if (!canConfirmBoarding) {
+        alert("Chỉ nhân viên hoặc quản trị viên được tự xếp lồng.");
+        return;
+    }
+
+    const requestItem = boardingRequests.find(
+        (item) => Number(item.request_id) === Number(requestId),
+    );
+    if (!requestItem) return;
+
+    const weight = Number(requestItem.cannangkhi_kham || 0);
+    const petType = String(requestItem.loai || "").trim().toLowerCase();
+    const options = cagesList.filter((cage) => {
+        if (cage.loailong !== requestItem.loai_long_yeu_cau) return false;
+        if (["DANG_VE_SINH", "BAO_TRI"].includes(cage.trangthai)) return false;
+        if (Number(cage.soluonghientai || 0) >= Number(cage.succhua || 0)) return false;
+        if (String(cage.loai_ap_dung || "").trim().toLowerCase() !== petType) return false;
+        if (weight > 0 && Number(cage.tai_trong_toi_da || 0) < weight) return false;
+        const occupants = Array.isArray(cage.pets) ? cage.pets : [];
+        if (Number(requestItem.yeu_cau_cach_ly) === 1 && occupants.length > 0) return false;
+        if (occupants.some((pet) => String(pet.loai || "").trim().toLowerCase() !== petType)) return false;
+        return true;
+    });
+
+    if (!options.length) {
+        alert("Không có lồng nào đang đáp ứng các điều kiện cơ bản. Hãy kiểm tra sức chứa, loại lồng, loài và cân nặng.");
+        return;
+    }
+
+    const menu = options.map((cage, index) =>
+        `${index + 1}. ${cage.malong} - ${cage.ten_long} (${cage.soluonghientai}/${cage.succhua} chỗ, tối đa ${cage.tai_trong_toi_da} kg)`
+    ).join("\n");
+    const answer = window.prompt(
+        "Chọn lồng phù hợp bằng cách nhập SỐ THỨ TỰ:\n\n" + menu,
+        "1"
+    );
+    if (answer === null) return;
+
+    const selectedIndex = Number(answer) - 1;
+    if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= options.length) {
+        alert("Số thứ tự lồng không hợp lệ.");
+        return;
+    }
+
+    const selectedCage = options[selectedIndex];
+    const petName = requestItem.ten_thucung || `thú cưng #${requestItem.pet_id}`;
+    if (!confirm(`Tự xếp ${petName} vào lồng ${selectedCage.malong} - ${selectedCage.ten_long}? Hệ thống sẽ kiểm tra lại điều kiện và chỉ giữ chỗ khi thành công.`)) return;
+
+    try {
+        const response = await apiRequest(`/boarding/requests/${requestId}/confirm`, {
+            method: "POST",
+            body: JSON.stringify({ cage_id: Number(selectedCage.cage_id) }),
+        });
+        await Promise.all([loadCages(), loadBoardingRequests()]);
+        alert(response?.message || "Đã tự xếp lồng thành công.");
+    } catch (error) {
+        alert("Không thể tự xếp lồng: " + error.message);
+        await Promise.all([loadCages(), loadBoardingRequests()]);
     }
 }
