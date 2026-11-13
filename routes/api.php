@@ -87,6 +87,7 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::middleware('role:QUAN_TRI,BAC_SI')->group(function () {
         Route::post('/medical/records', [MedicalController::class, 'store']);
         Route::get('/medical/records', [MedicalController::class, 'index']);
+        Route::put('/medical/records/{id}/status', [MedicalController::class, 'updateStatus']);
         Route::post('/medical/prescriptions', [MedicalController::class, 'createPrescription']);
         Route::get('/medical/history/pet/{petId}', [MedicalController::class, 'getHistoryByPet']);
     });

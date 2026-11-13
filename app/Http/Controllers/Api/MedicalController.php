@@ -234,6 +234,29 @@ class MedicalController extends Controller
     }
 
     /**
+     * Cập nhật trạng thái của một phiếu khám hiện có.
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $fields = $request->validate([
+            'trangthai' => 'required|in:DANG_DIEU_TRI,HOAN_THANH,CHUYEN_VIEN',
+        ]);
+
+        $record = DB::table('medical_records')->where('record_id', $id)->first();
+        abort_if(!$record, 404, 'Không tìm thấy phiếu khám.');
+
+        DB::table('medical_records')
+            ->where('record_id', $id)
+            ->update(['trangthai' => $fields['trangthai']]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Cập nhật trạng thái khám thành công.',
+            'data' => DB::table('medical_records')->where('record_id', $id)->first(),
+        ], 200);
+    }
+
+    /**
      * FR-MED-02: Kê đơn tính theo mg/kg và tự động xuất kho FEFO
      */
     public function createPrescription(Request $request)

@@ -205,7 +205,7 @@ async function loadPets() {
         renderPetsTable(petsList);
     } catch (err) {
         document.getElementById("petsTableBody").innerHTML =
-            `<tr><td colspan="7" class="text-danger text-center">${escapePetHtml(err.message)}</td></tr>`;
+            `<tr><td colspan="6" class="text-danger text-center">${escapePetHtml(err.message)}</td></tr>`;
     }
 }
 
@@ -222,7 +222,7 @@ function renderPetsTable(items) {
 
     if (!items.length) {
         tbody.innerHTML =
-            '<tr><td colspan="7" class="text-center text-muted">Chưa có dữ liệu thú cưng</td></tr>';
+            '<tr><td colspan="6" class="text-center text-muted">Chưa có dữ liệu thú cưng</td></tr>';
         return;
     }
 
@@ -267,13 +267,6 @@ function renderPetsTable(items) {
                 </td>
 
                 <td>
-                    <button type="button" class="btn btn-sm btn-outline-info"
-                        onclick="showPetQr(${Number(petId)})">
-                        <i class="fas fa-qrcode mr-1"></i> Xem QR
-                    </button>
-                </td>
-
-                <td>
                     <strong>
                         ${
                             weight !== "-" && weight !== null && weight !== ""
@@ -297,36 +290,6 @@ function renderPetsTable(items) {
         `;
         })
         .join("");
-}
-
-function showPetQr(petId) {
-    const pet = petsList.find((item) => Number(item.id ?? item.pet_id) === Number(petId));
-    if (!pet || !pet.qr_url || !pet.qr_code) {
-        alert("Chưa có dữ liệu QR. Vui lòng tải lại danh sách hoặc kiểm tra migration.");
-        return;
-    }
-
-    const container = document.getElementById("petQrContainer");
-    container.innerHTML = "";
-    document.getElementById("petQrName").textContent =
-        (pet.name || pet.ten_thucung || "Thú cưng") + " · " + (pet.mathucung || "");
-    document.getElementById("petQrCodeText").textContent = "Mã QR: " + pet.qr_code;
-    document.getElementById("petQrOpenLink").href = pet.qr_url;
-
-    if (typeof QRCode === "undefined") {
-        container.textContent = "Không tải được thư viện tạo QR. Vui lòng kiểm tra kết nối Internet.";
-    } else {
-        new QRCode(container, {
-            text: pet.qr_url,
-            width: 220,
-            height: 220,
-            colorDark: "#111827",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.M,
-        });
-    }
-
-    $("#petQrModal").modal("show");
 }
 
 // Mã hóa nội dung trước khi hiển thị HTML
@@ -355,109 +318,142 @@ function formatPetDate(value) {
         : date.toLocaleString("vi-VN");
 }
 
-// Xem chi tiết thú cưng
+// Xem chi tiết thú cưng, cập nhật cân nặng và trạng thái phiếu khám gần nhất
 async function openPetDetail(petId) {
     const content = document.getElementById("petDetailContent");
-
-    content.innerHTML =
-        '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i> Đang tải thông tin...</div>';
-
+    content.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i> Đang tải thông tin...</div>';
     $("#petDetailModal").modal("show");
 
     try {
         const response = await apiRequest(`/pets/${petId}`);
-
         const pet = response?.data?.data || response?.data || response;
+        const history = Array.isArray(pet.boarding_history) ? pet.boarding_history : [];
+        const exam = pet.latest_exam || null;
+        const canUpdateExam = ["QUAN_TRI", "BAC_SI"].includes(currentUserRole);
 
-        const history = Array.isArray(pet.boarding_history)
-            ? pet.boarding_history
-            : [];
-
-        const statusLabel = {
-            checked_in: '<span class="badge badge-success">Đang lưu trú</span>',
-            checked_out:
-                '<span class="badge badge-secondary">Đã trả lồng</span>',
+        const examStatusLabels = {
+            DANG_DIEU_TRI: "Đang điều trị",
+            HOAN_THANH: "Hoàn thành",
+            CHUYEN_VIEN: "Chuyển viện",
         };
-
+        const boardingStatusLabels = {
+            checked_in: '<span class="badge badge-success">Đang lưu trú</span>',
+            checked_out: '<span class="badge badge-secondary">Đã trả lồng</span>',
+        };
         const historyRows = history.length
-            ? history
-                  .map(
-                      (item) => `
+            ? history.map((item) => `
                 <tr>
-                    <td>
-                        ${escapePetHtml(item.malong || "-")}
-                        <br>
-                        <small class="text-muted">
-                            ${escapePetHtml(item.ten_long || "")}
-                        </small>
-                    </td>
-
+                    <td>${escapePetHtml(item.malong || "-")}<br><small class="text-muted">${escapePetHtml(item.ten_long || "")}</small></td>
                     <td>${formatPetDate(item.check_in)}</td>
                     <td>${formatPetDate(item.check_out)}</td>
-
-                    <td>
-                        ${statusLabel[item.status] || escapePetHtml(item.status || "-")}
-                    </td>
+                    <td>${boardingStatusLabels[item.status] || escapePetHtml(item.status || "-")}</td>
                 </tr>
-            `,
-                  )
-                  .join("")
+            `).join("")
             : '<tr><td colspan="4" class="text-center text-muted">Chưa có lịch sử lưu trú / trả lồng</td></tr>';
 
+        const examStatusControl = exam
+            ? (canUpdateExam
+                ? `
+                    <div class="form-row align-items-end mt-2">
+                        <div class="form-group col-md-8 mb-2">
+                            <label for="detailExamStatus">Trạng thái khám gần nhất</label>
+                            <select id="detailExamStatus" class="form-control">
+                                ${Object.entries(examStatusLabels).map(([value, label]) =>
+                                    `<option value="${value}" ${exam.trangthai === value ? "selected" : ""}>${label}</option>`
+                                ).join("")}
+                            </select>
+                            <small class="text-muted">Phiếu khám #${escapePetHtml(exam.record_id)} · ${formatPetDate(exam.ngaykham)}</small>
+                        </div>
+                        <div class="form-group col-md-4 mb-2">
+                            <button type="button" id="btnUpdateExamStatus" class="btn btn-outline-primary btn-block">Cập nhật trạng thái</button>
+                        </div>
+                    </div>`
+                : `<div class="mt-2"><strong>Trạng thái khám gần nhất:</strong> ${escapePetHtml(examStatusLabels[exam.trangthai] || exam.trangthai || "-")}<br><small class="text-muted">Phiếu khám #${escapePetHtml(exam.record_id)} · ${formatPetDate(exam.ngaykham)}</small></div>`)
+            : '<div class="text-muted mt-2">Thú cưng chưa có phiếu khám.</div>';
+
         content.innerHTML = `
-            <div class="row mb-4">
-                <div class="col-md-6 mb-2">
-                    <strong>Mã thú cưng:</strong>
-                    ${escapePetHtml(pet.mathucung || "-")}
-                </div>
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3"><strong>Mã thú cưng:</strong><br>${escapePetHtml(pet.mathucung || "-")}</div>
+                <div class="col-md-6 mb-3"><strong>Tên:</strong><br>${escapePetHtml(pet.name || "-")}</div>
+                <div class="col-md-6 mb-3"><strong>Loài / Giống:</strong><br>${escapePetHtml(pet.species || "-")} / ${escapePetHtml(pet.breed || "-")}</div>
+                <div class="col-md-6 mb-3"><strong>Ngày sinh:</strong><br>${escapePetHtml(pet.dob || "Chưa cập nhật")}</div>
+                <div class="col-md-6 mb-3"><strong>Chủ nuôi:</strong><br>${escapePetHtml(pet.owner?.name || "-")}</div>
+                <div class="col-md-6 mb-3"><strong>Số điện thoại:</strong><br>${escapePetHtml(pet.owner?.phone || "-")}</div>
+                <div class="col-md-6 mb-3"><strong>Trạng thái lưu trú:</strong><br>${escapePetHtml(pet.trangthai || "-")}</div>
+            </div>
 
-                <div class="col-md-6 mb-2">
-                    <strong>Tên:</strong>
-                    ${escapePetHtml(pet.name || "-")}
-                </div>
-
-                <div class="col-md-6 mb-2">
-                    <strong>Loài / Giống:</strong>
-                    ${escapePetHtml(pet.species || "-")} /
-                    ${escapePetHtml(pet.breed || "-")}
-                </div>
-
-                <div class="col-md-6 mb-2">
-                    <strong>Trạng thái:</strong>
-                    ${escapePetHtml(pet.trangthai || "-")}
-                </div>
-
-                <div class="col-md-6 mb-2">
-                    <strong>Chủ nuôi:</strong>
-                    ${escapePetHtml(pet.owner?.name || "-")}
-                </div>
-
-                <div class="col-md-6 mb-2">
-                    <strong>Số điện thoại:</strong>
-                    ${escapePetHtml(pet.owner?.phone || "-")}
+            <div class="card border-0 bg-light mb-4">
+                <div class="card-body">
+                    <h6 class="font-weight-bold text-primary"><i class="fas fa-weight mr-1"></i>Cân nặng hiện tại</h6>
+                    <div class="form-row align-items-end">
+                        <div class="form-group col-md-7 mb-2">
+                            <label for="detailPetWeight">Cân nặng (kg)</label>
+                            <input type="number" id="detailPetWeight" class="form-control" min="0.1" max="999" step="0.1" value="${pet.weight ?? ""}" placeholder="Nhập cân nặng">
+                        </div>
+                        <div class="form-group col-md-5 mb-2">
+                            <button type="button" id="btnUpdatePetWeight" class="btn btn-primary btn-block">Lưu cân nặng</button>
+                        </div>
+                    </div>
+                    <small class="text-muted">Mỗi lần cập nhật sẽ được ghi thành một bản ghi mới trong lịch sử cân nặng.</small>
                 </div>
             </div>
 
-            <h6 class="font-weight-bold text-primary mb-3">
-                <i class="fas fa-history mr-1"></i>
-                Lịch sử lưu trú / trả lồng
-            </h6>
+            <div class="mb-4">
+                <h6 class="font-weight-bold text-primary"><i class="fas fa-stethoscope mr-1"></i>Trạng thái khám</h6>
+                ${examStatusControl}
+            </div>
 
+            <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-history mr-1"></i>Lịch sử lưu trú / trả lồng</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
-                    <thead class="thead-light">
-                        <tr>
-                            <th>Mã lồng</th>
-                            <th>Thời gian nhận</th>
-                            <th>Thời gian trả</th>
-                            <th>Trạng thái</th>
-                        </tr>
-                    </thead>
-
+                    <thead class="thead-light"><tr><th>Mã lồng</th><th>Thời gian nhận</th><th>Thời gian trả</th><th>Trạng thái</th></tr></thead>
                     <tbody>${historyRows}</tbody>
                 </table>
             </div>
         `;
+
+        document.getElementById("btnUpdatePetWeight").addEventListener("click", async () => {
+            const input = document.getElementById("detailPetWeight");
+            const weight = Number(input.value);
+            if (!Number.isFinite(weight) || weight <= 0 || weight > 999) {
+                alert("Vui lòng nhập cân nặng lớn hơn 0 và không vượt quá 999 kg.");
+                input.focus();
+                return;
+            }
+            const button = document.getElementById("btnUpdatePetWeight");
+            button.disabled = true;
+            try {
+                await apiRequest(`/pets/${petId}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ weight }),
+                });
+                await loadPets();
+                alert("Đã cập nhật cân nặng.");
+                await openPetDetail(petId);
+            } catch (err) {
+                alert("Không cập nhật được cân nặng: " + err.message);
+                button.disabled = false;
+            }
+        });
+
+        const statusButton = document.getElementById("btnUpdateExamStatus");
+        if (statusButton) {
+            statusButton.addEventListener("click", async () => {
+                const status = document.getElementById("detailExamStatus").value;
+                statusButton.disabled = true;
+                try {
+                    await apiRequest(`/medical/records/${exam.record_id}/status`, {
+                        method: "PUT",
+                        body: JSON.stringify({ trangthai: status }),
+                    });
+                    alert("Đã cập nhật trạng thái khám.");
+                    await openPetDetail(petId);
+                } catch (err) {
+                    alert("Không cập nhật được trạng thái khám: " + err.message);
+                    statusButton.disabled = false;
+                }
+            });
+        }
     } catch (err) {
         content.innerHTML = `<div class="alert alert-danger mb-0">Không tải được chi tiết thú cưng: ${escapePetHtml(err.message)}</div>`;
     }

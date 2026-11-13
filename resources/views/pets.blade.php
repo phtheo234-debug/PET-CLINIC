@@ -23,10 +23,10 @@
     <div class="card-body table-responsive">
         <table class="table table-hover mb-0">
             <thead class="thead-light">
-                <tr><th>Mã TC</th><th>Tên & Giống loài</th><th>Chủ nuôi</th><th>QR Code</th><th>Cân nặng</th><th>Trạng thái</th><th>Thao tác</th></tr>
+                <tr><th>Mã TC</th><th>Tên & Giống loài</th><th>Chủ nuôi</th><th>Cân nặng</th><th>Trạng thái</th><th>Thao tác</th></tr>
             </thead>
             <tbody id="petsTableBody">
-                <tr><td colspan="7" class="text-center text-muted">Đang tải danh sách thú cưng...</td></tr>
+                <tr><td colspan="6" class="text-center text-muted">Đang tải danh sách thú cưng...</td></tr>
             </tbody>
         </table>
     </div>
@@ -95,26 +95,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="petQrModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title font-weight-bold">QR Code thú cưng</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <div class="modal-body text-center">
-                <div id="petQrName" class="font-weight-bold mb-2"></div>
-                <div id="petQrContainer" class="d-flex justify-content-center mb-3"></div>
-                <small id="petQrCodeText" class="text-muted d-block mb-2"></small>
-                <a id="petQrOpenLink" href="#" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-external-link-alt mr-1"></i>Mở trang hồ sơ
-                </a>
-                <p class="small text-muted mt-3 mb-0">Quét QR bằng điện thoại. Cần đăng nhập Pet Clinic để xem thông tin.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="modal fade" id="petDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -131,6 +111,5 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="{{ asset('js/pets.js') }}?v={{ filemtime(public_path('js/pets.js')) }}"></script>
 @endpush

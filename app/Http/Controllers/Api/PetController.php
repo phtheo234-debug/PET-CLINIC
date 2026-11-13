@@ -7,7 +7,6 @@ use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class PetController extends Controller
 {
@@ -48,8 +47,6 @@ class PetController extends Controller
             'breed'          => $p->giong,
             'gender'         => $p->gioitinh,
             'dob'            => $p->ngaysinh,
-            'qr_code'        => $p->qr_code,
-            'qr_url'         => route('pets.qr.show', $p->qr_code),
             'weight'         => $p->current_weight ? (float)$p->current_weight : null,
             'owner_id'       => $p->owner_id,
             'cage_id'        => $p->cage_id,
@@ -151,7 +148,6 @@ class PetController extends Controller
                     'giong'       => $v['breed'] ?? null,
                     'gioitinh'    => $v['gender'] ?? 'CHUA_XAC_DINH',
                     'ngaysinh'    => $v['dob'] ?? null,
-                    'qr_code'     => (string) Str::uuid(),
                     'trangthai'   => 'NGOAI_TRU',
                 ]);
 
@@ -200,10 +196,17 @@ class PetController extends Controller
             ->orderByDesc('pet_boardings.check_in')
             ->get();
 
+        $latestExam = DB::table('medical_records')
+            ->where('pet_id', $id)
+            ->orderByDesc('record_id')
+            ->select('record_id', 'trangthai', 'ngaykham')
+            ->first();
+
         return response()->json([
             'status' => 'success',
             'data'   => array_merge($this->format($pet), [
                 'boarding_history' => $boardingHistory,
+                'latest_exam' => $latestExam,
             ]),
         ], 200);
     }

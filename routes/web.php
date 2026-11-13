@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PetQrController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -9,11 +8,6 @@ Route::get('/', function () {
 
 Route::view('/login', 'auth.login')->name('login');
 Route::view('/forgot-password', 'auth.forgot-password')->name('forgot-password');
-
-// Trang tra cứu QR công khai: không tạo tài khoản cho chủ nuôi và không mở API quản trị.
-Route::get('/pet-qr/{qrCode}', [PetQrController::class, 'show'])
-    ->middleware('throttle:60,1')
-    ->name('pets.qr.show');
 
 Route::middleware('web.token')->group(function () {
     Route::view('/change-password', 'auth.change-password')->name('change-password');
