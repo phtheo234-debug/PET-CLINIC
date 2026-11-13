@@ -72,6 +72,7 @@ class CageWaitingListService
             return 0;
         }
 
+        return DB::transaction(function () {
         $assigned = 0;
         $waitingRows = DB::table('pet_cage_waitlist')
             ->where('status', 'WAITING')
@@ -83,11 +84,18 @@ class CageWaitingListService
         foreach ($waitingRows as $row) {
             $pet = DB::table('pets')->where('pet_id', $row->pet_id)->lockForUpdate()->first();
 
-            if (!$pet || $pet->cage_id) {
-                if (!$pet) {
-                    DB::table('pet_cage_waitlist')->where('waitlist_id', $row->waitlist_id)
-                        ->update(['status' => 'CANCELLED', 'updated_at' => now()]);
-                }
+            if (!$pet) {
+                DB::table('pet_cage_waitlist')->where('waitlist_id', $row->waitlist_id)
+                    ->update(['status' => 'CANCELLED', 'updated_at' => now()]);
+                continue;
+            }
+            if ($pet->cage_id) {
+                DB::table('pet_cage_waitlist')->where('waitlist_id', $row->waitlist_id)->update([
+                    'status' => 'ASSIGNED',
+                    'assigned_cage_id' => $pet->cage_id,
+                    'assigned_at' => now(),
+                    'updated_at' => now(),
+                ]);
                 continue;
             }
 
@@ -114,6 +122,7 @@ class CageWaitingListService
         }
 
         return $assigned;
+        });
     }
 
     private function findSuitableCage(object $pet, float $weight, string $treatment, bool $isolation): ?object
