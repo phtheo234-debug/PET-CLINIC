@@ -41,7 +41,7 @@ class InventoryController extends Controller
                         }
                     })
                     ->sum('soluong');
-                $firstUsableBatch = $item->batches->first(function ($batch) {
+                $firstUsableBatch = $item->batches->first(function ($batch) use ($item) {
                     return $batch->trangthai === 'DANG_SU_DUNG'
                         && (int) $batch->soluong > 0
                         && ($item->danhmuc === 'DO_DUNG' ? (!$batch->ngayhethan || $batch->ngayhethan >= now()->toDateString()) : ($batch->ngayhethan && $batch->ngayhethan >= now()->toDateString()));
