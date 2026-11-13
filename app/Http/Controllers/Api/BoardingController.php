@@ -123,34 +123,42 @@ class BoardingController extends Controller
                     ], 404);
                 }
 
-                if ($pet->cage_id) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Thú cưng đã được xếp vào lồng khác.',
-                    ], 409);
+                $oldCageId = $pet->cage_id ? (int) $pet->cage_id : null;
+                $oldCage = $oldCageId ? DB::table('cages')->where('cage_id', $oldCageId)->first() : null;
+                if ($oldCage && $oldCage->loailong === $boardingRequest->loai_long_yeu_cau) {
+                    return response()->json(['status' => 'error', 'message' => 'Thú cưng đã ở đúng loại lồng được chỉ định.'], 409);
                 }
 
-                $hasActiveBoarding = DB::table('pet_boardings')
+                $activeBoarding = DB::table('pet_boardings')
                     ->where('pet_id', $pet->pet_id)
                     ->where('status', 'checked_in')
                     ->whereNull('check_out')
-                    ->exists();
+                    ->lockForUpdate()
+                    ->first();
 
-                if ($hasActiveBoarding) {
+                if ($activeBoarding && !$oldCageId) {
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'Thú cưng đã có lượt lưu trú đang hoạt động.',
+                        'message' => 'Thú cưng đã có lượt lưu trú đang hoạt động nhưng chưa đồng bộ lồng hiện tại.',
                     ], 409);
                 }
 
                 // Luôn tìm lại lồng mới nhất tại thời điểm xác nhận.
-                $cage = $this->findSuitableCage($boardingRequest, true);
+                $cage = $this->findSuitableCage($boardingRequest, true, $oldCageId);
 
                 if (!$cage) {
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Hiện không còn lồng phù hợp. Yêu cầu vẫn được giữ ở trạng thái chờ.',
                     ], 422);
+                }
+
+                if ($oldCageId && $activeBoarding) {
+                    DB::table('pet_boardings')->where('id', $activeBoarding->id)->update([
+                        'check_out' => now(),
+                        'status' => 'checked_out',
+                        'updated_at' => now(),
+                    ]);
                 }
 
                 DB::table('pet_boardings')->insert([
@@ -177,11 +185,14 @@ class BoardingController extends Controller
                         'updated_at' => now(),
                     ]);
 
+                if ($oldCageId) {
+                    $this->cageOccupancy->sync($oldCageId);
+                }
                 $updatedCage = $this->cageOccupancy->sync((int) $cage->cage_id);
 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Đã xác nhận đề xuất và xếp thú cưng vào lồng ' . $updatedCage->malong . '.',
+                    'message' => ($oldCageId ? 'Đã chuyển thú cưng sang lồng ' : 'Đã xác nhận đề xuất và xếp thú cưng vào lồng ') . $updatedCage->malong . '.',
                     'data' => [
                         'pet_id' => $pet->pet_id,
                         'cage' => $updatedCage,
@@ -202,7 +213,7 @@ class BoardingController extends Controller
      * Tìm lồng theo loại được bác sĩ chỉ định, sức chứa, cân nặng,
      * yêu cầu cách ly và khả năng ở chung an toàn.
      */
-    private function findSuitableCage(object $boardingRequest, bool $lock): ?object
+    private function findSuitableCage(object $boardingRequest, bool $lock, ?int $excludeCageId = null): ?object
     {
         $pet = DB::table('pets')
             ->where('pet_id', $boardingRequest->pet_id)
@@ -226,6 +237,9 @@ class BoardingController extends Controller
         $query = DB::table('cages')
             ->where('loailong', $boardingRequest->loai_long_yeu_cau)
             ->whereNotIn('trangthai', ['DANG_VE_SINH', 'BAO_TRI']);
+        if ($excludeCageId) {
+            $query->where('cage_id', '!=', $excludeCageId);
+        }
 
         if (Schema::hasColumn('cages', 'loai_ap_dung')) {
             $query->whereRaw('LOWER(loai_ap_dung) = ?', [mb_strtolower((string) $pet->loai)]);
