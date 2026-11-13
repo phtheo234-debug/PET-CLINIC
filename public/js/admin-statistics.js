@@ -27,9 +27,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const categoryNames = {
         THUOC: "Thuốc",
-        VAC_XIN: "Vắc-xin",
-        THUC_AN: "Thức ăn",
-        VAT_TU: "Vật tư",
         LUU_TRU: "Lưu trú",
         DICH_VU_SPA: "Dịch vụ Spa"
     };
