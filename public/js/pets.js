@@ -344,23 +344,7 @@ async function openPetDetail(petId) {
         `).join("") : '<tr><td colspan="6" class="text-center text-muted">Chưa có lịch sử khám bệnh</td></tr>';
 
         const examStatusControl = exam
-            ? (canUpdateExam
-                ? `
-                    <div class="form-row align-items-end mt-2">
-                        <div class="form-group col-md-8 mb-2">
-                            <label for="detailExamStatus">Trạng thái khám gần nhất</label>
-                            <select id="detailExamStatus" class="form-control">
-                                ${Object.entries(examStatusLabels).map(([value, label]) =>
-                                    `<option value="${value}" ${exam.trangthai === value ? "selected" : ""}>${label}</option>`
-                                ).join("")}
-                            </select>
-                            <small class="text-muted">Phiếu khám #${escapePetHtml(exam.record_id)} · ${formatPetDate(exam.ngaykham)}</small>
-                        </div>
-                        <div class="form-group col-md-4 mb-2">
-                            <button type="button" id="btnUpdateExamStatus" class="btn btn-outline-primary btn-block">Cập nhật trạng thái</button>
-                        </div>
-                    </div>`
-                : `<div class="mt-2"><strong>Trạng thái khám gần nhất:</strong> ${escapePetHtml(examStatusLabels[exam.trangthai] || exam.trangthai || "-")}<br><small class="text-muted">Phiếu khám #${escapePetHtml(exam.record_id)} · ${formatPetDate(exam.ngaykham)}</small></div>`)
+            ? `<div class="mt-2"><strong>Trạng thái khám gần nhất:</strong> ${escapePetHtml(examStatusLabels[exam.trangthai] || exam.trangthai || "-")}<br><small class="text-muted">Phiếu khám #${escapePetHtml(exam.record_id)} · ${formatPetDate(exam.ngaykham)}</small></div>`
             : '<div class="text-muted mt-2">Thú cưng chưa có phiếu khám.</div>';
 
         content.innerHTML = `
