@@ -37,7 +37,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("assignCageForm")?.addEventListener("submit", submitAssignCage);
     }
 
-    document.getElementById("cageSearch")?.addEventListener("input", renderCagesGrid);
+    document.getElementById("cageSearch")?.addEventListener("input", () => {
+        renderCagesGrid();
+        renderWaitingList();
+    });
     document.getElementById("cageStatusFilter")?.addEventListener("change", renderCagesGrid);
     document.getElementById("cageTypeFilter")?.addEventListener("change", renderCagesGrid);
 
@@ -128,7 +131,17 @@ function renderWaitingList() {
         return;
     }
 
-    body.innerHTML = cageWaitingList.map((pet) => {
+    const keyword = (document.getElementById("cageSearch")?.value || "").trim().toLocaleLowerCase("vi");
+    const filteredWaiting = cageWaitingList.filter((pet) =>
+        [pet.mathucung, pet.ten_thucung, pet.loai, pet.giong].join(" ").toLocaleLowerCase("vi").includes(keyword)
+    );
+
+    if (!filteredWaiting.length) {
+        body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Không có thú cưng chờ nào khớp từ khóa.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = filteredWaiting.map((pet) => {
         const requirement = pet.isolation_required ? "Cách ly" : (pet.treatment_type === "SURGERY" ? "Phẫu thuật" : "Nội trú");
         return `<tr>
             <td>${pet.mathucung || "PET-" + pet.pet_id}</td>
