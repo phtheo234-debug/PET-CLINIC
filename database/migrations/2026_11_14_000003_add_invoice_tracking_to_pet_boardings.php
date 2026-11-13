@@ -53,6 +53,19 @@ return new class extends Migration
                 ->orderBy('i.invoice_id')
                 ->value('i.invoice_id');
 
+            // Tương thích hóa đơn cũ: ghi chú trước đây có dạng "Từ ngày ... đến ngày ...".
+            if (!$invoiceId) {
+                $legacyNote = 'Từ ngày ' . $checkInText . ' đến ngày ' . $checkOutText;
+                $invoiceId = DB::table('invoice_details as d')
+                    ->join('invoices as i', 'i.invoice_id', '=', 'd.invoice_id')
+                    ->where('i.pet_id', $stay->pet_id)
+                    ->where('d.loai_chiphi', 'LUU_TRU')
+                    ->where('d.ten_sanpham', $description)
+                    ->where('d.ghichu', $legacyNote)
+                    ->orderBy('i.invoice_id')
+                    ->value('i.invoice_id');
+            }
+
             if ($invoiceId) {
                 DB::table('pet_boardings')
                     ->where('id', $stay->id)
