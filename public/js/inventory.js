@@ -83,81 +83,68 @@ function escapeInventoryHtml(value) {
 }
 
 function renderInventory(items) {
-    const now = new Date();
-    const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
-    const categoryLabels = {
-        THUOC: "Thuốc",
-        VAC_XIN: "Vắc-xin",
-        THUC_AN: "Thức ăn",
-        DO_DUNG: "Đồ dùng",
+    const today = new Date().toLocaleDateString("en-CA");
+    const categories = {
+        THUOC: "Thuốc", VAC_XIN: "Vắc-xin", THUC_AN: "Thức ăn", DO_DUNG: "Đồ dùng"
     };
-    const allGoods = items.filter((item) => item.danhmuc !== "DICH_VU_SPA");
-    renderExpiryNotice(allGoods);
-    const goods = allGoods.filter((item) => warehouseFilter === "medical" ? ["THUOC", "VAC_XIN"].includes(item.danhmuc) : warehouseFilter === "retail" ? ["THUC_AN", "DO_DUNG"].includes(item.danhmuc) : true);
+    renderExpiryNotice(items.filter(item => ["THUOC", "VAC_XIN", "THUC_AN"].includes(item.danhmuc)));
 
-    document.getElementById("inventoryTableBody").innerHTML = goods.length
-        ? goods.map((item) => {
-            const expiry = item.ngayhethan || item.batches?.[0]?.ngayhethan || "-";
-            const batchNo = item.solo || item.batches?.[0]?.solo || "-";
-            const qty = item.tong_ton_kho ?? item.soluong ?? item.tong_ton ?? 0;
-            const isExpired = expiry !== "-" && expiry < today;
-            const hasExpiredLot = (item.batches || []).some(batch => batch.ngayhethan && batch.ngayhethan < today && Number(batch.soluong) > 0);
-            const statusHtml = isExpired || (hasExpiredLot && Number(qty) <= 0)
-                ? '<span class="badge badge-danger">Hết hạn - Đã khóa</span>'
-                : Number(qty) <= 0
-                    ? '<span class="badge badge-secondary">Hết hàng</span>'
-                    : '<span class="badge badge-success">Khả dụng (FEFO)</span>';
-            const actions = isAdminInventory ? `
-                <td class="text-nowrap">
-                    <button type="button" class="btn btn-sm btn-outline-success mr-1" onclick="openInventoryBatchForm(${Number(item.item_id)})">
-                        <i class="fas fa-boxes"></i> Nhập lô
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editInventoryItem(${Number(item.item_id)})">
-                        <i class="fas fa-edit"></i> Sửa
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteInventoryItem(${Number(item.item_id)})">
-                        <i class="fas fa-trash"></i> Xóa
-                    </button>
-                </td>` : "";
+    const renderBatchTable = (rows, bodyId) => {
+        const body = document.getElementById(bodyId);
+        body.innerHTML = rows.length ? rows.map(item => {
+            const usable = (item.batches || []).filter(batch =>
+                batch.trangthai === "DANG_SU_DUNG" && Number(batch.soluong) > 0 &&
+                batch.ngayhethan && batch.ngayhethan >= today
+            );
+            const expired = (item.batches || []).some(batch =>
+                batch.trangthai === "HET_HAN" && Number(batch.soluong) > 0
+            );
+            const batch = usable[0] || (item.batches || []).find(b => Number(b.soluong) > 0) || {};
+            const quantity = Number(item.tong_ton_kho || 0);
+            const status = quantity > 0
+                ? '<span class="badge badge-success">Còn hàng</span>'
+                : expired
+                    ? '<span class="badge badge-danger">Có lô hết hạn đã khóa</span>'
+                    : '<span class="badge badge-secondary">Hết hàng</span>';
+            const actions = isAdminInventory ? '<td class="text-nowrap">' +
+                '<button type="button" class="btn btn-sm btn-outline-success mr-1" onclick="openInventoryBatchForm(' + Number(item.item_id) + ')">Nhập lô</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editInventoryItem(' + Number(item.item_id) + ')">Sửa</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteInventoryItem(' + Number(item.item_id) + ')">Xóa</button></td>' : '';
+            return '<tr>' +
+                '<td><code>' + escapeInventoryHtml(item.masanpham) + '</code></td>' +
+                '<td><strong>' + escapeInventoryHtml(item.ten_sanpham) + '</strong></td>' +
+                '<td>' + escapeInventoryHtml(batch.solo || '—') + '</td>' +
+                '<td>' + quantity + '</td>' +
+                '<td>' + escapeInventoryHtml(batch.ngayhethan || '—') + '</td>' +
+                '<td>' + formatCurrency(item.dongia) + '</td><td>' + status + '</td>' + actions +
+                '</tr>';
+        }).join("") : '<tr><td colspan="' + (isAdminInventory ? 8 : 7) + '" class="text-center text-muted">Chưa có mặt hàng.</td></tr>';
+    };
 
-            return `
-                <tr class="${isExpired ? "table-danger" : ""}">
-                    <td><code>${escapeInventoryHtml(item.masanpham)}</code></td>
-                    <td><strong>${escapeInventoryHtml(item.ten_sanpham || item.name)}</strong></td>
-                    <td>${categoryLabels[item.danhmuc] || escapeInventoryHtml(item.danhmuc)}</td>
-                    <td>${escapeInventoryHtml(batchNo)}</td>
-                    <td><strong>${Number(qty)}</strong></td>
-                    <td>${escapeInventoryHtml(expiry)}</td>
-                    <td>${formatCurrency(item.dongia)}</td>
-                    <td>${statusHtml}</td>
-                    ${actions}
-                </tr>`;
-        }).join("")
-        : `<tr><td colspan="${isAdminInventory ? 9 : 8}" class="text-center text-muted">Chưa có mặt hàng trong kho này</td></tr>`;
+    renderBatchTable(items.filter(item => ["THUOC", "VAC_XIN"].includes(item.danhmuc)), "medicalInventoryTableBody");
+    renderBatchTable(items.filter(item => item.danhmuc === "THUC_AN"), "foodInventoryTableBody");
 
-    const services = items.filter((item) => item.danhmuc === "DICH_VU_SPA");
-    document.getElementById("spaTableBody").innerHTML = services.length
-        ? services.map((service) => {
-            const actions = isAdminSpa ? `
-                <td class="text-nowrap">
-                    <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editSpaService(${Number(service.item_id)})">
-                        <i class="fas fa-edit"></i> Sửa
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSpaService(${Number(service.item_id)})">
-                        <i class="fas fa-trash"></i> Xóa
-                    </button>
-                </td>` : "";
-            return `
-                <tr>
-                    <td><code>${escapeInventoryHtml(service.masanpham)}</code></td>
-                    <td><strong>${escapeInventoryHtml(service.ten_sanpham || service.name)}</strong></td>
-                    <td class="text-primary font-weight-bold">${formatCurrency(service.dongia)}</td>
-                    ${actions}
-                </tr>`;
-        }).join("")
-        : `<tr><td colspan="${isAdminSpa ? 4 : 3}" class="text-center text-muted">Chưa có dịch vụ Spa</td></tr>`;
+    const goods = items.filter(item => item.danhmuc === "DO_DUNG");
+    document.getElementById("goodsInventoryTableBody").innerHTML = goods.length ? goods.map(item => {
+        const actions = isAdminInventory ? '<td class="text-nowrap">' +
+            '<button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editInventoryItem(' + Number(item.item_id) + ')">Sửa / cập nhật tồn</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteInventoryItem(' + Number(item.item_id) + ')">Xóa</button></td>' : '';
+        return '<tr><td><code>' + escapeInventoryHtml(item.masanpham) + '</code></td>' +
+            '<td><strong>' + escapeInventoryHtml(item.ten_sanpham) + '</strong></td>' +
+            '<td>' + Number(item.soluongton ?? item.tong_ton_kho ?? 0) + '</td>' +
+            '<td>' + formatCurrency(item.dongia) + '</td>' + actions + '</tr>';
+    }).join("") : '<tr><td colspan="' + (isAdminInventory ? 5 : 4) + '" class="text-center text-muted">Chưa có đồ dùng.</td></tr>';
+
+    const services = items.filter(item => item.danhmuc === "DICH_VU_SPA");
+    document.getElementById("spaTableBody").innerHTML = services.length ? services.map(service => {
+        const actions = isAdminSpa ? '<td class="text-nowrap">' +
+            '<button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editSpaService(' + Number(service.item_id) + ')">Sửa</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSpaService(' + Number(service.item_id) + ')">Xóa</button></td>' : '';
+        return '<tr><td><code>' + escapeInventoryHtml(service.masanpham) + '</code></td>' +
+            '<td><strong>' + escapeInventoryHtml(service.ten_sanpham) + '</strong></td>' +
+            '<td class="text-primary font-weight-bold">' + formatCurrency(service.dongia) + '</td>' + actions + '</tr>';
+    }).join("") : '<tr><td colspan="' + (isAdminSpa ? 4 : 3) + '" class="text-center text-muted">Chưa có dịch vụ.</td></tr>';
 }
-
 
 function openInventoryBatchForm(itemId) {
     if (!isAdminInventory) return;
@@ -183,13 +170,12 @@ async function saveInventoryBatch(event) {
     if (!isAdminInventory) return;
     const payload = {
         item_id: Number(document.getElementById("batch_item_id").value),
-        solo: document.getElementById("batch_code").value.trim(),
         soluong: Number(document.getElementById("batch_quantity").value),
         ngaynhap: document.getElementById("batch_import_date").value,
         ngayhethan: document.getElementById("batch_expiry_date").value || null,
     };
-    if (!payload.solo || !Number.isInteger(payload.soluong) || payload.soluong < 1) {
-        alert("Mã lô và số lượng nhập không hợp lệ."); return;
+    if (!Number.isInteger(payload.soluong) || payload.soluong < 1) {
+        alert("Số lượng nhập không hợp lệ."); return;
     }
     const batchItem = inventoryItems.find(item => Number(item.item_id) === payload.item_id);
     if (!payload.ngayhethan && ["THUOC", "VAC_XIN", "THUC_AN"].includes(batchItem?.danhmuc)) {
@@ -215,30 +201,28 @@ async function saveInventoryBatch(event) {
 }
 
 function toggleMedicineDosageFields() {
-    const isMedicine = document.getElementById("inventory_category")?.value === "THUOC";
-    const fields = document.getElementById("medicineDosageFields");
-    const dose = document.getElementById("inventory_dose");
-    const mgUnit = document.getElementById("inventory_mg_unit");
-    if (!fields || !dose || !mgUnit) return;
-
-    fields.classList.toggle("d-none", !isMedicine);
-    dose.required = isMedicine;
-    mgUnit.required = isMedicine;
+    const category = document.getElementById("inventory_category")?.value;
+    const isGoods = category === "DO_DUNG";
+    const unitGroup = document.getElementById("inventoryUnitGroup");
+    const stockGroup = document.getElementById("inventoryStockGroup");
+    if (unitGroup) unitGroup.classList.toggle("d-none", isGoods);
+    if (stockGroup) stockGroup.classList.toggle("d-none", !isGoods);
+    const unit = document.getElementById("inventory_unit");
+    if (unit) unit.required = !isGoods;
 }
 
-function openInventoryForm(item = null) {
+function openInventoryForm(item = null, category = null) {
     if (!isAdminInventory) return;
     document.getElementById("inventoryForm").reset();
     document.getElementById("inventory_form_id").value = item ? item.item_id : "";
     document.getElementById("inventoryFormTitle").innerText = item ? "Cập nhật mặt hàng kho" : "Thêm mặt hàng kho";
     document.getElementById("inventory_code").value = item?.masanpham || "";
     document.getElementById("inventory_name").value = item?.ten_sanpham || "";
-    document.getElementById("inventory_category").value = item?.danhmuc || "THUOC";
+    document.getElementById("inventory_category").value = item?.danhmuc || category || "THUOC";
     document.getElementById("inventory_unit").value = item?.donvitinh || "";
     document.getElementById("inventory_price").value = item?.dongia ?? "";
     document.getElementById("inventory_minimum").value = item?.tonkhotoithieu ?? 10;
-    document.getElementById("inventory_dose").value = item?.lieu_mg_kg ?? "";
-    document.getElementById("inventory_mg_unit").value = item?.mg_moi_don_vi ?? "";
+    document.getElementById("inventory_stock").value = item?.soluongton ?? 0;
     toggleMedicineDosageFields();
     $("#inventoryFormModal").modal("show");
 }
@@ -265,11 +249,12 @@ async function saveInventoryItem(event) {
     const payload = {
         ten_sanpham: document.getElementById("inventory_name").value.trim(),
         danhmuc: category,
-        donvitinh: document.getElementById("inventory_unit").value.trim(),
+        donvitinh: category === "DO_DUNG" ? "" : document.getElementById("inventory_unit").value.trim(),
+        soluongton: category === "DO_DUNG" ? Number(document.getElementById("inventory_stock").value || 0) : 0,
         dongia: Number(document.getElementById("inventory_price").value),
         tonkhotoithieu: Number(document.getElementById("inventory_minimum").value || 0),
-        lieu_mg_kg: category === "THUOC" ? Number(document.getElementById("inventory_dose").value) : null,
-        mg_moi_don_vi: category === "THUOC" ? Number(document.getElementById("inventory_mg_unit").value) : null,
+        lieu_mg_kg: null,
+        mg_moi_don_vi: null,
     };
 
     const button = document.getElementById("btnSaveInventory");
@@ -314,7 +299,6 @@ function openSpaServiceForm(service = null) {
     document.getElementById("spaServiceFormTitle").innerText = service ? "Cập nhật dịch vụ Spa" : "Thêm dịch vụ Spa";
     document.getElementById("spa_service_code").value = service?.masanpham || "";
     document.getElementById("spa_service_name").value = service?.ten_sanpham || "";
-    document.getElementById("spa_service_unit").value = service?.donvitinh || "lần";
     document.getElementById("spa_service_price").value = service?.dongia ?? "";
     $("#spaServiceFormModal").modal("show");
 }
@@ -341,7 +325,6 @@ async function saveSpaService(event) {
     const id = document.getElementById("spa_service_form_id").value;
     const payload = {
         ten_sanpham: document.getElementById("spa_service_name").value.trim(),
-        donvitinh: document.getElementById("spa_service_unit").value.trim(),
         dongia: Number(document.getElementById("spa_service_price").value),
     };
 
