@@ -611,3 +611,15 @@ hr {
         padding: 7px 10px;
     }
 }
+
+/* Lồng còn trống: nền xanh nhạt, chữ xanh đậm để dễ đọc */
+.cage-card.border-success > .card-header.text-white {
+    color: #166534 !important;
+    background: #dcfce7 !important;
+    border-bottom-color: #bbf7d0;
+}
+
+.cage-card.border-success > .card-header strong,
+.cage-card.border-success > .card-header span {
+    color: #166534 !important;
+}
