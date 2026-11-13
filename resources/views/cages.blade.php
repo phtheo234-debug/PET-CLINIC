@@ -4,6 +4,40 @@
 @section('page_title', 'Quản lý Lồng Lưu trú & Nội trú')
 
 @section('content')
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-clipboard-list mr-1 text-primary"></i> YÊU CẦU LƯU TRÚ CHỜ XÁC NHẬN</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadBoardingRequests()">
+            <i class="fas fa-sync-alt mr-1"></i> Làm mới
+        </button>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Hệ thống tự tìm lồng theo chỉ định của bác sĩ. Nhân viên kiểm tra lồng được đề xuất và xác nhận;
+            lồng chỉ được giữ sau khi xác nhận thành công.
+        </p>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Thú cưng</th>
+                        <th>Chẩn đoán</th>
+                        <th>Yêu cầu</th>
+                        <th>Lồng hệ thống đề xuất</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="boardingRequestsBody">
+                    <tr><td colspan="5" class="text-center text-muted">Đang tải yêu cầu lưu trú...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <small class="form-text text-muted mt-2">
+            Bác sĩ có thể xem đề xuất; chỉ quản trị viên và nhân viên được xác nhận xếp lồng.
+        </small>
+    </div>
+</div>
+
 <div class="d-flex justify-content-end mb-3 d-none" id="adminCageToolbar">
     <button type="button" class="btn btn-primary" onclick="openCageForm()">
         <i class="fas fa-plus mr-1"></i> Thêm lồng lưu trú
@@ -14,7 +48,7 @@
     <div class="col-12 text-center text-muted py-4">Đang tải danh sách lồng lưu trú...</div>
 </div>
 
-<!-- Modal Thêm / sửa lồng (chỉ quản trị viên) -->
+<!-- Modal thêm / sửa danh mục lồng (chỉ quản trị viên) -->
 <div class="modal fade" id="cageFormModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <form id="cageForm" class="modal-content">
@@ -27,7 +61,7 @@
                 <div class="form-group">
                     <label>Mã lồng</label>
                     <input type="text" id="cage_malong" class="form-control" maxlength="20" readonly>
-                    <small class="form-text text-muted">Mã được hệ thống tự động tạo khi lưu lồng mới; mã đã cấp không thay đổi.</small>
+                    <small class="form-text text-muted">Mã được hệ thống tự động tạo khi lưu lồng mới.</small>
                 </div>
                 <div class="form-group">
                     <label>Tên lồng <span class="text-danger">*</span></label>
@@ -45,7 +79,7 @@
                     <label>Sức chứa tối đa <span class="text-danger">*</span></label>
                     <input type="number" id="cage_succhua" class="form-control" min="1" max="100" value="1" required>
                 </div>
-                <div class="form-group" id="cageStatusGroup">
+                <div class="form-group">
                     <label>Trạng thái</label>
                     <select id="cage_trangthai" class="form-control">
                         <option value="CON_TRONG">Còn trống</option>
@@ -59,39 +93,6 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
                 <button type="submit" class="btn btn-primary" id="btnSaveCage">Lưu lồng</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Modal Xếp thú cưng vào lồng -->
-<div class="modal fade" id="assignCageModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <form id="assignCageForm" class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title font-weight-bold">
-                    Xếp Thú cưng vào Lồng <span id="modalCageCode" class="text-primary"></span>
-                </h5>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="selected_cage_id">
-                <div class="form-group">
-                    <label>Chọn Thú cưng cần lưu trú <span class="text-danger">*</span></label>
-                    <select id="assign_pet_id" class="form-control" required>
-                        <option value="">-- Đang tải danh sách thú cưng --</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Lý do lưu trú / Ghi chú</label>
-                    <input type="text" id="assign_note" class="form-control" placeholder="VD: Lưu viện theo dõi hậu phẫu...">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
-                <button type="submit" id="btnConfirmAssign" class="btn btn-primary">
-                    <i class="fas fa-check mr-1"></i> Xác nhận xếp lồng
-                </button>
             </div>
         </form>
     </div>
