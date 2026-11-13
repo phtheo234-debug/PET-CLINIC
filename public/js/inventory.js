@@ -1,6 +1,7 @@
 let inventoryItems = [];
 let isAdminInventory = false;
 let isAdminSpa = false;
+let warehouseFilter = 'medical';
 
 document.addEventListener("DOMContentLoaded", async () => {
     await initPage();
@@ -46,9 +47,11 @@ function renderInventory(items) {
         THUOC: "Thuốc",
         VAC_XIN: "Vắc-xin",
         THUC_AN: "Thức ăn",
-        VAT_TU: "Vật tư",
+        DO_DUNG: "Đồ dùng",
     };
-    const goods = items.filter((item) => item.danhmuc !== "DICH_VU_SPA");
+    const allGoods = items.filter((item) => item.danhmuc !== "DICH_VU_SPA");
+    renderExpiryNotice(allGoods);
+    const goods = allGoods.filter((item) => warehouseFilter === "medical" ? ["THUOC", "VAC_XIN"].includes(item.danhmuc) : warehouseFilter === "retail" ? ["THUC_AN", "DO_DUNG"].includes(item.danhmuc) : true);
 
     document.getElementById("inventoryTableBody").innerHTML = goods.length
         ? goods.map((item) => {
@@ -85,7 +88,7 @@ function renderInventory(items) {
                     ${actions}
                 </tr>`;
         }).join("")
-        : `<tr><td colspan="${isAdminInventory ? 9 : 8}" class="text-center text-muted">Chưa có thuốc, vắc-xin, thức ăn hoặc vật tư trong kho</td></tr>`;
+        : `<tr><td colspan="${isAdminInventory ? 9 : 8}" class="text-center text-muted">Chưa có mặt hàng trong kho này</td></tr>`;
 
     const services = items.filter((item) => item.danhmuc === "DICH_VU_SPA");
     document.getElementById("spaTableBody").innerHTML = services.length
@@ -122,7 +125,11 @@ function openInventoryBatchForm(itemId) {
     document.getElementById("batch_item_label").innerText = item.masanpham + " · " + item.ten_sanpham + " (" + item.donvitinh + ")";
     document.getElementById("batch_import_date").value = localToday;
     document.getElementById("batch_import_date").max = localToday;
-    document.getElementById("batch_expiry_date").min = localToday;
+    const expiryInput = document.getElementById("batch_expiry_date");
+    expiryInput.min = localToday;
+    expiryInput.required = ["THUOC", "VAC_XIN", "THUC_AN"].includes(item.danhmuc);
+    expiryInput.disabled = item.danhmuc === "DO_DUNG";
+    if (item.danhmuc === "DO_DUNG") expiryInput.value = "";
     $("#inventoryBatchModal").modal("show");
 }
 
@@ -134,12 +141,16 @@ async function saveInventoryBatch(event) {
         solo: document.getElementById("batch_code").value.trim(),
         soluong: Number(document.getElementById("batch_quantity").value),
         ngaynhap: document.getElementById("batch_import_date").value,
-        ngayhethan: document.getElementById("batch_expiry_date").value,
+        ngayhethan: document.getElementById("batch_expiry_date").value || null,
     };
     if (!payload.solo || !Number.isInteger(payload.soluong) || payload.soluong < 1) {
         alert("Mã lô và số lượng nhập không hợp lệ."); return;
     }
-    if (payload.ngayhethan <= payload.ngaynhap) {
+    const batchItem = inventoryItems.find(item => Number(item.item_id) === payload.item_id);
+    if (!payload.ngayhethan && ["THUOC", "VAC_XIN", "THUC_AN"].includes(batchItem?.danhmuc)) {
+        alert("Thuốc, vắc-xin và thức ăn bắt buộc phải có hạn sử dụng."); return;
+    }
+    if (payload.ngayhethan && payload.ngayhethan <= payload.ngaynhap) {
         alert("Hạn sử dụng phải sau ngày nhập."); return;
     }
     const button = document.getElementById("btnSaveInventoryBatch");
