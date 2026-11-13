@@ -29,7 +29,7 @@ class PetController extends Controller
                 'pets.*',
                 'owners.ho_ten as owner_name',
                 'owners.phone as owner_phone',
-                'latest_weight.cannang as current_weight', 'latest_exam.exam_status as trangthai_kham', 'latest_exam.exam_date as ngaykham_gannhat', 'latest_exam.exam_invoice_id as mahoadon_kham'
+                'latest_weight.cannang as current_weight', 'latest_exam.record_id as record_id', 'latest_exam.exam_status as trangthai_kham', 'latest_exam.exam_date as ngaykham_gannhat', 'latest_exam.exam_invoice_id as mahoadon_kham'
             );
     }
 
