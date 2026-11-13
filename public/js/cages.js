@@ -226,7 +226,8 @@ function renderCagesGrid() {
                     </div>
                     <div class="card-body">
                         <p class="mb-1"><strong>Phân loại:</strong> ${typeLabels[cage.loailong] || cage.loailong}</p>
-                        <p class="mb-2"><strong>Sức chứa:</strong> ${currentCount}/${maxCapacity} thú cưng</p>
+                        <p class="mb-1"><strong>Sức chứa:</strong> ${currentCount}/${maxCapacity} thú cưng</p>
+                        <p class="mb-2"><strong>Giới hạn:</strong> ${Number(cage.tai_trong_toi_da || 0)} kg · Loài: ${cage.loai_ap_dung || "Chưa cấu hình"}</p>
                         <div class="small"><strong>Thú cưng đang lưu trú:</strong>${occupantsHtml}</div>
                         ${adminActions}
                     </div>
