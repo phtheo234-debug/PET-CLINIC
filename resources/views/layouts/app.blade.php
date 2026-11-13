@@ -9,8 +9,9 @@
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
 </head>
 <body>
+    @php($currentUser = request()->attributes->get('web_authenticated_user'))
+    @php($role = $currentUser->vaitro ?? '')
     <div class="wrapper">
-        <!-- Sidebar dùng chung -->
         <nav id="sidebar">
             <div class="sidebar-header">
                 <h5 class="mb-0 font-weight-bold text-info">
@@ -22,9 +23,13 @@
                 <li class="{{ request()->routeIs('profile') ? 'active' : '' }}">
                     <a href="{{ route('profile') }}"><i class="fas fa-user-cog"></i> Thông tin tài khoản</a>
                 </li>
-                <li id="adminUsersNav" class="d-none {{ request()->routeIs('admin.users') ? 'active' : '' }}">
-                    <a href="{{ route('admin.users') }}"><i class="fas fa-users-cog"></i> Quản lý tài khoản</a>
-                </li>
+
+                @if($role === 'QUAN_TRI')
+                    <li class="{{ request()->routeIs('admin.users') ? 'active' : '' }}">
+                        <a href="{{ route('admin.users') }}"><i class="fas fa-users-cog"></i> Quản lý tài khoản</a>
+                    </li>
+                @endif
+
                 <li class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <a href="{{ route('dashboard') }}"><i class="fas fa-chart-line"></i> Tổng quan (Dashboard)</a>
                 </li>
@@ -34,19 +39,25 @@
                 <li class="{{ request()->routeIs('cages') ? 'active' : '' }}">
                     <a href="{{ route('cages') }}"><i class="fas fa-home"></i> Lồng lưu trú nội trú</a>
                 </li>
-                <li class="{{ request()->routeIs('medical') ? 'active' : '' }}">
-                    <a href="{{ route('medical') }}"><i class="fas fa-stethoscope"></i> Khám bệnh & Kê đơn</a>
-                </li>
+
+                @if(in_array($role, ['QUAN_TRI', 'BAC_SI'], true))
+                    <li class="{{ request()->routeIs('medical') ? 'active' : '' }}">
+                        <a href="{{ route('medical') }}"><i class="fas fa-stethoscope"></i> Khám bệnh & Kê đơn</a>
+                    </li>
+                @endif
+
                 <li class="{{ request()->routeIs('inventory') ? 'active' : '' }}">
                     <a href="{{ route('inventory') }}"><i class="fas fa-pills"></i> Kho thuốc & Spa</a>
                 </li>
-                <li class="{{ request()->routeIs('invoices') ? 'active' : '' }}">
-                    <a href="{{ route('invoices') }}"><i class="fas fa-file-invoice-dollar"></i> Thanh toán POS</a>
-                </li>
+
+                @if(in_array($role, ['QUAN_TRI', 'NHAN_VIEN'], true))
+                    <li class="{{ request()->routeIs('invoices') ? 'active' : '' }}">
+                        <a href="{{ route('invoices') }}"><i class="fas fa-file-invoice-dollar"></i> Thanh toán POS</a>
+                    </li>
+                @endif
             </ul>
         </nav>
 
-        <!-- Nội dung chính -->
         <div id="content">
             <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4">
                 <span class="navbar-brand font-weight-bold text-dark mb-0">@yield('page_title')</span>
