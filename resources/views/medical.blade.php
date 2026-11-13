@@ -4,6 +4,22 @@
 @section('page_title', 'Khám bệnh Lâm sàng, Kê đơn & Tiêm phòng')
 
 @section('content')
+@php
+    $medicalCurrentRole = strtoupper(trim($medicalUser->vaitro ?? ''));
+    $isMedicalDoctor = $medicalCurrentRole === 'BAC_SI';
+@endphp
+@if($isMedicalDoctor)
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white font-weight-bold text-danger"><i class="fas fa-clipboard-list mr-1"></i> DANH SÁCH CHỜ KHÁM</div>
+    <div class="card-body table-responsive">
+        <p class="text-muted small">Ca có ghi chú ưu tiên sẽ được xếp lên đầu. Bác sĩ nhấn Chọn để tiếp nhận từng ca.</p>
+        <table class="table table-bordered table-hover mb-0">
+            <thead class="thead-light"><tr><th>Thú cưng</th><th>Chủ nuôi</th><th>Triệu chứng</th><th>Ghi chú ưu tiên</th><th>Trạng thái</th><th>Thời gian chờ</th><th></th></tr></thead>
+            <tbody id="medicalQueueBody"><tr><td colspan="7" class="text-center text-muted">Đang tải danh sách chờ...</td></tr></tbody>
+        </table>
+    </div>
+</div>
+@endif
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white font-weight-bold text-primary">
         <i class="fas fa-stethoscope mr-1"></i> TẠO PHIẾU KHÁM BỆNH LÂM SÀNG
