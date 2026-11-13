@@ -250,9 +250,18 @@ class PaymentController extends Controller
                 $totalBoarding = $days * $pricePerDay;
 
 
-                $grandTotal = $totalMedicine + $totalBoarding + $totalSpa;
+                                // Phí khám cố định 50.000 đồng cho mỗi phiếu khám chưa lập hóa đơn.
+                $unbilledRecords = DB::table('medical_records')
+                    ->where('pet_id', $pet->pet_id)
+                    ->whereNull('invoice_id')
+                    ->orderBy('ngaykham')
+                    ->lockForUpdate()
+                    ->get();
+                $examFeePerVisit = 50000;
+                $totalExam = $unbilledRecords->count() * $examFeePerVisit;
+                $grandTotal = $totalMedicine + $totalBoarding + $totalSpa + $totalExam;
 
-                if ($grandTotal <= 0 && $lines->isEmpty()) {
+                if ($grandTotal <= 0 && $lines->isEmpty() && $unbilledRecords->isEmpty()) {
                     return response()->json([
                         'status'  => 'error',
                         'message' => 'Thú cưng này không có khoản chi phí nào cần thanh toán.'
@@ -307,6 +316,20 @@ class PaymentController extends Controller
                         ]);
                 }
 
+                // Lưu riêng phí khám cho từng lần khám.
+                foreach ($unbilledRecords as $examRecord) {
+                    DB::table('invoice_details')->insert([
+                        'invoice_id' => $invoiceId, 'prescription_id' => null, 'loai_chiphi' => 'PHI_KHAM',
+                        'ten_sanpham' => 'Phí khám bệnh - Phiếu #' . $examRecord->record_id,
+                        'donvitinh' => 'lần', 'soluong' => 1, 'dongia' => $examFeePerVisit,
+                        'thanhtien' => $examFeePerVisit,
+                        'ghichu' => 'Ngày khám: ' . Carbon::parse($examRecord->ngaykham)->format('d/m/Y H:i'),
+                        'created_at' => now(), 'updated_at' => now(),
+                    ]);
+                }
+                if ($unbilledRecords->isNotEmpty()) {
+                    DB::table('medical_records')->whereIn('record_id', $unbilledRecords->pluck('record_id'))->update(['invoice_id' => $invoiceId]);
+                }
                 // 6. Lưu chi tiết phí lưu trú
                 if ($totalBoarding > 0) {
                     DB::table('invoice_details')->insert([
@@ -385,6 +408,8 @@ class PaymentController extends Controller
                         'invoice_id'     => $invoiceId,
                         'mahoadon'       => $code,
                         'tien_thuoc'     => $totalMedicine,
+                        'tien_kham'       => $totalExam,
+                        'so_lan_kham'     => $unbilledRecords->count(),
                         'tien_long'      => $totalBoarding,
                         'tien_spa'       => $totalSpa,
                         'tong_thanhtoan' => $grandTotal,
