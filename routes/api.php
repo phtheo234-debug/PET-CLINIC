@@ -98,7 +98,6 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::get('/medical/queue', [MedicalController::class, 'queue']);
         Route::post('/medical/queue/{id}/start', [MedicalController::class, 'startQueueRecord']);
         Route::get('/medical/records/{id}', [MedicalController::class, 'show']);
-        Route::put('/medical/records/{id}/status', [MedicalController::class, 'updateStatus']);
         Route::post('/medical/prescriptions', [MedicalController::class, 'createPrescription']);
         Route::get('/medical/history/pet/{petId}', [MedicalController::class, 'getHistoryByPet']);
     });
