@@ -117,19 +117,18 @@ class PaymentController extends Controller
                     }
 
                     $quantity = (int) $line['quantity'];
-                    if ($item->danhmuc !== 'DICH_VU_SPA') {
+                    if ($item->danhmuc === 'DO_DUNG') {
+                        if ((int) $item->soluongton < $quantity) {
+                            throw new Exception('Không đủ tồn kho đồ dùng "' . $item->ten_sanpham . '". Còn ' . (int) $item->soluongton . '.');
+                        }
+                        DB::table('inventory')->where('item_id', $item->item_id)->decrement('soluongton', $quantity);
+                    } elseif ($item->danhmuc === 'THUC_AN') {
                         $batches = DB::table('inventory_batches')
                             ->where('item_id', $item->item_id)
                             ->where('trangthai', 'DANG_SU_DUNG')
                             ->where('soluong', '>', 0)
-                            ->where(function ($query) use ($item) {
-                                if ($item->danhmuc === 'DO_DUNG') {
-                                    $query->whereNull('ngayhethan')->orWhereDate('ngayhethan', '>=', now()->toDateString());
-                                } else {
-                                    $query->whereNotNull('ngayhethan')->whereDate('ngayhethan', '>=', now()->toDateString());
-                                }
-                            })
-                            ->orderByRaw('CASE WHEN ngayhethan IS NULL THEN 1 ELSE 0 END')
+                            ->whereNotNull('ngayhethan')
+                            ->whereDate('ngayhethan', '>=', now()->toDateString())
                             ->orderBy('ngayhethan')
                             ->orderBy('batch_id')
                             ->lockForUpdate()
@@ -143,7 +142,7 @@ class PaymentController extends Controller
                             $remaining -= $take;
                         }
                         if ($remaining > 0) {
-                            throw new Exception('Không đủ tồn kho hợp lệ cho sản phẩm ' . $item->ten_sanpham . '. Thiếu ' . $remaining . ' ' . $item->donvitinh . '.');
+                            throw new Exception('Không đủ tồn kho thức ăn còn hạn cho "' . $item->ten_sanpham . '". Thiếu ' . $remaining . '.');
                         }
                     }
 
@@ -152,7 +151,7 @@ class PaymentController extends Controller
                     $cartLines[] = [
                         'name' => $item->ten_sanpham,
                         'category' => $item->danhmuc,
-                        'unit' => $item->donvitinh,
+                        'unit' => $item->danhmuc === 'DO_DUNG' || $item->danhmuc === 'DICH_VU_SPA' ? '' : $item->donvitinh,
                         'quantity' => $quantity,
                         'price' => (float) $item->dongia,
                         'total' => $lineTotal,
