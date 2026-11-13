@@ -17,10 +17,30 @@
                         <option value="">-- Đang tải danh sách thú cưng --</option>
                     </select>
                 </div>
+
                 <div class="form-group col-md-4">
-                    <label class="text-danger font-weight-bold">Cân nặng lúc khám (kg) *</label>
-                    <input type="number" step="0.1" min="0.1" max="200" id="cannangkhi_kham" class="form-control border-danger" placeholder="VD: 4.5" required>
-                    <small id="doseSuggestion" class="text-info">Nhập cân nặng để tự động tính liều mg/kg</small>
+                    <label class="text-danger font-weight-bold">
+                        Cân nặng lúc khám (kg) *
+                    </label>
+
+                    <input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        max="200"
+                        id="cannangkhi_kham"
+                        class="form-control border-danger"
+                        placeholder="Chọn thú cưng để lấy cân nặng"
+                        required
+                    >
+
+                    <small class="form-text text-muted">
+                        Tự động lấy cân nặng hiện tại. Bác sĩ có thể điều chỉnh theo kết quả cân thực tế.
+                    </small>
+
+                    <small id="doseSuggestion" class="text-info">
+                        Nhập cân nặng để tự động tính liều mg/kg
+                    </small>
                 </div>
                 <div class="form-group col-md-4">
                     <label class="font-weight-bold">Hướng xử lý / Kết luận</label>

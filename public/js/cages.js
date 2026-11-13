@@ -5,7 +5,9 @@ let canConfirmBoarding = false;
 
 function getCurrentRole() {
     const user = getCurrentUser();
-    return String(user?.vaitro || "").trim().toUpperCase();
+    return String(user?.vaitro || "")
+        .trim()
+        .toUpperCase();
 }
 
 function isAdminCageUser() {
@@ -20,19 +22,27 @@ function extractList(res) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    await initPage();
-
     const role = getCurrentRole();
+
     isAdminCage = role === "QUAN_TRI";
     canConfirmBoarding = ["QUAN_TRI", "NHAN_VIEN"].includes(role);
 
-    document.getElementById("adminCageToolbar")?.classList.toggle("d-none", !isAdminCage);
+    // Chỉ quản trị viên được thấy nút thêm lồng
+    const toolbar = document.getElementById("adminCageToolbar");
 
-    if (isAdminCage) {
-        document.getElementById("cageForm")?.addEventListener("submit", saveCage);
+    if (toolbar) {
+        toolbar.classList.toggle("d-none", !isAdminCage);
     }
 
+    if (isAdminCage) {
+        document
+            .getElementById("cageForm")
+            ?.addEventListener("submit", saveCage);
+    }
+
+    await initPage();
     await Promise.all([loadCages(), loadBoardingRequests()]);
+
     window.setInterval(loadBoardingRequests, 30000);
 });
 
@@ -64,7 +74,8 @@ function renderBoardingRequests() {
     const tbody = document.getElementById("boardingRequestsBody");
 
     if (!boardingRequests.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Hiện không có yêu cầu lưu trú chờ xác nhận.</td></tr>';
+        tbody.innerHTML =
+            '<tr><td colspan="5" class="text-center text-muted">Hiện không có yêu cầu lưu trú chờ xác nhận.</td></tr>';
         return;
     }
 
@@ -74,22 +85,25 @@ function renderBoardingRequests() {
         CACH_LY: "Lồng cách ly",
     };
 
-    tbody.innerHTML = boardingRequests.map((item) => {
-        const cage = item.recommended_cage;
-        const petName = item.ten_thucung || "Chưa có tên";
-        const petCode = item.mathucung || `PET-${item.pet_id}`;
-        const typeLabel = typeLabels[item.loai_long_yeu_cau] || item.loai_long_yeu_cau;
-        const isolationLabel = Number(item.yeu_cau_cach_ly) === 1 ? " · Bắt buộc cách ly" : "";
-        const cageLabel = cage
-            ? `<strong>${cage.malong}</strong> - ${cage.ten_long}<br><small class="text-muted">${Number(cage.soluonghientai || 0)}/${Number(cage.succhua || 0)} chỗ đang sử dụng</small>`
-            : '<span class="text-danger">Chưa có lồng phù hợp</span><br><small class="text-muted">Yêu cầu vẫn được giữ chờ, hệ thống sẽ tìm lại khi làm mới.</small>';
-        const action = canConfirmBoarding
-            ? (cage
-                ? `<button type="button" class="btn btn-sm btn-success" onclick="confirmBoardingRequest(${Number(item.request_id)})"><i class="fas fa-check mr-1"></i> Xác nhận xếp</button>`
-                : '<button type="button" class="btn btn-sm btn-secondary" disabled>Chưa thể xếp</button>')
-            : '<span class="text-muted small">Chỉ xem</span>';
+    tbody.innerHTML = boardingRequests
+        .map((item) => {
+            const cage = item.recommended_cage;
+            const petName = item.ten_thucung || "Chưa có tên";
+            const petCode = item.mathucung || `PET-${item.pet_id}`;
+            const typeLabel =
+                typeLabels[item.loai_long_yeu_cau] || item.loai_long_yeu_cau;
+            const isolationLabel =
+                Number(item.yeu_cau_cach_ly) === 1 ? " · Bắt buộc cách ly" : "";
+            const cageLabel = cage
+                ? `<strong>${cage.malong}</strong> - ${cage.ten_long}<br><small class="text-muted">${Number(cage.soluonghientai || 0)}/${Number(cage.succhua || 0)} chỗ đang sử dụng</small>`
+                : '<span class="text-danger">Chưa có lồng phù hợp</span><br><small class="text-muted">Yêu cầu vẫn được giữ chờ, hệ thống sẽ tìm lại khi làm mới.</small>';
+            const action = canConfirmBoarding
+                ? cage
+                    ? `<button type="button" class="btn btn-sm btn-success" onclick="confirmBoardingRequest(${Number(item.request_id)})"><i class="fas fa-check mr-1"></i> Xác nhận xếp</button>`
+                    : '<button type="button" class="btn btn-sm btn-secondary" disabled>Chưa thể xếp</button>'
+                : '<span class="text-muted small">Chỉ xem</span>';
 
-        return `
+            return `
             <tr>
                 <td><strong>${petCode}</strong><br>${petName}<br><small class="text-muted">${item.loai || ""} ${item.giong || ""}</small></td>
                 <td>${item.chandoan || "Chưa có chẩn đoán"}<br><small class="text-muted">${item.trieuchung || ""}</small></td>
@@ -98,7 +112,8 @@ function renderBoardingRequests() {
                 <td>${action}</td>
             </tr>
         `;
-    }).join("");
+        })
+        .join("");
 }
 
 async function confirmBoardingRequest(requestId) {
@@ -107,16 +122,25 @@ async function confirmBoardingRequest(requestId) {
         return;
     }
 
-    const requestItem = boardingRequests.find((item) => Number(item.request_id) === Number(requestId));
+    const requestItem = boardingRequests.find(
+        (item) => Number(item.request_id) === Number(requestId),
+    );
     if (!requestItem || !requestItem.recommended_cage) {
-        alert("Hiện chưa có lồng phù hợp để xác nhận. Vui lòng làm mới danh sách.");
+        alert(
+            "Hiện chưa có lồng phù hợp để xác nhận. Vui lòng làm mới danh sách.",
+        );
         return;
     }
 
     const cage = requestItem.recommended_cage;
-    const petName = requestItem.ten_thucung || `thú cưng #${requestItem.pet_id}`;
+    const petName =
+        requestItem.ten_thucung || `thú cưng #${requestItem.pet_id}`;
 
-    if (!confirm(`Xác nhận xếp ${petName} vào lồng ${cage.malong} - ${cage.ten_long}? Hệ thống sẽ kiểm tra lại sức chứa trước khi lưu.`)) {
+    if (
+        !confirm(
+            `Xác nhận xếp ${petName} vào lồng ${cage.malong} - ${cage.ten_long}? Hệ thống sẽ kiểm tra lại sức chứa trước khi lưu.`,
+        )
+    ) {
         return;
     }
 
@@ -151,26 +175,38 @@ function renderCagesGrid() {
     const grid = document.getElementById("cagesGrid");
 
     if (!cagesList.length) {
-        grid.innerHTML = '<div class="col-12 text-muted">Chưa có dữ liệu lồng lưu trú.</div>';
+        grid.innerHTML =
+            '<div class="col-12 text-muted">Chưa có dữ liệu lồng lưu trú.</div>';
         return;
     }
 
-    grid.innerHTML = cagesList.map((cage) => {
-        const cageId = Number(cage.cage_id);
-        const currentCount = Number(cage.soluonghientai || 0);
-        const maxCapacity = Number(cage.succhua || 1);
-        const status = statusMap[cage.trangthai] || { text: cage.trangthai || "Không rõ", cls: "info" };
-        const isMaintenance = ["DANG_VE_SINH", "BAO_TRI"].includes(cage.trangthai);
-        const isFull = currentCount >= maxCapacity && !isMaintenance;
-        const statusText = isFull ? "Đã đủ sức chứa" : status.text;
-        const statusClass = isFull ? "warning" : status.cls;
-        const occupants = Array.isArray(cage.pets) ? cage.pets : [];
-        const occupantsHtml = occupants.length
-            ? occupants.map((pet) => `<div><i class="fas fa-paw text-muted mr-1"></i>${pet.mathucung || ""} - ${pet.ten_thucung || ""}</div>`).join("")
-            : '<span class="text-muted">Chưa có thú cưng</span>';
+    grid.innerHTML = cagesList
+        .map((cage) => {
+            const cageId = Number(cage.cage_id);
+            const currentCount = Number(cage.soluonghientai || 0);
+            const maxCapacity = Number(cage.succhua || 1);
+            const status = statusMap[cage.trangthai] || {
+                text: cage.trangthai || "Không rõ",
+                cls: "info",
+            };
+            const isMaintenance = ["DANG_VE_SINH", "BAO_TRI"].includes(
+                cage.trangthai,
+            );
+            const isFull = currentCount >= maxCapacity && !isMaintenance;
+            const statusText = isFull ? "Đã đủ sức chứa" : status.text;
+            const statusClass = isFull ? "warning" : status.cls;
+            const occupants = Array.isArray(cage.pets) ? cage.pets : [];
+            const occupantsHtml = occupants.length
+                ? occupants
+                      .map(
+                          (pet) =>
+                              `<div><i class="fas fa-paw text-muted mr-1"></i>${pet.mathucung || ""} - ${pet.ten_thucung || ""}</div>`,
+                      )
+                      .join("")
+                : '<span class="text-muted">Chưa có thú cưng</span>';
 
-        const adminActions = isAdminCage
-            ? `
+            const adminActions = isAdminCage
+                ? `
                 <hr>
                 <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editCage(${cageId})">
                     <i class="fas fa-edit mr-1"></i> Sửa
@@ -179,9 +215,9 @@ function renderCagesGrid() {
                     <i class="fas fa-trash mr-1"></i> Xóa
                 </button>
             `
-            : "";
+                : "";
 
-        return `
+            return `
             <div class="col-md-4 mb-3">
                 <div class="card cage-card border-${statusClass} h-100">
                     <div class="card-header bg-${statusClass} text-white d-flex justify-content-between">
@@ -197,7 +233,8 @@ function renderCagesGrid() {
                 </div>
             </div>
         `;
-    }).join("");
+        })
+        .join("");
 }
 
 function openCageForm(cage = null) {
@@ -210,12 +247,20 @@ function openCageForm(cage = null) {
     form.reset();
 
     document.getElementById("cage_form_id").value = cage ? cage.cage_id : "";
-    document.getElementById("cageFormTitle").innerText = cage ? "Cập nhật lồng lưu trú" : "Thêm lồng lưu trú";
-    document.getElementById("cage_malong").value = cage ? cage.malong : "Tự động tạo khi lưu";
+    document.getElementById("cageFormTitle").innerText = cage
+        ? "Cập nhật lồng lưu trú"
+        : "Thêm lồng lưu trú";
+    document.getElementById("cage_malong").value = cage
+        ? cage.malong
+        : "Tự động tạo khi lưu";
     document.getElementById("cage_ten_long").value = cage ? cage.ten_long : "";
-    document.getElementById("cage_loailong").value = cage ? cage.loailong : "THUONG";
+    document.getElementById("cage_loailong").value = cage
+        ? cage.loailong
+        : "THUONG";
     document.getElementById("cage_succhua").value = cage ? cage.succhua : 1;
-    document.getElementById("cage_trangthai").value = cage ? cage.trangthai : "CON_TRONG";
+    document.getElementById("cage_trangthai").value = cage
+        ? cage.trangthai
+        : "CON_TRONG";
 
     $("#cageFormModal").modal("show");
 }
@@ -223,7 +268,9 @@ function openCageForm(cage = null) {
 function editCage(cageId) {
     if (!isAdminCageUser()) return;
 
-    const cage = cagesList.find((item) => Number(item.cage_id) === Number(cageId));
+    const cage = cagesList.find(
+        (item) => Number(item.cage_id) === Number(cageId),
+    );
     if (!cage) {
         alert("Không tìm thấy thông tin lồng.");
         return;
@@ -272,10 +319,14 @@ async function saveCage(event) {
 async function deleteCage(cageId) {
     if (!isAdminCageUser()) return;
 
-    const cage = cagesList.find((item) => Number(item.cage_id) === Number(cageId));
+    const cage = cagesList.find(
+        (item) => Number(item.cage_id) === Number(cageId),
+    );
     if (!cage) return;
 
-    if (!confirm(`Bạn có chắc muốn xóa lồng ${cage.malong} - ${cage.ten_long}?`)) {
+    if (
+        !confirm(`Bạn có chắc muốn xóa lồng ${cage.malong} - ${cage.ten_long}?`)
+    ) {
         return;
     }
 

@@ -9,8 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('medical_records', function (Blueprint $table) {
-            $table->string('huong_xuly', 20)->nullable()->after('trangthai');
-            $table->boolean('yeu_cau_cach_ly')->default(false)->after('huong_xuly');
+            if (!Schema::hasColumn('medical_records', 'huong_xuly')) {
+                $table->string('huong_xuly', 20)->nullable()->after('trangthai');
+            }
+
+            if (!Schema::hasColumn('medical_records', 'yeu_cau_cach_ly')) {
+                $table->boolean('yeu_cau_cach_ly')->default(false);
+            }
         });
 
         Schema::create('boarding_requests', function (Blueprint $table) {

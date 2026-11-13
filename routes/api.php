@@ -1,19 +1,19 @@
 <?php
 
-use Illuminate\\Support\\Facades\\Route;
+use Illuminate\Support\Facades\Route;
 
-use App\\Http\\Controllers\\Api\\AuthController;
-use App\\Http\\Controllers\\Api\\AdminUserController;
-use App\\Http\\Controllers\\Api\\AdminCageController;
-use App\\Http\\Controllers\\Api\\AdminInventoryController;
-use App\\Http\\Controllers\\Api\\AdminSpaServiceController;
-use App\\Http\\Controllers\\Api\\DashboardController;
-use App\\Http\\Controllers\\Api\\PetController;
-use App\\Http\\Controllers\\Api\\BoardingController;
-use App\\Http\\Controllers\\Api\\InventoryController;
-use App\\Http\\Controllers\\Api\\MedicalController;
-use App\\Http\\Controllers\\Api\\PaymentController;
-use App\\Http\\Controllers\\Api\\SpaUsageController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\AdminCageController;
+use App\Http\Controllers\Api\AdminInventoryController;
+use App\Http\Controllers\Api\AdminSpaServiceController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PetController;
+use App\Http\Controllers\Api\BoardingController;
+use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\MedicalController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\SpaUsageController;
 
 /*
 |--------------------------------------------------------------------------

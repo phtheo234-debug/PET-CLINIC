@@ -4,6 +4,15 @@
 @section('page_title', 'Quản lý Chủ nuôi & Hồ sơ Thú cưng')
 
 @section('content')
+@php
+    $currentUser = request()->attributes->get('web_authenticated_user');
+    $currentRole = strtoupper(trim($currentUser->vaitro ?? ''));
+    $isDoctor = $currentRole === 'BAC_SI';
+@endphp
+
+<script>
+    window.isDoctor = @json($isDoctor);
+</script>
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
         <input type="text" id="searchPet" class="form-control w-50" placeholder="Tìm theo mã thú cưng, tên, SĐT chủ nuôi...">
@@ -74,28 +83,6 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
                 <button type="submit" id="btnSavePet" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Lưu Hồ sơ</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="weightModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-sm" role="document">
-        <form id="weightForm" class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title font-weight-bold">Cân thú cưng <span id="weightPetCode" class="text-primary"></span></h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="weight_pet_id">
-                <div class="form-group mb-0">
-                    <label>Cân nặng mới (kg) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.1" min="0.1" max="200" id="new_weight" class="form-control" placeholder="VD: 3.5" required>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
-                <button type="submit" id="btnSaveWeight" class="btn btn-info btn-sm"><i class="fas fa-check mr-1"></i> Lưu cân nặng</button>
             </div>
         </form>
     </div>

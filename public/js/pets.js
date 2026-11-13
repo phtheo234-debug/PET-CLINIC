@@ -1,28 +1,41 @@
 let petsList = [];
 
-// Tự động sinh mã thú cưng hiển thị tạm trên form (VD: PET-001 -> PET-002)
+let currentUserRole = "";
+
+function isDoctor() {
+    return currentUserRole === "BAC_SI";
+}
+
+// Tự động sinh mã thú cưng hiển thị tạm trên form
 function generateNextPetCode() {
     if (!petsList.length) {
         return "PET-001";
     }
+
     let maxNum = 0;
+
     petsList.forEach((p) => {
         const match = (p.mathucung || "").match(/\d+/);
+
         if (match) {
             const num = parseInt(match[0], 10);
+
             if (num > maxNum) {
                 maxNum = num;
             }
         }
     });
+
     return "PET-" + String(maxNum + 1).padStart(3, "0");
 }
 
-// Chuẩn hóa giá trị giới tính sang ENUM của Backend (DUC, CAI, CHUA_XAC_DINH)
+// Chuẩn hóa giới tính
 function normalizeGender(raw) {
     const val = (raw || "").trim().toUpperCase();
+
     if (val === "DUC" || val === "ĐỰC" || val === "MALE") return "DUC";
     if (val === "CAI" || val === "CÁI" || val === "FEMALE") return "CAI";
+
     return "CHUA_XAC_DINH";
 }
 
@@ -30,33 +43,52 @@ function extractList(res) {
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.data)) return res.data;
     if (res && res.data && Array.isArray(res.data.data)) return res.data.data;
+
     return [];
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
     await initPage();
-    const currentUser = getCurrentUser();
-    const canReceivePets = !!currentUser && ["QUAN_TRI", "NHAN_VIEN"].includes(currentUser.vaitro);
-    const addPetButton = document.getElementById("btnOpenAddPet");
-    if (addPetButton && canReceivePets) addPetButton.classList.remove("d-none");
+
+    // Tải danh sách thú cưng ngay khi mở trang
     await loadPets();
 
-    // Tự động điền mã thú cưng mới mỗi lần mở Modal tiếp nhận
+    const currentUser = getCurrentUser();
+
+    currentUserRole = String(currentUser?.vaitro || "")
+        .trim()
+        .toUpperCase();
+
+    const canReceivePets = ["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole);
+
+    const addPetButton = document.getElementById("btnOpenAddPet");
+
+    if (addPetButton && canReceivePets) {
+        addPetButton.classList.remove("d-none");
+    }
+
+    // Tự động điền mã thú cưng khi mở modal tiếp nhận
     $("#addPetModal").on("show.bs.modal", function () {
         const codeInput = document.getElementById("mathucung");
-        if (codeInput) codeInput.value = generateNextPetCode();
+
+        if (codeInput) {
+            codeInput.value = generateNextPetCode();
+        }
     });
 
-    // Tìm kiếm nhanh theo mã, tên thú cưng hoặc SĐT chủ nuôi
+    // Tìm kiếm nhanh
     document.getElementById("searchPet").addEventListener("input", (e) => {
         const kw = e.target.value.trim().toLowerCase();
+
         const filtered = petsList.filter((p) => {
             const petName = (p.name || p.ten_thucung || "").toLowerCase();
+
             const ownerName = (
                 (p.owner && (p.owner.name || p.owner.ho_ten)) ||
                 p.ho_ten_chu ||
                 ""
             ).toLowerCase();
+
             const ownerPhone = (p.owner && p.owner.phone) || p.phone || "";
 
             return (
@@ -66,12 +98,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ownerPhone.includes(kw)
             );
         });
+
         renderPetsTable(filtered);
     });
 
-    // Xử lý lưu hồ sơ thú cưng & chủ nuôi
+    // Tiếp nhận hồ sơ chủ nuôi và thú cưng
     document.getElementById("petForm").addEventListener("submit", async (e) => {
         e.preventDefault();
+
         if (!canReceivePets) {
             alert("Chỉ nhân viên hoặc quản trị viên được tiếp nhận thú cưng.");
             return;
@@ -82,21 +116,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         const petName = document.getElementById("ten_thucung").value.trim();
         const species = document.getElementById("loai").value;
         const breed = document.getElementById("giong").value.trim() || null;
+
         const gender = normalizeGender(
             document.getElementById("gioitinh").value,
         );
+
         const microchip =
             document.getElementById("machip").value.trim() || null;
+
         const weight = parseFloat(document.getElementById("can_nang").value);
 
         if (!ownerName || !ownerPhone) {
             alert("Vui lòng nhập đầy đủ Họ tên và Số điện thoại chủ nuôi!");
             return;
         }
+
         if (!petName) {
             alert("Vui lòng nhập tên thú cưng!");
             return;
         }
+
         if (isNaN(weight) || weight <= 0) {
             alert("Cân nặng thú cưng phải lớn hơn 0 kg!");
             document.getElementById("can_nang").focus();
@@ -104,18 +143,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const btnSave = document.getElementById("btnSavePet");
+
         btnSave.disabled = true;
         btnSave.innerHTML =
             '<i class="fas fa-spinner fa-spin mr-1"></i> Đang lưu...';
 
         try {
             let ownerId = null;
+
             try {
                 const ownersRes = await apiRequest("/owners");
                 const owners = extractList(ownersRes);
+
                 const existingOwner = owners.find(
                     (o) => (o.phone || "").trim() === ownerPhone,
                 );
+
                 if (existingOwner) {
                     ownerId = existingOwner.owner_id ?? existingOwner.id;
                 }
@@ -139,8 +182,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
             e.target.reset();
+
             $("#addPetModal").modal("hide");
+
             await loadPets();
+
             alert("Tiếp nhận hồ sơ chủ nuôi & thú cưng thành công!");
         } catch (err) {
             alert("Lỗi thêm hồ sơ thú cưng: " + err.message);
@@ -149,58 +195,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             btnSave.innerHTML = '<i class="fas fa-save mr-1"></i> Lưu Hồ sơ';
         }
     });
-
-    // Xử lý lưu cập nhật cân nặng mới từ Modal (BR-04)
-    const weightForm = document.getElementById("weightForm");
-    if (weightForm) {
-        weightForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const petId = Number(
-                document.getElementById("weight_pet_id").value,
-            );
-            const kg = parseFloat(document.getElementById("new_weight").value);
-
-            if (!petId || isNaN(kg) || kg <= 0) {
-                alert("Cân nặng phải lớn hơn 0 kg!");
-                document.getElementById("new_weight").focus();
-                return;
-            }
-
-            const btn = document.getElementById("btnSaveWeight");
-            btn.disabled = true;
-            btn.innerHTML =
-                '<i class="fas fa-spinner fa-spin mr-1"></i> Đang lưu...';
-
-            try {
-                await apiRequest(`/pets/${petId}`, {
-                    method: "PUT",
-                    body: JSON.stringify({ weight: kg }),
-                });
-                e.target.reset();
-                $("#weightModal").modal("hide");
-                await loadPets();
-            } catch (err) {
-                alert("Lỗi cập nhật cân nặng: " + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML =
-                    '<i class="fas fa-check mr-1"></i> Lưu cân nặng';
-            }
-        });
-    }
 });
 
+// Tải danh sách thú cưng
 async function loadPets() {
     try {
         const res = await apiRequest("/pets");
+
         petsList = extractList(res);
+
         renderPetsTable(petsList);
     } catch (err) {
         document.getElementById("petsTableBody").innerHTML =
-            `<tr><td colspan="7" class="text-danger text-center">${err.message}</td></tr>`;
+            `<tr><td colspan="7" class="text-danger text-center">${escapePetHtml(err.message)}</td></tr>`;
     }
 }
 
+// Hiển thị danh sách thú cưng
 function renderPetsTable(items) {
     const statusBadges = {
         NOI_TRU: '<span class="badge badge-warning">Nội trú</span>',
@@ -210,6 +221,7 @@ function renderPetsTable(items) {
     };
 
     const tbody = document.getElementById("petsTableBody");
+
     if (!items.length) {
         tbody.innerHTML =
             '<tr><td colspan="7" class="text-center text-muted">Chưa có dữ liệu thú cưng</td></tr>';
@@ -219,15 +231,18 @@ function renderPetsTable(items) {
     tbody.innerHTML = items
         .map((p) => {
             const petId = p.id ?? p.pet_id;
+
             const petName = p.name || p.ten_thucung || "-";
             const species = p.species || p.loai || "";
             const breed = p.breed || p.giong || "";
+
             const chip = p.microchip_code || p.machip || "Chưa gán";
 
             const ownerName =
                 (p.owner && (p.owner.name || p.owner.ho_ten)) ||
                 p.ho_ten_chu ||
                 "-";
+
             const ownerPhone = (p.owner && p.owner.phone) || p.phone || "";
 
             const weight =
@@ -235,25 +250,48 @@ function renderPetsTable(items) {
                 p.can_nang ??
                 (p.latest_weight && p.latest_weight.can_nang) ??
                 "-";
-            const numericWeight =
-                weight !== "-" && weight !== null ? weight : "";
 
             return `
             <tr>
-                <td class="font-weight-bold text-primary">${p.mathucung}</td>
-                <td><strong>${petName}</strong> (${species}${breed ? " - " + breed : ""})</td>
-                <td>${ownerName}<br><small class="text-muted">${ownerPhone}</small></td>
-                <td><code>${chip}</code></td>
-                <td><strong>${numericWeight !== "" ? numericWeight + " kg" : "-"}</strong></td>
-                <td>${statusBadges[p.trangthai] || p.trangthai || "Ngoại trú"}</td>
+                <td class="font-weight-bold text-primary">
+                    ${escapePetHtml(p.mathucung || "-")}
+                </td>
+
+                <td>
+                    <strong>${escapePetHtml(petName)}</strong>
+                    (${escapePetHtml(species)}${breed ? " - " + escapePetHtml(breed) : ""})
+                </td>
+
+                <td>
+                    ${escapePetHtml(ownerName)}
+                    <br>
+                    <small class="text-muted">
+                        ${escapePetHtml(ownerPhone)}
+                    </small>
+                </td>
+
+                <td>
+                    <code>${escapePetHtml(chip)}</code>
+                </td>
+
+                <td>
+                    <strong>
+                        ${
+                            weight !== "-" && weight !== null && weight !== ""
+                                ? escapePetHtml(weight) + " kg"
+                                : "-"
+                        }
+                    </strong>
+                </td>
+
+                <td>
+                    ${statusBadges[p.trangthai] || escapePetHtml(p.trangthai || "Ngoại trú")}
+                </td>
+
                 <td>
                     <button type="button" class="btn btn-sm btn-outline-primary"
-                        onclick="openPetDetail(${petId})">
+                        onclick="openPetDetail(${Number(petId)})">
                         <i class="fas fa-eye"></i> Chi tiết
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-info"
-                        onclick="openWeightModal(${petId}, '${p.mathucung}', '${numericWeight}')">
-                        <i class="fas fa-weight"></i> Cân
                     </button>
                 </td>
             </tr>
@@ -262,68 +300,131 @@ function renderPetsTable(items) {
         .join("");
 }
 
-function openWeightModal(petId, mathucung, currentWeight) {
-    document.getElementById("weight_pet_id").value = petId;
-    document.getElementById("weightPetCode").innerText = mathucung || "";
-    const input = document.getElementById("new_weight");
-    input.value = currentWeight || "";
-    $("#weightModal").modal("show");
-    setTimeout(() => input.focus(), 300);
-}
-
-
+// Mã hóa nội dung trước khi hiển thị HTML
 function escapePetHtml(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-    })[char]);
+    return String(value ?? "").replace(
+        /[&<>"']/g,
+        (char) =>
+            ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#039;",
+            })[char],
+    );
 }
 
+// Định dạng ngày giờ
 function formatPetDate(value) {
     if (!value) return "-";
+
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? escapePetHtml(value) : date.toLocaleString("vi-VN");
+
+    return Number.isNaN(date.getTime())
+        ? escapePetHtml(value)
+        : date.toLocaleString("vi-VN");
 }
 
+// Xem chi tiết thú cưng
 async function openPetDetail(petId) {
     const content = document.getElementById("petDetailContent");
-    content.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i> Đang tải thông tin...</div>';
+
+    content.innerHTML =
+        '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i> Đang tải thông tin...</div>';
+
     $("#petDetailModal").modal("show");
 
     try {
         const response = await apiRequest(`/pets/${petId}`);
+
         const pet = response?.data?.data || response?.data || response;
-        const history = Array.isArray(pet.boarding_history) ? pet.boarding_history : [];
+
+        const history = Array.isArray(pet.boarding_history)
+            ? pet.boarding_history
+            : [];
+
         const statusLabel = {
             checked_in: '<span class="badge badge-success">Đang lưu trú</span>',
-            checked_out: '<span class="badge badge-secondary">Đã trả lồng</span>'
+            checked_out:
+                '<span class="badge badge-secondary">Đã trả lồng</span>',
         };
 
         const historyRows = history.length
-            ? history.map((item) => `
+            ? history
+                  .map(
+                      (item) => `
                 <tr>
-                    <td>${escapePetHtml(item.malong || "-")}<br><small class="text-muted">${escapePetHtml(item.ten_long || "")}</small></td>
+                    <td>
+                        ${escapePetHtml(item.malong || "-")}
+                        <br>
+                        <small class="text-muted">
+                            ${escapePetHtml(item.ten_long || "")}
+                        </small>
+                    </td>
+
                     <td>${formatPetDate(item.check_in)}</td>
                     <td>${formatPetDate(item.check_out)}</td>
-                    <td>${statusLabel[item.status] || escapePetHtml(item.status || "-")}</td>
+
+                    <td>
+                        ${statusLabel[item.status] || escapePetHtml(item.status || "-")}
+                    </td>
                 </tr>
-            `).join("")
+            `,
+                  )
+                  .join("")
             : '<tr><td colspan="4" class="text-center text-muted">Chưa có lịch sử lưu trú / trả lồng</td></tr>';
 
         content.innerHTML = `
             <div class="row mb-4">
-                <div class="col-md-6 mb-2"><strong>Mã thú cưng:</strong> ${escapePetHtml(pet.mathucung || "-")}</div>
-                <div class="col-md-6 mb-2"><strong>Tên:</strong> ${escapePetHtml(pet.name || "-")}</div>
-                <div class="col-md-6 mb-2"><strong>Loài / Giống:</strong> ${escapePetHtml(pet.species || "-")} / ${escapePetHtml(pet.breed || "-")}</div>
-                <div class="col-md-6 mb-2"><strong>Trạng thái:</strong> ${escapePetHtml(pet.trangthai || "-")}</div>
-                <div class="col-md-6 mb-2"><strong>Chủ nuôi:</strong> ${escapePetHtml(pet.owner?.name || "-")}</div>
-                <div class="col-md-6 mb-2"><strong>Số điện thoại:</strong> ${escapePetHtml(pet.owner?.phone || "-")}</div>
+                <div class="col-md-6 mb-2">
+                    <strong>Mã thú cưng:</strong>
+                    ${escapePetHtml(pet.mathucung || "-")}
+                </div>
+
+                <div class="col-md-6 mb-2">
+                    <strong>Tên:</strong>
+                    ${escapePetHtml(pet.name || "-")}
+                </div>
+
+                <div class="col-md-6 mb-2">
+                    <strong>Loài / Giống:</strong>
+                    ${escapePetHtml(pet.species || "-")} /
+                    ${escapePetHtml(pet.breed || "-")}
+                </div>
+
+                <div class="col-md-6 mb-2">
+                    <strong>Trạng thái:</strong>
+                    ${escapePetHtml(pet.trangthai || "-")}
+                </div>
+
+                <div class="col-md-6 mb-2">
+                    <strong>Chủ nuôi:</strong>
+                    ${escapePetHtml(pet.owner?.name || "-")}
+                </div>
+
+                <div class="col-md-6 mb-2">
+                    <strong>Số điện thoại:</strong>
+                    ${escapePetHtml(pet.owner?.phone || "-")}
+                </div>
             </div>
-            <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-history mr-1"></i> Lịch sử lưu trú / trả lồng</h6>
+
+            <h6 class="font-weight-bold text-primary mb-3">
+                <i class="fas fa-history mr-1"></i>
+                Lịch sử lưu trú / trả lồng
+            </h6>
+
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
                     <thead class="thead-light">
-                        <tr><th>Mã lồng</th><th>Thời gian nhận</th><th>Thời gian trả</th><th>Trạng thái</th></tr>
+                        <tr>
+                            <th>Mã lồng</th>
+                            <th>Thời gian nhận</th>
+                            <th>Thời gian trả</th>
+                            <th>Trạng thái</th>
+                        </tr>
                     </thead>
+
                     <tbody>${historyRows}</tbody>
                 </table>
             </div>

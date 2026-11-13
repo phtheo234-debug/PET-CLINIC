@@ -71,7 +71,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 chandoan: document.getElementById("chandoan").value.trim(),
                 don_thuoc: document.getElementById("don_thuoc").value.trim(),
                 huong_xuly: huongXuLy,
-                yeu_cau_cach_ly: document.getElementById("yeu_cau_cach_ly")?.checked ? 1 : 0,
+                yeu_cau_cach_ly: document.getElementById("yeu_cau_cach_ly")
+                    ?.checked
+                    ? 1
+                    : 0,
                 trangthai: mapActionToStatus(huongXuLy),
             };
 
@@ -110,14 +113,18 @@ function updateIsolationOption() {
 
 async function loadPetsDropdown() {
     const select = document.getElementById("pet_select");
+    const weightInput = document.getElementById("cannangkhi_kham");
+
     try {
         const res = await apiRequest("/pets");
         const pets = extractList(res);
+
         if (!pets.length) {
             select.innerHTML =
                 '<option value="">-- Chưa có thú cưng trong CSDL --</option>';
             return;
         }
+
         select.innerHTML =
             '<option value="">-- Chọn thú cưng --</option>' +
             pets
@@ -126,9 +133,25 @@ async function loadPetsDropdown() {
                     const code = p.mathucung || `PET-${id}`;
                     const species = p.species || p.loai || "";
                     const name = p.name || p.ten_thucung || "";
-                    return `<option value="${id}">${code} (${species}${species && name ? " - " : ""}${name})</option>`;
+                    const weight = p.weight ?? p.can_nang ?? "";
+
+                    return `
+                    <option value="${id}" data-weight="${weight}">
+                        ${code} (${species}${species && name ? " - " : ""}${name})
+                    </option>
+                `;
                 })
                 .join("");
+
+        // Khi chọn thú cưng, tự động điền cân nặng hiện tại
+        select.addEventListener("change", function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const currentWeight = selectedOption?.dataset.weight || "";
+
+            weightInput.value = currentWeight;
+
+            weightInput.dispatchEvent(new Event("input"));
+        });
     } catch (err) {
         select.innerHTML = `<option value="">Lỗi tải danh sách: ${err.message}</option>`;
     }
@@ -169,10 +192,14 @@ function renderMedicalHistory(records) {
         TRANSFER: "Chuyển viện",
     };
     const boardingLabels = {
-        pending: '<span class="badge badge-warning">Chờ nhân viên xác nhận lồng</span>',
-        checked_in: '<span class="badge badge-success">Đã xếp lồng / Đang nội trú</span>',
-        completed: '<span class="badge badge-secondary">Đã kết thúc lưu trú</span>',
-        cancelled: '<span class="badge badge-secondary">Đã hủy yêu cầu lưu trú</span>',
+        pending:
+            '<span class="badge badge-warning">Chờ nhân viên xác nhận lồng</span>',
+        checked_in:
+            '<span class="badge badge-success">Đã xếp lồng / Đang nội trú</span>',
+        completed:
+            '<span class="badge badge-secondary">Đã kết thúc lưu trú</span>',
+        cancelled:
+            '<span class="badge badge-secondary">Đã hủy yêu cầu lưu trú</span>',
     };
 
     const tbody = document.getElementById("medicalHistoryBody");
@@ -190,7 +217,11 @@ function renderMedicalHistory(records) {
                   ? `${r.mathucung}${r.ten_thucung ? " (" + r.ten_thucung + ")" : ""}`
                   : `#${r.pet_id}`;
             const statusKey = r.trangthai;
-            const actionLabel = actionLabels[r.huong_xuly] || statusMap[statusKey] || statusKey || "-";
+            const actionLabel =
+                actionLabels[r.huong_xuly] ||
+                statusMap[statusKey] ||
+                statusKey ||
+                "-";
             const boardingLabel = boardingLabels[r.boarding_status]
                 ? `<br>${boardingLabels[r.boarding_status]}`
                 : "";

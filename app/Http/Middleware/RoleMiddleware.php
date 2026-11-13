@@ -1,34 +1,44 @@
 <?php
 
-namespace App\\Http\\Middleware;
+namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\\Http\\Request;
-use Symfony\\Component\\HttpFoundation\\Response;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
     /**
-     * Cho phép một hoặc nhiều vai trò, phân tách bằng dấu phẩy.
+     * Cho phép một hoặc nhiều vai trò.
      */
-    public function handle(Request $request, Closure $next, string $roles): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
+        // Lấy người dùng đã được auth:sanctum xác thực.
         $user = $request->user();
 
         if (!$user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Bạn chưa đăng nhập.',
-            ], 401);
+            abort(401, 'Bạn chưa đăng nhập.');
         }
 
-        $allowedRoles = array_filter(array_map('trim', explode(',', $roles)));
+        // Tách danh sách vai trò được phép.
+        $allowedRoles = [];
 
-        if (!in_array($user->vaitro, $allowedRoles, true)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Bạn không có quyền thực hiện chức năng này.',
-            ], 403);
+        foreach ($roles as $role) {
+            foreach (explode(',', $role) as $item) {
+                $item = strtoupper(trim($item));
+
+                if ($item !== '') {
+                    $allowedRoles[] = $item;
+                }
+            }
+        }
+
+        // Lấy vai trò hiện tại.
+        $currentRole = strtoupper(trim($user->vaitro ?? ''));
+
+        // Kiểm tra quyền.
+        if (!in_array($currentRole, $allowedRoles, true)) {
+            abort(403, 'Bạn không có quyền thực hiện thao tác này.');
         }
 
         return $next($request);
