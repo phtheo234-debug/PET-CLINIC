@@ -88,8 +88,8 @@
                         <input id="spa_service_name" class="form-control" maxlength="100" required>
                     </div>
                     <div class="form-group">
-                        <label for="spa_service_price">Đơn giá (VNĐ)</label>
-                        <input id="spa_service_price" type="number" min="0" step="0.01" class="form-control" required>
+                        <label for="spa_service_price">Giá (nghìn đồng)</label>
+                        <input id="spa_service_price" type="number" min="0" step="0.01" class="form-control" placeholder="Ví dụ: 10 = 10.000 VNĐ" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -139,13 +139,21 @@
                             <small class="form-text text-muted" id="inventoryStockHelp">Nhập số lượng ban đầu của mặt hàng.</small>
                         </div>
                         <div class="form-group col-md-6">
-                            <label for="inventory_price">Đơn giá (VNĐ)</label>
-                            <input id="inventory_price" type="number" class="form-control" min="0" step="0.01" required>
+                            <label for="inventory_price">Giá (nghìn đồng)</label>
+                            <input id="inventory_price" type="number" class="form-control" min="0" step="0.01" placeholder="Ví dụ: 10 = 10.000 VNĐ" required>
+                        </div>
+                        <div class="form-group col-md-6 d-none" id="inventoryBatchFields">
+                            <label for="inventory_lot_preview">Số lô tự động</label>
+                            <input id="inventory_lot_preview" class="form-control" readonly>
+                            <small class="form-text text-muted">Mã lô hiển thị tại đây sẽ được lưu đúng như vậy.</small>
+                        </div>
+                        <div class="form-group col-md-6 d-none" id="inventoryManufactureGroup">
+                            <label for="inventory_manufacture">Ngày sản xuất</label>
+                            <input id="inventory_manufacture" type="date" class="form-control">
                         </div>
                         <div class="form-group col-md-6 d-none" id="inventoryExpiryGroup">
-                            <label for="inventory_expiry">Hạn sử dụng lô nhập ban đầu</label>
+                            <label for="inventory_expiry">Hạn sử dụng</label>
                             <input id="inventory_expiry" type="date" class="form-control">
-                            <small class="form-text text-muted">Mã lô được hệ thống tự động sinh; chỉ áp dụng cho thuốc, vắc-xin và thức ăn.</small>
                         </div>
                     </div>
 
@@ -170,8 +178,9 @@
                 <input type="hidden" id="batch_item_id">
                 <p class="text-muted mb-3" id="batch_item_label"></p>
                 <div class="form-group">
-                    <label>Mã lô tự động</label>
-                    <input class="form-control" value="Hệ thống tự sinh khi xác nhận nhập kho" readonly>
+                    <label for="batch_lot_preview">Số lô tự động</label>
+                    <input id="batch_lot_preview" class="form-control" readonly>
+                    <small class="form-text text-muted">Mã lô hiển thị tại đây sẽ được lưu đúng như vậy.</small>
                 </div>
                 <div class="form-group">
                     <label for="batch_quantity">Số lượng nhập</label>
@@ -183,11 +192,15 @@
                         <input id="batch_import_date" type="date" class="form-control" required>
                     </div>
                     <div class="form-group col-md-6">
+                        <label for="batch_manufacture_date">Ngày sản xuất</label>
+                        <input id="batch_manufacture_date" type="date" class="form-control" required>
+                    </div>
+                    <div class="form-group col-md-6">
                         <label for="batch_expiry_date">Hạn sử dụng</label>
-                        <input id="batch_expiry_date" type="date" class="form-control">
+                        <input id="batch_expiry_date" type="date" class="form-control" required>
                     </div>
                 </div>
-                <small class="text-muted">Thuốc, vắc-xin và thức ăn bắt buộc có hạn sử dụng. Đồ dùng không bắt buộc. Hệ thống xuất theo FEFO.</small>
+                <small class="text-muted">Thuốc, vắc-xin và thức ăn cần ngày sản xuất và hạn sử dụng. Hệ thống xuất theo FEFO.</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
