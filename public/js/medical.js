@@ -1,13 +1,42 @@
 async function loadMedicalInventory() {
     const select = document.getElementById("medicalInventorySelect");
+    const search = document.getElementById("medicalInventorySearch");
+    const suggestions = document.getElementById("medicalInventorySuggestions");
     try {
         const response = await apiRequest("/inventory");
-        medicalInventoryItems = extractList(response).filter((item) => ["THUOC", "VAC_XIN"].includes(item.danhmuc) && Number(item.tong_ton_kho) > 0);
+        medicalInventoryItems = extractList(response).filter((item) =>
+            ["THUOC", "VAC_XIN"].includes(item.danhmuc) && Number(item.tong_ton_kho) > 0
+        );
         select.innerHTML = '<option value="">-- Chọn thuốc hoặc vắc-xin --</option>' + medicalInventoryItems.map((item) =>
-            '<option value="' + Number(item.item_id) + '">' + (item.danhmuc === "THUOC" ? "Thuốc" : "Vắc-xin") + " · " + escapeMedicalHtml(item.ten_sanpham) + " (còn " + Number(item.tong_ton_kho) + " " + escapeMedicalHtml(item.donvitinh) + ")</option>"
+            '<option value="' + Number(item.item_id) + '">' + escapeMedicalHtml(item.ten_sanpham) + '</option>'
         ).join("");
-        if (!medicalInventoryItems.length) select.innerHTML = '<option value="">Kho chưa có thuốc/vắc-xin còn hàng</option>';
-    } catch (error) { select.innerHTML = '<option value="">Không tải được danh mục kho</option>'; console.error(error); }
+        suggestions.innerHTML = medicalInventoryItems.map((item) => {
+            const code = item.masanpham ? item.masanpham + " - " : "";
+            const kind = item.danhmuc === "THUOC" ? "Thuốc" : "Vắc-xin";
+            return '<option value="' + escapeMedicalHtml(code + item.ten_sanpham) + '">' +
+                escapeMedicalHtml(kind + " · còn " + Number(item.tong_ton_kho) + " " + (item.donvitinh || "")) + '</option>';
+        }).join("");
+        if (!medicalInventoryItems.length) {
+            suggestions.innerHTML = '<option value="Kho chưa có thuốc/vắc-xin còn hàng"></option>';
+        }
+        search.value = "";
+        select.value = "";
+    } catch (error) {
+        suggestions.innerHTML = '<option value="Không tải được danh mục kho"></option>';
+        console.error(error);
+    }
+}
+
+function syncMedicalInventorySearch() {
+    const search = document.getElementById("medicalInventorySearch");
+    const select = document.getElementById("medicalInventorySelect");
+    const value = search.value.trim().toLocaleLowerCase("vi");
+    const item = medicalInventoryItems.find((entry) => {
+        const codeName = ((entry.masanpham || "") + " - " + (entry.ten_sanpham || "")).toLocaleLowerCase("vi");
+        return value && (value === codeName || value === String(entry.ten_sanpham || "").toLocaleLowerCase("vi"));
+    });
+    select.value = item ? String(item.item_id) : "";
+    return item || null;
 }
 
 function escapeMedicalHtml(value) {
@@ -16,7 +45,8 @@ function escapeMedicalHtml(value) {
 }
 
 function addMedicalInventoryItem() {
-    const itemId = Number(document.getElementById("medicalInventorySelect").value);
+    const matchedItem = syncMedicalInventorySearch();
+    const itemId = Number(matchedItem?.item_id || document.getElementById("medicalInventorySelect").value);
     const quantity = Number(document.getElementById("medicalInventoryQty").value);
     const note = document.getElementById("medicalInventoryNote").value.trim();
     const item = medicalInventoryItems.find((entry) => Number(entry.item_id) === itemId);
@@ -87,7 +117,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     initPage();
     await Promise.all([loadPetsDropdown(), loadMedicalRecords(), loadMedicalInventory()]);
     document.getElementById("btnAddMedicalItem")?.addEventListener("click", addMedicalInventoryItem);
+    document.getElementById("medicalInventorySearch")?.addEventListener("input", syncMedicalInventorySearch);
+    document.getElementById("medicalInventorySearch")?.addEventListener("change", syncMedicalInventorySearch);
     let lastSavedMedicalRecordId = null;
+    const saveButtonDefaultHtml = '<i class="fas fa-save mr-1"></i> Lưu Phiếu Khám';
+    const printCurrentButton = document.getElementById("btnPrintCurrentMedical");
+    const markMedicalFormDirty = () => {
+        lastSavedMedicalRecordId = null;
+        if (printCurrentButton) printCurrentButton.disabled = true;
+        const saveButton = document.getElementById("btnSaveMedical");
+        if (saveButton && !saveButton.disabled) saveButton.innerHTML = saveButtonDefaultHtml;
+    };
+    document.getElementById("medicalForm")?.addEventListener("input", markMedicalFormDirty);
+    document.getElementById("medicalForm")?.addEventListener("change", markMedicalFormDirty);
     document.getElementById("btnPrintCurrentMedical")?.addEventListener("click", () => { if (lastSavedMedicalRecordId) printMedicalRecord(lastSavedMedicalRecordId); });
     document.getElementById("medicalItemsBody")?.addEventListener("click", (event) => {
         const button = event.target.closest("[data-remove-medical-item]");
@@ -168,15 +210,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                     method: "POST",
                     body: JSON.stringify(payload),
                 });
-                e.target.reset();
+                const savedRecord = res?.data?.data || res?.data || {};
+                lastSavedMedicalRecordId = Number(savedRecord.record_id || savedRecord.id || 0) || null;
                 updateMedicalSections();
                 document.getElementById("doseSuggestion").innerText =
                     "Nhập cân nặng để tự động tính liều mg/kg";
                 await loadMedicalRecords();
-                const savedRecord = res?.data?.data || res?.data || {};
-                lastSavedMedicalRecordId = Number(savedRecord.record_id || savedRecord.id || 0) || null;
                 const printButton = document.getElementById("btnPrintCurrentMedical");
                 if (printButton) printButton.disabled = !lastSavedMedicalRecordId;
+                if (lastSavedMedicalRecordId) {
+                    btn.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Đã lưu';
+                }
                 selectedMedicalItems = [];
                 renderSelectedMedicalItems();
                 alert((res?.message || "Đã lưu phiếu khám bệnh thành công!") + (lastSavedMedicalRecordId ? " Bạn có thể nhấn nút In phiếu khám ngay cạnh nút lưu." : " Bạn có thể in trong danh sách lịch sử khám."));
@@ -184,8 +228,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 alert("Lỗi lưu phiếu khám: " + err.message);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML =
-                    '<i class="fas fa-save mr-1"></i> Lưu Phiếu Khám';
+                if (!lastSavedMedicalRecordId) btn.innerHTML = saveButtonDefaultHtml;
             }
         });
 });
