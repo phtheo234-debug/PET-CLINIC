@@ -113,11 +113,11 @@
                 @endif
 
 
-                {{-- Kho thuốc và Spa --}}
+                {{-- Quản lý các kho hàng --}}
                 <li class="{{ request()->routeIs('inventory') ? 'active' : '' }}">
                     <a href="{{ route('inventory') }}">
                         <i class="fas fa-pills"></i>
-                        Kho thuốc & Spa
+                        Quản lý kho
                     </a>
                 </li>
 
