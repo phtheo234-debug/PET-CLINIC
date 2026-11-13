@@ -518,7 +518,7 @@ class PaymentController extends Controller
                             ]);
                         }
                     }
-                    DB::table('medical_records')->whereIn('record_id', $unbilledRecords->pluck('record_id'))->update(['invoice_id' => $invoiceId]);
+                    DB::table('medical_records')->whereIn('record_id', $unbilledRecords->pluck('record_id'))->update(['invoice_id' => $invoiceId, 'trangthai' => 'HOAN_THANH']);
                 }
                 // 6. Lưu chi tiết phí lưu trú
                 if ($totalBoarding > 0) {
