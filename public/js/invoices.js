@@ -9,7 +9,15 @@ function invoiceCategoryLabel(c) { return ({DICH_VU_SPA:"Dịch vụ",THUC_AN:"T
 
 document.addEventListener("DOMContentLoaded", async function() {
     await initPage();
-    await Promise.all([loadPaymentPets(),loadInvoices()]);
+
+    // Tải danh sách hóa đơn độc lập với việc chọn/tải hồ sơ thú cưng.
+    // Nếu API danh sách thú cưng lỗi hoặc chưa nhập Bảng 1, hóa đơn cũ vẫn hiển thị.
+    loadInvoices();
+    loadPaymentPets().catch(function(e) {
+        console.error("Không tải được danh sách thú cưng:", e);
+        document.getElementById("paymentPetInfo").textContent = "Không tải được danh sách thú cưng: " + e.message;
+    });
+
     document.getElementById("paymentPetSearch").addEventListener("change",selectPaymentPetFromSearch);
     document.getElementById("paymentPetSearch").addEventListener("input",function(){
         const v=this.value.trim().toLowerCase();
