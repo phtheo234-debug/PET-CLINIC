@@ -1,4 +1,5 @@
 let cagesList = [];
+let isAdminCage = false;
 
 // Tạo chuỗi ngày giờ hiện tại chuẩn định dạng Laravel/MySQL (YYYY-MM-DD HH:mm:ss)
 function getCurrentDateTime() {
@@ -20,8 +21,8 @@ function extractList(res) {
 document.addEventListener("DOMContentLoaded", async () => {
     await initPage();
     const currentUser = getCurrentUser();
-    const isAdmin = currentUser && currentUser.vaitro === "QUAN_TRI";
-    if (isAdmin) {
+    isAdminCage = !!currentUser && currentUser.vaitro === "QUAN_TRI";
+    if (isAdminCage) {
         document.getElementById("adminCageToolbar").classList.remove("d-none");
     }
 
@@ -190,7 +191,7 @@ function renderCagesGrid() {
                             onclick="openAssignModal(${cageId}, '${cageCode}')">
                             <i class="fas fa-plus-circle mr-1"></i> Xếp thú vào lồng
                         </button>
-                        ${isAdmin ? `
+                        ${isAdminCage ? `
                             <hr>
                             <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="editCage(${cageId})">
                                 <i class="fas fa-edit mr-1"></i> Sửa
@@ -213,7 +214,8 @@ function openCageForm(cage = null) {
     document.getElementById("cageForm").reset();
     document.getElementById("cage_form_id").value = cage ? cage.cage_id : "";
     document.getElementById("cageFormTitle").innerText = cage ? "Cập nhật lồng lưu trú" : "Thêm lồng lưu trú";
-    document.getElementById("cage_malong").value = cage ? cage.malong : "";
+    const codeInput = document.getElementById("cage_malong");
+    codeInput.value = cage ? cage.malong : "Tự động tạo khi lưu";
     document.getElementById("cage_ten_long").value = cage ? cage.ten_long : "";
     document.getElementById("cage_loailong").value = cage ? cage.loailong : "THUONG";
     document.getElementById("cage_succhua").value = cage ? cage.succhua : 1;
@@ -244,7 +246,6 @@ async function saveCage(event) {
 
     const id = document.getElementById("cage_form_id").value;
     const payload = {
-        malong: document.getElementById("cage_malong").value.trim(),
         ten_long: document.getElementById("cage_ten_long").value.trim(),
         loailong: document.getElementById("cage_loailong").value,
         succhua: Number(document.getElementById("cage_succhua").value),
