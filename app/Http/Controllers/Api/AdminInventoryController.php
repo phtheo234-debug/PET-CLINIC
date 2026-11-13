@@ -101,6 +101,13 @@ class AdminInventoryController extends Controller
                 ], 422);
             }
 
+            if ($item->danhmuc === 'DO_DUNG' && (int) $item->soluongton > 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Không thể xóa đồ dùng còn tồn kho. Hãy xử lý số lượng tồn trước.',
+                ], 422);
+            }
+
             if (DB::table('prescriptions')->where('item_id', $id)->exists()) {
                 return response()->json([
                     'status' => 'error',
