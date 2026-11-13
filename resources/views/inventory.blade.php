@@ -126,6 +126,8 @@
                             <select id="inventory_category" class="form-control">
                                 <option value="THUOC">Thuốc</option>
                                 <option value="VAC_XIN">Vắc-xin</option>
+                                <option value="THUC_AN">Thức ăn</option>
+                                <option value="DO_DUNG">Đồ dùng</option>
                             </select>
                             <small class="form-text text-muted">Chỉ kho thuốc mới cần chọn danh mục thuốc hoặc vắc-xin.</small>
                         </div>
