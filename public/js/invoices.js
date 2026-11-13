@@ -217,6 +217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <div>Mã hóa đơn: <strong>${escapeInvoiceHtml(detail.mahoadon || "-")}</strong></div>
                     <div>Phí khám (${Number(detail.so_lan_kham || 0)} lần): <strong>${formatCurrency(detail.tien_kham)}</strong></div>
                     <div>Tiền thuốc/vắc-xin: <strong>${formatCurrency(detail.tien_thuoc)}</strong></div>
+                    <div>Phí phẫu thuật: <strong>${formatCurrency(detail.tien_phauthuat)}</strong></div>
                     <div>Phí lưu trú: <strong>${formatCurrency(detail.tien_long)}</strong></div>
                     <div>Phí dịch vụ Spa: <strong>${formatCurrency(detail.tien_spa)}</strong></div>
                     <div class="mt-1">Tổng thanh toán: <strong class="text-danger">${formatCurrency(detail.tong_thanhtoan)}</strong></div>
