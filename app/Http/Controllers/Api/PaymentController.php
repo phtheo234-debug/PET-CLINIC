@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\CageOccupancyService;
+use App\Services\CageWaitingListService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +12,10 @@ use Carbon\Carbon;
 
 class PaymentController extends Controller
 {
-    public function __construct(private CageOccupancyService $cageOccupancy)
+    public function __construct(
+        private CageOccupancyService $cageOccupancy,
+        private CageWaitingListService $cageWaitingList
+    )
     {
     }
 
@@ -368,10 +372,13 @@ class PaymentController extends Controller
                 ]);
 
                 $updatedCage = $this->cageOccupancy->sync((int) $cage->cage_id);
+                $assignedFromWaiting = $this->cageWaitingList->dispatchWaiting();
 
                 return response()->json([
                     'status'  => 'success',
-                    'message' => 'Thanh toán thành công, lồng đã được giải phóng và thú cưng xuất viện!',
+                    'message' => $assignedFromWaiting > 0
+                        ? "Thanh toán thành công, thú cưng đã xuất viện. Hệ thống tự động xếp {$assignedFromWaiting} thú cưng đang chờ vào lồng vừa trống."
+                        : 'Thanh toán thành công, lồng đã được giải phóng và thú cưng xuất viện!',
                     'data'    => [
                         'invoice_id'     => $invoiceId,
                         'mahoadon'       => $code,
