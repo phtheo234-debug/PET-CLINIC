@@ -205,8 +205,9 @@ function renderCagesGrid() {
         const st = statusMap[c.trangthai] || { text: c.trangthai, cls: "info" };
         const currentCount = Number(c.soluonghientai ?? 0);
         const maxCapacity = Number(c.succhua ?? 1);
+        const effectiveCapacity = c.loailong === "CACH_LY" ? 1 : maxCapacity;
         const isMaintenance = ["DANG_VE_SINH", "BAO_TRI"].includes(c.trangthai);
-        const isFull = currentCount >= maxCapacity && !isMaintenance;
+        const isFull = currentCount >= effectiveCapacity && !isMaintenance;
         const displayStatus = isMaintenance ? st.text : (isFull ? "Đã đủ sức chứa" : st.text);
         const displayClass = isFull ? "warning" : st.cls;
         const isUnavailable = isFull || isMaintenance;
@@ -221,7 +222,7 @@ function renderCagesGrid() {
                         <p class="mb-1"><strong>Phân loại:</strong> ${typeLabel[c.loailong] || c.loailong}</p>
                         <p class="mb-1"><strong>Loài phù hợp:</strong> ${c.loai_phu_hop === "CHO" ? "Chó" : c.loai_phu_hop === "MEO" ? "Mèo" : "Tất cả"}</p>
                         <p class="mb-1"><strong>Tải trọng tối đa:</strong> ${c.tai_trong_toi_da ? c.tai_trong_toi_da + " kg" : "Không giới hạn"}</p>
-                        <p class="mb-3"><strong>Sức chứa:</strong> ${currentCount} / ${c.loailong === "CACH_LY" ? 1 : maxCapacity} thú cưng</p>
+                        <p class="mb-3"><strong>Sức chứa:</strong> ${currentCount} / ${effectiveCapacity} thú cưng</p>
                         ${(c.pets || []).length ? '<div class="small mb-2"><strong>Đang lưu trú:</strong> ' + c.pets.map(p => (p.mathucung || "PET-" + p.pet_id) + " - " + (p.ten_thucung || "")).join(", ") + '</div>' : ""}
                         ${canManageBoarding ? `
                             <button type="button" class="btn btn-sm btn-primary" ${isUnavailable ? "disabled" : ""}
