@@ -1,23 +1,18 @@
-
 <?php
 
-namespace App\Http\Middleware;
+namespace App\\Http\\Middleware;
 
 use Closure;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\\Http\\Request;
+use Symfony\\Component\\HttpFoundation\\Response;
 
 class RoleMiddleware
 {
     /**
-     * Kiểm tra quyền truy cập theo vai trò.
+     * Cho phép một hoặc nhiều vai trò, phân tách bằng dấu phẩy.
      */
-    public function handle(
-        Request $request,
-        Closure $next,
-        string $role
-    ): Response {
-        // Kiểm tra người dùng đã đăng nhập
+    public function handle(Request $request, Closure $next, string $roles): Response
+    {
         $user = $request->user();
 
         if (!$user) {
@@ -27,8 +22,9 @@ class RoleMiddleware
             ], 401);
         }
 
-        // Kiểm tra vai trò người dùng
-        if ($user->vaitro !== $role) {
+        $allowedRoles = array_filter(array_map('trim', explode(',', $roles)));
+
+        if (!in_array($user->vaitro, $allowedRoles, true)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Bạn không có quyền thực hiện chức năng này.',
