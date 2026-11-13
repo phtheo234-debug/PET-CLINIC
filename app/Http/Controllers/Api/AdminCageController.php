@@ -21,6 +21,8 @@ class AdminCageController extends Controller
             'ten_long' => 'required|string|max:50',
             'loailong' => ['required', Rule::in(['THUONG', 'CAP_CUU_ICU', 'CACH_LY'])],
             'succhua' => 'required|integer|min:1|max:100',
+            'tai_trong_toi_da' => 'required|numeric|gt:0|max:99999',
+            'loai_ap_dung' => 'required|string|max:30',
             'trangthai' => ['nullable', Rule::in(['CON_TRONG', 'DANG_VE_SINH', 'BAO_TRI'])],
         ]);
 
@@ -32,6 +34,8 @@ class AdminCageController extends Controller
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
                 'succhua' => $fields['succhua'],
+                'tai_trong_toi_da' => $fields['tai_trong_toi_da'],
+                'loai_ap_dung' => trim($fields['loai_ap_dung']),
                 'soluonghientai' => 0,
                 'trangthai' => $fields['trangthai'] ?? 'CON_TRONG',
             ], 'cage_id');
@@ -55,6 +59,8 @@ class AdminCageController extends Controller
             'ten_long' => 'required|string|max:50',
             'loailong' => ['required', Rule::in(['THUONG', 'CAP_CUU_ICU', 'CACH_LY'])],
             'succhua' => 'required|integer|min:1|max:100',
+            'tai_trong_toi_da' => 'required|numeric|gt:0|max:99999',
+            'loai_ap_dung' => 'required|string|max:30',
             'trangthai' => ['required', Rule::in(['CON_TRONG', 'DA_CO_THU', 'DANG_VE_SINH', 'BAO_TRI'])],
         ]);
 
@@ -72,6 +78,17 @@ class AdminCageController extends Controller
                 ], 422);
             }
 
+            $occupants = DB::table('pets')->where('cage_id', $id)->get();
+            foreach ($occupants as $occupant) {
+                if (mb_strtolower((string) $occupant->loai) !== mb_strtolower(trim($fields['loai_ap_dung']))) {
+                    return response()->json(['status' => 'error', 'message' => 'Loài áp dụng phải phù hợp với thú cưng đang ở trong lồng.'], 422);
+                }
+                $weight = DB::table('weight_logs')->where('pet_id', $occupant->pet_id)->orderByDesc('ngaydo')->value('cannang');
+                if ($weight !== null && (float) $weight > (float) $fields['tai_trong_toi_da']) {
+                    return response()->json(['status' => 'error', 'message' => 'Cân chứa tối đa không được nhỏ hơn cân nặng thú đang lưu trú.'], 422);
+                }
+            }
+
             if ($actualCount > 0 && in_array($fields['trangthai'], ['DANG_VE_SINH', 'BAO_TRI'], true)) {
                 return response()->json([
                     'status' => 'error',
@@ -87,6 +104,8 @@ class AdminCageController extends Controller
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
                 'succhua' => $fields['succhua'],
+                'tai_trong_toi_da' => $fields['tai_trong_toi_da'],
+                'loai_ap_dung' => trim($fields['loai_ap_dung']),
                 'soluonghientai' => $actualCount,
                 'trangthai' => $status,
             ]);
