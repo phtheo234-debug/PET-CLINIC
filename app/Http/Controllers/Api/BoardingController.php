@@ -240,6 +240,9 @@ class BoardingController extends Controller
 
         $cages = $query->orderBy('cage_id')->get();
 
+        $selectedCage = null;
+        $selectedOccupancy = PHP_INT_MAX;
+
         foreach ($cages as $cage) {
             $occupantsQuery = DB::table('pets')->where('cage_id', $cage->cage_id);
 
@@ -303,9 +306,13 @@ class BoardingController extends Controller
 
             $cage->soluonghientai = $actualCount;
 
-            return $cage;
+            // Ưu tiên lồng trống hoàn toàn, sau đó mới đến lồng có ít thú hơn.
+            if ($selectedCage === null || $actualCount < $selectedOccupancy) {
+                $selectedCage = $cage;
+                $selectedOccupancy = $actualCount;
+            }
         }
 
-        return null;
+        return $selectedCage;
     }
 }
