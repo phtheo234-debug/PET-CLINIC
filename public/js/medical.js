@@ -116,24 +116,31 @@ function mapActionToStatus(huongXuLy) {
 document.addEventListener("DOMContentLoaded", async () => {
     initPage();
     await Promise.all([loadPetsDropdown(), loadMedicalRecords(), loadMedicalInventory()]);
-    if (document.getElementById("medicalQueueBody")) await loadMedicalQueue();
-    document.getElementById("medicalQueueBody")?.addEventListener("click", async event => {
-        const button = event.target.closest("[data-select-queue]");
-        if (!button) return;
-        const queueId = Number(button.dataset.selectQueue);
-        button.disabled = true;
-        try {
-            const response = await apiRequest("/medical/queue/" + queueId + "/start", {method:"POST"});
-            const petId = Number(response?.data?.data?.pet_id || response?.data?.pet_id);
-            const petSelect = document.getElementById("pet_select");
-            if (petSelect && petId) {
+    if (document.getElementById("medicalQueueBody")) {
+        document.getElementById("btnSelectPriorityQueue")?.addEventListener("click", async event => {
+            const button = event.currentTarget;
+            const queueId = Number(button.dataset.queueId || 0);
+            if (!queueId) return;
+            button.disabled = true;
+            try {
+                const response = await apiRequest("/medical/queue/" + queueId + "/start", {method:"POST"});
+                const data = response?.data || {};
+                const petId = Number(data.pet_id || data.data?.pet_id || 0);
+                const petSelect = document.getElementById("pet_select");
+                if (!petId || !petSelect || !Array.from(petSelect.options).some(option => Number(option.value) === petId)) {
+                    throw new Error("Không tìm thấy thú cưng tương ứng trong ô Thú cưng thăm khám.");
+                }
                 petSelect.value = String(petId);
                 petSelect.dispatchEvent(new Event("change", {bubbles:true}));
+                await loadMedicalQueue();
+                document.getElementById("medicalForm")?.scrollIntoView({behavior:"smooth", block:"start"});
+            } catch (error) {
+                alert("Không thể chọn ca khám: " + error.message);
+                await loadMedicalQueue();
             }
-            document.getElementById("medicalForm")?.scrollIntoView({behavior:"smooth", block:"start"});
-            await loadMedicalQueue();
-        } catch (error) { alert("Không thể tiếp nhận ca khám: " + error.message); button.disabled = false; }
-    });
+        });
+        await loadMedicalQueue();
+    }
     document.getElementById("btnAddMedicalItem")?.addEventListener("click", addMedicalInventoryItem);
     document.getElementById("medicalInventorySearch")?.addEventListener("input", syncMedicalInventorySearch);
     document.getElementById("medicalInventorySearch")?.addEventListener("change", syncMedicalInventorySearch);
@@ -234,6 +241,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 document.getElementById("doseSuggestion").innerText =
                     "Nhập cân nặng để tự động tính liều mg/kg";
                 await loadMedicalRecords();
+                await loadMedicalQueue();
                 const printButton = document.getElementById("btnPrintCurrentMedical");
                 if (printButton) printButton.disabled = !lastSavedMedicalRecordId;
                 if (lastSavedMedicalRecordId) {
@@ -502,23 +510,50 @@ async function deleteSurgery(id) {
 
 async function loadMedicalQueue() {
     const body = document.getElementById("medicalQueueBody");
+    const featured = document.getElementById("medicalQueueFeatured");
+    const selectButton = document.getElementById("btnSelectPriorityQueue");
     if (!body) return;
     try {
         const response = await apiRequest("/medical/queue");
         const rows = extractList(response);
+        const active = rows.find(item => item.queue_status === "DANG_KHAM");
+        const next = active || rows.find(item => item.queue_status === "CHO_KHAM");
+        if (active) {
+            const petSelect = document.getElementById("pet_select");
+            if (petSelect && Array.from(petSelect.options).some(option => Number(option.value) === Number(active.pet_id))) {
+                petSelect.value = String(active.pet_id);
+                petSelect.dispatchEvent(new Event("change", {bubbles:true}));
+            }
+        }
+        if (featured) {
+            featured.innerHTML = next
+                ? '<div class="d-flex flex-wrap justify-content-between align-items-center"><div><div class="small text-uppercase font-weight-bold text-danger mb-1">' + (active ? 'CA ĐANG ĐƯỢC KHÁM' : 'THÚ CƯNG TIẾP THEO') + '</div><h5 class="mb-1 font-weight-bold">' + escapeMedicalHtml(next.ten_thucung || 'Chưa có tên') + ' <small class="text-muted">(' + escapeMedicalHtml(next.mathucung || '') + ')</small></h5><div>' + escapeMedicalHtml(next.ten_chu_nuoi || 'Chưa có thông tin chủ nuôi') + '</div>' + (next.ghi_chu ? '<div class="mt-2 text-danger font-weight-bold"><i class="fas fa-exclamation-circle mr-1"></i>' + escapeMedicalHtml(next.ghi_chu) + '</div>' : '<div class="small text-muted mt-1">Không có ghi chú ưu tiên</div>') + '</div><span class="badge ' + (active ? 'badge-warning' : 'badge-danger') + ' p-2">' + (active ? 'Đang khám' : 'Ưu tiên tiếp theo') + '</span></div>'
+                : '<span class="text-muted">Hiện không có thú cưng chờ khám.</span>';
+        }
+        if (selectButton) {
+            selectButton.dataset.queueId = next && !active && next.queue_status === "CHO_KHAM" ? String(next.queue_id) : "";
+            selectButton.disabled = !next || !!active || next.queue_status !== "CHO_KHAM";
+            selectButton.innerHTML = active
+                ? '<i class="fas fa-stethoscope mr-1"></i> Đang khám'
+                : next ? '<i class="fas fa-hand-pointer mr-1"></i> Chọn' : '<i class="fas fa-check mr-1"></i> Không còn ca chờ';
+        }
+        const statusLabels = {
+            CHO_KHAM: '<span class="badge badge-secondary">Chưa khám</span>',
+            DANG_KHAM: '<span class="badge badge-warning">Đang khám</span>',
+            DA_KHAM: '<span class="badge badge-success">Đã khám</span>'
+        };
         body.innerHTML = rows.length ? rows.map(item => {
-            const status = item.queue_status === "DANG_KHAM"
-                ? '<span class="badge badge-warning">Đang khám</span>'
-                : '<span class="badge badge-info">Chờ khám</span>';
-            return '<tr>' +
-                '<td><strong>' + escapeMedicalHtml(item.mathucung) + '</strong><br>' + escapeMedicalHtml(item.ten_thucung) + '<br><small class="text-muted">' + escapeMedicalHtml(item.loai || "") + ' · ' + escapeMedicalHtml(item.giong || "") + '</small></td>' +
-                '<td>' + escapeMedicalHtml(item.ten_chu_nuoi || "-") + '<br><small>' + escapeMedicalHtml(item.sdt_chu_nuoi || "") + '</small></td>' +
-                '<td>' + escapeMedicalHtml(item.trieuchung || "-") + '</td>' +
-                '<td>' + (item.ghi_chu ? '<span class="text-danger font-weight-bold"><i class="fas fa-exclamation-circle mr-1"></i>' + escapeMedicalHtml(item.ghi_chu) + '</span>' : '<span class="text-muted">—</span>') + '</td>' +
-                '<td>' + status + '</td><td>' + escapeMedicalHtml(item.created_at || "-") + '</td>' +
-                '<td><button type="button" class="btn btn-sm btn-primary" data-select-queue="' + Number(item.queue_id) + '">Chọn</button></td></tr>';
-        }).join("") : '<tr><td colspan="7" class="text-center text-muted">Chưa có thú cưng trong danh sách chờ khám.</td></tr>';
+            const isPriority = item.queue_status === "CHO_KHAM" && !!String(item.ghi_chu || "").trim();
+            const rowClass = item.queue_status === "DANG_KHAM" ? "table-warning" : (isPriority ? "table-danger" : "");
+            return '<tr class="' + rowClass + '">' +
+                '<td><strong>' + escapeMedicalHtml(item.ten_thucung || "-") + '</strong><br><small class="text-muted">' + escapeMedicalHtml(item.mathucung || "") + ' · ' + escapeMedicalHtml(item.loai || "") + ' ' + escapeMedicalHtml(item.giong || "") + '</small></td>' +
+                '<td>' + escapeMedicalHtml(item.ten_chu_nuoi || "-") + '<br><small class="text-muted">' + escapeMedicalHtml(item.sdt_chu_nuoi || "") + '</small></td>' +
+                '<td>' + (statusLabels[item.queue_status] || '<span class="badge badge-secondary">Chưa khám</span>') + '</td>' +
+                '<td>' + (item.ghi_chu ? '<span class="' + (isPriority ? 'text-danger font-weight-bold' : '') + '">' + escapeMedicalHtml(item.ghi_chu) + '</span>' : '<span class="text-muted">—</span>') + '</td></tr>';
+        }).join("") : '<tr><td colspan="4" class="text-center text-muted">Chưa có thú cưng trong danh sách chờ khám hôm nay.</td></tr>';
     } catch (error) {
-        body.innerHTML = '<tr><td colspan="7" class="text-danger text-center">' + escapeMedicalHtml(error.message || "Không tải được danh sách chờ") + '</td></tr>';
+        if (featured) featured.innerHTML = '<span class="text-danger">' + escapeMedicalHtml(error.message || "Không tải được danh sách chờ") + '</span>';
+        if (selectButton) { selectButton.disabled = true; selectButton.textContent = "Không tải được danh sách"; }
+        body.innerHTML = '<tr><td colspan="4" class="text-danger text-center">' + escapeMedicalHtml(error.message || "Không tải được danh sách chờ") + '</td></tr>';
     }
 }
