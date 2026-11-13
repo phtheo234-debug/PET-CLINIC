@@ -361,6 +361,15 @@ class PaymentController extends Controller
                         'updated_at' => now(),
                     ]);
 
+                // Đóng yêu cầu lưu trú tương ứng sau khi hoàn tất thanh toán và xuất viện.
+                DB::table('boarding_requests')
+                    ->where('pet_id', $pet->pet_id)
+                    ->where('status', 'checked_in')
+                    ->update([
+                        'status' => 'completed',
+                        'updated_at' => now(),
+                    ]);
+
                 // 7. Cập nhật trạng thái thú cưng trước, sau đó đồng bộ lồng
                 DB::table('pets')->where('pet_id', $pet->pet_id)->update([
                     'cage_id'   => null,
