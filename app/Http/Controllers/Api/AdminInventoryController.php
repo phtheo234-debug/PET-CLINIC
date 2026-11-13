@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api;
+namespace App\Http\Controllers\Api;
 
-use App\\Http\\Controllers\\Controller;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\Rule;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdminInventoryController extends Controller
 {
@@ -42,7 +42,7 @@ class AdminInventoryController extends Controller
             if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0) {
                 $lotCode = $fields['solo'] ?? ('LO-' . now()->format('Ymd') . '-' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT));
                 if (DB::table('inventory_batches')->where('item_id', $id)->where('solo', $lotCode)->exists()) {
-                    throw new \\RuntimeException('Mã lô vừa tạo đã tồn tại. Vui lòng thử lưu lại để tạo mã mới.');
+                    throw new \RuntimeException('Mã lô vừa tạo đã tồn tại. Vui lòng thử lưu lại để tạo mã mới.');
                 }
                 DB::table('inventory_batches')->insert([
                     'item_id' => $id,
