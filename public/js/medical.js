@@ -167,6 +167,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     body: JSON.stringify(payload),
                 });
                 e.target.reset();
+                updateMedicalSections();
                 document.getElementById("doseSuggestion").innerText =
                     "Nhập cân nặng để tự động tính liều mg/kg";
                 await loadMedicalRecords();
