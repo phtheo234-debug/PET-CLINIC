@@ -5,6 +5,7 @@
 
 @section('content')
 @php
+    $medicalUser = request()->attributes->get('web_authenticated_user');
     $medicalCurrentRole = strtoupper(trim($medicalUser->vaitro ?? ''));
     $isMedicalDoctor = $medicalCurrentRole === 'BAC_SI';
 @endphp
