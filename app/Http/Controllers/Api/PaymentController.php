@@ -21,8 +21,8 @@ class PaymentController extends Controller
     public function index()
     {
         $invoices = DB::table('invoices as i')
-            ->join('pets as p', 'p.pet_id', '=', 'i.pet_id')
-            ->join('owners as o', 'o.owner_id', '=', 'i.owner_id')
+            ->leftJoin('pets as p', 'p.pet_id', '=', 'i.pet_id')
+            ->leftJoin('owners as o', 'o.owner_id', '=', 'i.owner_id')
             ->select('i.*', 'p.ten_thucung', 'p.mathucung', 'o.ho_ten as ten_chu_nuoi', 'o.phone')
             ->orderByDesc('i.ngaytao')
             ->get();
