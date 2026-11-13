@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\CageOccupancyService;
+use App\Services\CageWaitingListService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -11,7 +12,10 @@ use Illuminate\Validation\Rule;
 
 class AdminCageController extends Controller
 {
-    public function __construct(private CageOccupancyService $cageOccupancy)
+    public function __construct(
+        private CageOccupancyService $cageOccupancy,
+        private CageWaitingListService $cageWaitingList
+    )
     {
     }
 
@@ -45,6 +49,8 @@ class AdminCageController extends Controller
 
             return DB::table('cages')->where('cage_id', $id)->first();
         });
+
+        $this->cageWaitingList->dispatchWaiting();
 
         return response()->json([
             'status' => 'success',
@@ -105,6 +111,8 @@ class AdminCageController extends Controller
                 'soluonghientai' => $actualCount,
                 'trangthai' => $status,
             ]);
+
+            $this->cageWaitingList->dispatchWaiting();
 
             return response()->json([
                 'status' => 'success',
