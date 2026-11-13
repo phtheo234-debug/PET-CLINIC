@@ -627,14 +627,14 @@ hr {
 
 /* Lồng đã đủ sức chứa: nền vàng nhạt, chữ nâu đậm dễ đọc */
 .cage-card-header-full {
-    color: #854d0e !important;
-    background: #fef3c7 !important;
-    border-bottom-color: #fde68a !important;
+    color: #ffffff !important;
+    background: #dc3545 !important;
+    border-bottom-color: #bd2130 !important;
 }
 
 .cage-card-header-full strong,
 .cage-card-header-full span {
-    color: #854d0e !important;
+    color: #ffffff !important;
 }
 
 
