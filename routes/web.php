@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PetQrController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -16,6 +17,7 @@ Route::middleware('web.token')->group(function () {
     // Các vai trò đều được xem tổng quan, hồ sơ thú cưng và danh sách lồng.
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::view('/pets', 'pets')->name('pets');
+    Route::get('/pet-qr/{qrCode}', [PetQrController::class, 'show'])->name('pets.qr.show');
     Route::view('/cages', 'cages')->name('cages');
 
     // Bác sĩ và quản trị viên được truy cập nghiệp vụ khám, chẩn đoán, kê đơn.

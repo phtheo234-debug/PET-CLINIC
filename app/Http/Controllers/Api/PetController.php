@@ -7,6 +7,7 @@ use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PetController extends Controller
 {
@@ -47,7 +48,8 @@ class PetController extends Controller
             'breed'          => $p->giong,
             'gender'         => $p->gioitinh,
             'dob'            => $p->ngaysinh,
-            'microchip_code' => $p->machip,
+            'qr_code'       => $p->qr_code,
+            'qr_url'        => route('pets.qr.show', $p->qr_code),
             'weight'         => $p->current_weight ? (float)$p->current_weight : null,
             'owner_id'       => $p->owner_id,
             'cage_id'        => $p->cage_id,
@@ -93,7 +95,6 @@ class PetController extends Controller
             'breed'          => 'nullable|string|max:50',
             'gender'         => 'nullable|in:DUC,CAI,CHUA_XAC_DINH',
             'dob'            => 'nullable|date',
-            'microchip_code' => 'nullable|string|max:50|unique:pets,machip',
             'weight'         => 'required|numeric|min:0.1|max:999',
         ];
 
@@ -115,7 +116,6 @@ class PetController extends Controller
             'phone.required'        => 'Vui lòng nhập số điện thoại chủ nuôi.',
             'name.required'         => 'Vui lòng nhập tên thú cưng.',
             'species.required'      => 'Vui lòng chọn loài thú cưng.',
-            'microchip_code.unique' => 'Mã Microchip / QR này đã tồn tại.',
             'weight.required'       => 'Vui lòng nhập cân nặng ban đầu.',
             'weight.min'            => 'Cân nặng phải tối thiểu 0.1 kg.',
         ]);
@@ -151,7 +151,7 @@ class PetController extends Controller
                     'giong'       => $v['breed'] ?? null,
                     'gioitinh'    => $v['gender'] ?? 'CHUA_XAC_DINH',
                     'ngaysinh'    => $v['dob'] ?? null,
-                    'machip'      => $v['microchip_code'] ?? null,
+                    'qr_code'     => (string) Str::uuid(),
                     'trangthai'   => 'NGOAI_TRU',
                 ]);
 
@@ -231,7 +231,6 @@ class PetController extends Controller
             'breed'          => 'sometimes|nullable|string|max:50',
             'gender'         => 'sometimes|in:DUC,CAI,CHUA_XAC_DINH',
             'dob'            => 'sometimes|nullable|date',
-            'microchip_code' => 'sometimes|nullable|string|max:50|unique:pets,machip,' . $id . ',pet_id',
             'weight'         => 'sometimes|numeric|min:0.1|max:999',
         ]);
 
@@ -244,7 +243,6 @@ class PetController extends Controller
                     'breed'          => 'giong',
                     'gender'         => 'gioitinh',
                     'dob'            => 'ngaysinh',
-                    'microchip_code' => 'machip',
                 ];
 
                 $data = [];

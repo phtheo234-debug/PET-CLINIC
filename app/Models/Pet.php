@@ -19,7 +19,7 @@ class Pet extends Model
         'giong',
         'gioitinh',
         'ngaysinh',
-        'machip',
+        'qr_code',
         'trangthai',
         'ngaytao',
     ];

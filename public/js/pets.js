@@ -121,10 +121,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById("gioitinh").value,
         );
 
-        const microchip =
-            document.getElementById("machip").value.trim() || null;
-
-        const weight = parseFloat(document.getElementById("can_nang").value);
+const weight = parseFloat(document.getElementById("can_nang").value);
 
         if (!ownerName || !ownerPhone) {
             alert("Vui lòng nhập đầy đủ Họ tên và Số điện thoại chủ nuôi!");
@@ -172,7 +169,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 species: species,
                 breed: breed,
                 gender: gender,
-                microchip_code: microchip,
                 weight: weight,
             };
 
@@ -236,9 +232,7 @@ function renderPetsTable(items) {
             const species = p.species || p.loai || "";
             const breed = p.breed || p.giong || "";
 
-            const chip = p.microchip_code || p.machip || "Chưa gán";
-
-            const ownerName =
+const ownerName =
                 (p.owner && (p.owner.name || p.owner.ho_ten)) ||
                 p.ho_ten_chu ||
                 "-";
@@ -271,7 +265,10 @@ function renderPetsTable(items) {
                 </td>
 
                 <td>
-                    <code>${escapePetHtml(chip)}</code>
+                    <button type="button" class="btn btn-sm btn-outline-info"
+                        onclick="showPetQr(${Number(petId)})">
+                        <i class="fas fa-qrcode mr-1"></i> Xem QR
+                    </button>
                 </td>
 
                 <td>
@@ -298,6 +295,36 @@ function renderPetsTable(items) {
         `;
         })
         .join("");
+}
+
+function showPetQr(petId) {
+    const pet = petsList.find((item) => Number(item.id ?? item.pet_id) === Number(petId));
+    if (!pet || !pet.qr_url || !pet.qr_code) {
+        alert("Chưa có dữ liệu QR. Vui lòng tải lại danh sách hoặc kiểm tra migration.");
+        return;
+    }
+
+    const container = document.getElementById("petQrContainer");
+    container.innerHTML = "";
+    document.getElementById("petQrName").textContent =
+        (pet.name || pet.ten_thucung || "Thú cưng") + " · " + (pet.mathucung || "");
+    document.getElementById("petQrCodeText").textContent = "Mã QR: " + pet.qr_code;
+    document.getElementById("petQrOpenLink").href = pet.qr_url;
+
+    if (typeof QRCode === "undefined") {
+        container.textContent = "Không tải được thư viện tạo QR. Vui lòng kiểm tra kết nối Internet.";
+    } else {
+        new QRCode(container, {
+            text: pet.qr_url,
+            width: 220,
+            height: 220,
+            colorDark: "#111827",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M,
+        });
+    }
+
+    $("#petQrModal").modal("show");
 }
 
 // Mã hóa nội dung trước khi hiển thị HTML
