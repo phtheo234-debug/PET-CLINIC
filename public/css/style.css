@@ -623,3 +623,16 @@ hr {
 .cage-card.border-success > .card-header span {
     color: #166534 !important;
 }
+
+
+/* Lồng đã đủ sức chứa: nền vàng nhạt, chữ nâu đậm dễ đọc */
+.cage-card-header-full {
+    color: #854d0e !important;
+    background: #fef3c7 !important;
+    border-bottom-color: #fde68a !important;
+}
+
+.cage-card-header-full strong,
+.cage-card-header-full span {
+    color: #854d0e !important;
+}
