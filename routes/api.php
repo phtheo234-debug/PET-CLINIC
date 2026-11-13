@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\BoardingController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\MedicalController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\SpaUsageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -69,6 +70,9 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::get('/boarding/cages', [BoardingController::class, 'index']);
     Route::post('/boarding/assign', [BoardingController::class, 'assignCage']);
     Route::post('/boarding/release', [BoardingController::class, 'releaseCage']);
+
+    Route::get('/spa/usages', [SpaUsageController::class, 'index']);
+    Route::post('/spa/usages', [SpaUsageController::class, 'store']);
 
     Route::get('/inventory', [InventoryController::class, 'index']);
     Route::post('/inventory/batch/import', [InventoryController::class, 'importBatch']);
