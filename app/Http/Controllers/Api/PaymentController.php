@@ -204,7 +204,7 @@ class PaymentController extends Controller
             ->join('pets as p', 'p.pet_id', '=', 'mr.pet_id')
             ->leftJoin('owners as o', 'o.owner_id', '=', 'p.owner_id')
             ->whereNull('mr.invoice_id')
-            ->where('mr.trangthai', 'HOAN_THANH')
+            ->whereIn('mr.trangthai', ['CHUA_KHAM', 'DANG_DIEU_TRI'])
             ->where('p.trangthai', '!=', 'NOI_TRU')
             ->select('mr.record_id', 'mr.pet_id', 'mr.ngaykham', 'mr.chandoan', 'p.mathucung', 'p.ten_thucung', 'o.ho_ten as ten_chu_nuoi')
             ->orderByDesc('mr.ngaykham')
@@ -225,8 +225,8 @@ class PaymentController extends Controller
             if (!$record || $record->invoice_id) {
                 return response()->json(['status' => 'error', 'message' => 'Phiếu khám này đã được thanh toán hoặc không còn tồn tại.'], 422);
             }
-            if ($record->trangthai !== 'HOAN_THANH') {
-                return response()->json(['status' => 'error', 'message' => 'Chỉ thanh toán phiếu khám đã hoàn thành.'], 422);
+            if (!in_array($record->trangthai, ['CHUA_KHAM', 'DANG_DIEU_TRI'], true)) {
+                return response()->json(['status' => 'error', 'message' => 'Phiếu khám không ở trạng thái có thể thanh toán.'], 422);
             }
             $pet = DB::table('pets')->where('pet_id', $record->pet_id)->lockForUpdate()->first();
             if (!$pet || $pet->trangthai === 'NOI_TRU') {
@@ -267,7 +267,7 @@ class PaymentController extends Controller
             if ($items->isNotEmpty()) {
                 DB::table('prescriptions')->whereIn('prescription_id', $items->pluck('prescription_id'))->update(['invoice_id' => $invoiceId]);
             }
-            DB::table('medical_records')->where('record_id', $record->record_id)->update(['invoice_id' => $invoiceId]);
+            DB::table('medical_records')->where('record_id', $record->record_id)->update(['invoice_id' => $invoiceId, 'trangthai' => 'HOAN_THANH']);
             return response()->json(['status' => 'success', 'message' => 'Đã thanh toán lượt khám ngoại trú.', 'data' => [
                 'invoice_id' => $invoiceId, 'mahoadon' => $code, 'tien_kham' => $examFee,
                 'tien_thuoc' => $medicineTotal, 'tong_thanhtoan' => $examFee + $medicineTotal,
