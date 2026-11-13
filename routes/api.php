@@ -104,7 +104,8 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
 
     // Hóa đơn, xuất viện và ghi chú ưu tiên khám dành cho nhân viên/quản trị.
     Route::middleware('role:QUAN_TRI,NHAN_VIEN')->group(function () {
-        Route::put('/medical/records/{id}/queue-note', [MedicalController::class, 'updateQueueNote']);
+        Route::post('/medical/queue', [MedicalController::class, 'addToQueue']);
+        Route::put('/medical/queue/{id}/note', [MedicalController::class, 'updateQueueNote']);
         Route::get('/payment/invoices', [PaymentController::class, 'index']);
         Route::get('/payment/pets/{petId}/preview', [PaymentController::class, 'previewPetCharges']);
         Route::post('/payment/checkout', [PaymentController::class, 'createUnifiedInvoice']);
