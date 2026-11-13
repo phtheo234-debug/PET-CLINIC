@@ -72,6 +72,46 @@
     </div>
 </div>
 <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white font-weight-bold text-warning">
+        <i class="fas fa-shopping-basket mr-1"></i> POS BÁN THỨC ĂN, ĐỒ DÙNG & DỊCH VỤ (KHÔNG CẦN KHÁM)
+    </div>
+    <div class="card-body">
+        <p class="text-muted small">Có thể thanh toán trực tiếp không cần phiếu khám. Bắt buộc chọn hồ sơ chủ nuôi và thú cưng. Hàng hóa được trừ kho theo lô còn hạn; dịch vụ không trừ tồn kho.</p>
+        <form id="retailPosForm">
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="pos_pet_select">Thú cưng <span class="text-danger">*</span></label>
+                    <select id="pos_pet_select" class="form-control" required><option value="">-- Chọn thú cưng --</option></select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="pos_owner_name">Chủ nuôi</label>
+                    <input id="pos_owner_name" class="form-control bg-light" readonly placeholder="Tự động theo hồ sơ thú cưng">
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong>Danh sách hàng hóa / dịch vụ</strong>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddPosLine"><i class="fas fa-plus mr-1"></i>Thêm dòng</button>
+            </div>
+            <div id="posCartRows"></div>
+            <div class="form-row align-items-end mt-3">
+                <div class="form-group col-md-4">
+                    <label for="pos_payment_method">Phương thức thanh toán</label>
+                    <select id="pos_payment_method" class="form-control">
+                        <option value="TIEN_MAT">Tiền mặt</option>
+                        <option value="CHUYEN_KHOAN">Chuyển khoản</option>
+                        <option value="THE">Thẻ</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-8 text-right">
+                    <button type="submit" id="btnRetailPosCheckout" class="btn btn-warning font-weight-bold"><i class="fas fa-cash-register mr-1"></i>Thanh toán POS</button>
+                </div>
+            </div>
+        </form>
+        <div id="retailPosResult" class="mt-2" aria-live="polite"></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
     <div class="card-header bg-white font-weight-bold text-success">
         <i class="fas fa-cash-register mr-1"></i> THANH TOÁN VÀ DUYỆT XUẤT VIỆN
     </div>
