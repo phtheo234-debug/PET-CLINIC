@@ -84,7 +84,13 @@
                 <div class="form-group col-md-12 d-none" id="medicalInventorySection">
                     <label class="font-weight-bold">Thuốc / Vắc-xin sử dụng từ kho</label>
                     <div class="form-row align-items-end">
-                        <div class="form-group col-md-4 mb-2"><label for="medicalInventorySelect">Mặt hàng trong kho</label><select id="medicalInventorySelect" class="form-control"><option value="">-- Chọn thuốc hoặc vắc-xin --</option></select></div>
+                        <div class="form-group col-md-4 mb-2">
+                            <label for="medicalInventorySearch">Mặt hàng trong kho</label>
+                            <input type="text" id="medicalInventorySearch" class="form-control" list="medicalInventorySuggestions" placeholder="Nhập tên hoặc mã thuốc/vắc-xin..." autocomplete="off">
+                            <datalist id="medicalInventorySuggestions"></datalist>
+                            <select id="medicalInventorySelect" class="d-none" aria-hidden="true" tabindex="-1"><option value="">-- Chọn thuốc hoặc vắc-xin --</option></select>
+                            <small class="form-text text-muted">Gõ tên hoặc mã để xem các mặt hàng liên quan còn trong kho.</small>
+                        </div>
                         <div class="form-group col-md-2 mb-2"><label for="medicalInventoryQty">Số lượng</label><input type="number" id="medicalInventoryQty" class="form-control" min="1" step="1" value="1"></div>
                         <div class="form-group col-md-4 mb-2"><label for="medicalInventoryNote">Liều dùng / Hướng dẫn</label><input type="text" id="medicalInventoryNote" class="form-control" maxlength="1000" placeholder="VD: 1 viên/lần, ngày 2 lần..."></div>
                         <div class="form-group col-md-2 mb-2"><button type="button" id="btnAddMedicalItem" class="btn btn-outline-primary btn-block"><i class="fas fa-plus mr-1"></i>Thêm</button></div>
