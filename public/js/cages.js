@@ -258,6 +258,8 @@ function openCageForm(cage = null) {
         ? cage.loailong
         : "THUONG";
     document.getElementById("cage_succhua").value = cage ? cage.succhua : 1;
+    document.getElementById("cage_tai_trong").value = cage ? cage.tai_trong_toi_da : "";
+    document.getElementById("cage_loai_ap_dung").value = cage ? cage.loai_ap_dung : "Chó";
     document.getElementById("cage_trangthai").value = cage
         ? cage.trangthai
         : "CON_TRONG";
@@ -292,6 +294,8 @@ async function saveCage(event) {
         ten_long: document.getElementById("cage_ten_long").value.trim(),
         loailong: document.getElementById("cage_loailong").value,
         succhua: Number(document.getElementById("cage_succhua").value),
+        tai_trong_toi_da: Number(document.getElementById("cage_tai_trong").value),
+        loai_ap_dung: document.getElementById("cage_loai_ap_dung").value,
         trangthai: document.getElementById("cage_trangthai").value,
     };
 
