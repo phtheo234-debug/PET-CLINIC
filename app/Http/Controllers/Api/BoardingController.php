@@ -228,9 +228,11 @@ class BoardingController extends Controller
             ->orderByDesc('ngaydo')
             ->first();
 
+        $examWeight = $boardingRequest->cannangkhi_kham
+            ?? DB::table('medical_records')->where('record_id', $boardingRequest->medical_record_id)->value('cannangkhi_kham');
         $weight = $latestWeight
             ? (float) $latestWeight->cannang
-            : (float) ($boardingRequest->cannangkhi_kham ?? 0);
+            : (float) ($examWeight ?? 0);
 
         $hasMaxWeightColumn = Schema::hasColumn('cages', 'tai_trong_toi_da');
 
