@@ -25,15 +25,20 @@ class MedicalController extends Controller
         try {
             $records = DB::table('medical_records')
                 ->leftJoin('pets', 'medical_records.pet_id', '=', 'pets.pet_id')
-                ->leftJoin('cages', 'pets.cage_id', '=', 'cages.cage_id')
+                ->leftJoin('cages as current_cages', 'pets.cage_id', '=', 'current_cages.cage_id')
+                ->leftJoin('boarding_requests as br', 'br.medical_record_id', '=', 'medical_records.record_id')
+                ->leftJoin('cages as suggested_cages', 'br.suggested_cage_id', '=', 'suggested_cages.cage_id')
                 ->select(
                     'medical_records.*',
                     'pets.mathucung',
                     'pets.ten_thucung',
                     'pets.loai',
                     'pets.giong',
-                    'cages.malong',
-                    'cages.ten_long'
+                    DB::raw('COALESCE(current_cages.malong, suggested_cages.malong) as malong'),
+                    DB::raw('COALESCE(current_cages.ten_long, suggested_cages.ten_long) as ten_long'),
+                    'br.status as boarding_status',
+                    'br.loai_long_yeu_cau',
+                    'br.yeu_cau_cach_ly'
                 )
                 ->orderByDesc('medical_records.ngaykham')
                 ->limit(20)
