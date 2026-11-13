@@ -72,7 +72,7 @@ async function printMedicalRecord(recordId) {
     try {
         const response = await apiRequest("/medical/records/" + recordId);
         const record = response?.data?.data || response?.data || {};
-        const labels = {DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"};
+        const labels = {CHUA_KHAM:"Chưa khám",DANG_DIEU_TRI:"Đang điều trị",HOAN_THANH:"Hoàn thành",CHUYEN_VIEN:"Chuyển viện"};
         const rows = (record.items || []).map((item, index) => "<tr><td>" + (index+1) + "</td><td>" + escapeMedicalHtml(item.ten_sanpham) + "</td><td>" + (item.danhmuc === "VAC_XIN" ? "Vắc-xin" : "Thuốc") + "</td><td>" + Number(item.soluong) + " " + escapeMedicalHtml(item.donvitinh) + "</td><td>" + escapeMedicalHtml(item.huongdan || "-") + "</td></tr>").join("");
         const win = window.open("", "_blank", "width=900,height=750");
         if (!win) { alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup rồi thử lại."); return; }
