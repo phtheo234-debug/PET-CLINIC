@@ -95,14 +95,17 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::middleware('role:QUAN_TRI,BAC_SI')->group(function () {
         Route::post('/medical/records', [MedicalController::class, 'store']);
         Route::get('/medical/records', [MedicalController::class, 'index']);
+        Route::get('/medical/queue', [MedicalController::class, 'queue']);
+        Route::post('/medical/records/{id}/start', [MedicalController::class, 'startQueueRecord']);
         Route::get('/medical/records/{id}', [MedicalController::class, 'show']);
         Route::put('/medical/records/{id}/status', [MedicalController::class, 'updateStatus']);
         Route::post('/medical/prescriptions', [MedicalController::class, 'createPrescription']);
         Route::get('/medical/history/pet/{petId}', [MedicalController::class, 'getHistoryByPet']);
     });
 
-    // Hóa đơn và xuất viện dành cho nhân viên/quản trị.
+    // Hóa đơn, xuất viện và ghi chú ưu tiên khám dành cho nhân viên/quản trị.
     Route::middleware('role:QUAN_TRI,NHAN_VIEN')->group(function () {
+        Route::put('/medical/records/{id}/queue-note', [MedicalController::class, 'updateQueueNote']);
         Route::get('/payment/invoices', [PaymentController::class, 'index']);
         Route::get('/payment/pets/{petId}/preview', [PaymentController::class, 'previewPetCharges']);
         Route::post('/payment/checkout', [PaymentController::class, 'createUnifiedInvoice']);
