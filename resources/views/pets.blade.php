@@ -77,6 +77,11 @@
                         </select>
                     </div>
                     <div class="form-group col-md-4">
+                        <label>Ngày sinh</label>
+                        <input type="date" id="ngaysinh" class="form-control">
+                        <small class="form-text text-muted">Có thể để trống nếu không rõ ngày sinh.</small>
+                    </div>
+                    <div class="form-group col-md-4">
                         <label>Cân nặng (kg) <span class="text-danger">*</span></label>
                         <input type="number" step="0.1" min="0.1" max="200" id="can_nang" class="form-control" placeholder="VD: 3.5" required>
                     </div>

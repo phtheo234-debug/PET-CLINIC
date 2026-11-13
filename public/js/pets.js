@@ -116,6 +116,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const petName = document.getElementById("ten_thucung").value.trim();
         const species = document.getElementById("loai").value;
         const breed = document.getElementById("giong").value.trim() || null;
+        const dob = document.getElementById("ngaysinh").value || null;
 
         const gender = normalizeGender(
             document.getElementById("gioitinh").value,
@@ -169,6 +170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 species: species,
                 breed: breed,
                 gender: gender,
+                dob: dob,
                 weight: weight,
             };
 
