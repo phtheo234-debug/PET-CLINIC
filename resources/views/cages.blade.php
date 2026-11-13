@@ -153,6 +153,12 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="assign_isolation_required" value="1">
+                        <label class="custom-control-label text-danger" for="assign_isolation_required">Thú cưng cần cách ly</label>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>Lý do lưu trú / Ghi chú</label>
                     <input type="text" id="assign_note" class="form-control" placeholder="VD: Lưu viện theo dõi hậu phẫu...">
                 </div>
