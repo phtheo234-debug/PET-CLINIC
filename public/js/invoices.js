@@ -119,7 +119,7 @@ async function printInvoice(invoiceId) {
         const response = await apiRequest("/payment/invoices/" + invoiceId);
         const invoice = response?.data?.data || response?.data || {};
         const details = invoice.chi_tiet || [];
-        const labels = {THUOC:"Thuốc",VAC_XIN:"Vắc-xin",THUC_AN:"Thức ăn",DO_DUNG:"Đồ dùng",PHI_KHAM:"Phí khám",LUU_TRU:"Lưu trú",DICH_VU_SPA:"Dịch vụ"};
+        const labels = {THUOC:"Thuốc",VAC_XIN:"Vắc-xin",THUC_AN:"Thức ăn",DO_DUNG:"Đồ dùng",PHI_KHAM:"Phí khám",PHAU_THUAT:"Phẫu thuật",LUU_TRU:"Lưu trú",DICH_VU_SPA:"Dịch vụ"};
         const rows = details.map((line,index) => "<tr><td>"+(index+1)+"</td><td>"+escapeInvoiceHtml(line.ten_sanpham)+"</td><td>"+(labels[line.loai_chiphi] || escapeInvoiceHtml(line.loai_chiphi))+"</td><td>"+Number(line.soluong)+" "+escapeInvoiceHtml(line.donvitinh || "")+"</td><td>"+formatCurrency(line.dongia)+"</td><td>"+formatCurrency(line.thanhtien)+"</td></tr>").join("");
         const win = window.open("", "_blank", "width=900,height=750");
         if (!win) { alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup rồi thử lại."); return; }
