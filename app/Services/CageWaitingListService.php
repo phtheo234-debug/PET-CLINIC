@@ -50,7 +50,6 @@ class CageWaitingListService
 
         if (!$cage) {
             $this->putOnWaitingList($petId, $weight, $treatment, $isolation);
-            DB::table('pets')->where('pet_id', $petId)->update(['trangthai' => 'CHO_XEP_LONG']);
 
             return ['cage' => null, 'waiting' => true];
         }
@@ -131,14 +130,6 @@ class CageWaitingListService
                     $sub->whereNull('tai_trong_toi_da')->orWhere('tai_trong_toi_da', '>=', $weight);
                 });
             })
-            ->when($hasSpecies, function ($q) use ($pet) {
-                $species = $this->normalizeSpecies((string) $pet->loai);
-                $q->where(function ($sub) use ($species) {
-                    $sub->whereNull('loai_phu_hop')
-                        ->orWhere('loai_phu_hop', 'TAT_CA')
-                        ->orWhereRaw('LOWER(loai_phu_hop) = ?', [$species]);
-                });
-            })
             ->orderByRaw("CASE WHEN loailong = ? THEN 0 ELSE 1 END", [
                 $treatment === 'SURGERY' ? 'CAP_CUU_ICU' : 'THUONG',
             ])
@@ -147,6 +138,11 @@ class CageWaitingListService
             ->get();
 
         foreach ($cages as $cage) {
+            if ($hasSpecies && !empty($cage->loai_phu_hop) && $cage->loai_phu_hop !== 'TAT_CA'
+                && $this->normalizeSpecies((string) $cage->loai_phu_hop) !== $this->normalizeSpecies((string) $pet->loai)) {
+                continue;
+            }
+
             $occupants = DB::table('pets')->where('cage_id', $cage->cage_id)->get();
             $count = $occupants->count();
             $capacity = $cage->loailong === 'CACH_LY' ? 1 : (int) $cage->succhua;
