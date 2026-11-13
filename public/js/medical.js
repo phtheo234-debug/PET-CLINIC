@@ -116,6 +116,24 @@ function mapActionToStatus(huongXuLy) {
 document.addEventListener("DOMContentLoaded", async () => {
     initPage();
     await Promise.all([loadPetsDropdown(), loadMedicalRecords(), loadMedicalInventory()]);
+    if (document.getElementById("medicalQueueBody")) await loadMedicalQueue();
+    document.getElementById("medicalQueueBody")?.addEventListener("click", async event => {
+        const button = event.target.closest("[data-select-queue]");
+        if (!button) return;
+        const queueId = Number(button.dataset.selectQueue);
+        button.disabled = true;
+        try {
+            const response = await apiRequest("/medical/queue/" + queueId + "/start", {method:"POST"});
+            const petId = Number(response?.data?.data?.pet_id || response?.data?.pet_id);
+            const petSelect = document.getElementById("pet_select");
+            if (petSelect && petId) {
+                petSelect.value = String(petId);
+                petSelect.dispatchEvent(new Event("change", {bubbles:true}));
+            }
+            document.getElementById("medicalForm")?.scrollIntoView({behavior:"smooth", block:"start"});
+            await loadMedicalQueue();
+        } catch (error) { alert("Không thể tiếp nhận ca khám: " + error.message); button.disabled = false; }
+    });
     document.getElementById("btnAddMedicalItem")?.addEventListener("click", addMedicalInventoryItem);
     document.getElementById("medicalInventorySearch")?.addEventListener("input", syncMedicalInventorySearch);
     document.getElementById("medicalInventorySearch")?.addEventListener("change", syncMedicalInventorySearch);
@@ -477,5 +495,29 @@ async function deleteSurgery(id) {
         alert(response?.message || "Đã xử lý loại phẫu thuật.");
     } catch (error) {
         alert("Không thể xóa loại phẫu thuật: " + error.message);
+    }
+}
+
+
+async function loadMedicalQueue() {
+    const body = document.getElementById("medicalQueueBody");
+    if (!body) return;
+    try {
+        const response = await apiRequest("/medical/queue");
+        const rows = extractList(response);
+        body.innerHTML = rows.length ? rows.map(item => {
+            const status = item.queue_status === "DANG_KHAM"
+                ? '<span class="badge badge-warning">Đang khám</span>'
+                : '<span class="badge badge-info">Chờ khám</span>';
+            return '<tr>' +
+                '<td><strong>' + escapeMedicalHtml(item.mathucung) + '</strong><br>' + escapeMedicalHtml(item.ten_thucung) + '<br><small class="text-muted">' + escapeMedicalHtml(item.loai || "") + ' · ' + escapeMedicalHtml(item.giong || "") + '</small></td>' +
+                '<td>' + escapeMedicalHtml(item.ten_chu_nuoi || "-") + '<br><small>' + escapeMedicalHtml(item.sdt_chu_nuoi || "") + '</small></td>' +
+                '<td>' + escapeMedicalHtml(item.trieuchung || "-") + '</td>' +
+                '<td>' + (item.ghi_chu ? '<span class="text-danger font-weight-bold"><i class="fas fa-exclamation-circle mr-1"></i>' + escapeMedicalHtml(item.ghi_chu) + '</span>' : '<span class="text-muted">—</span>') + '</td>' +
+                '<td>' + status + '</td><td>' + escapeMedicalHtml(item.created_at || "-") + '</td>' +
+                '<td><button type="button" class="btn btn-sm btn-primary" data-select-queue="' + Number(item.queue_id) + '">Chọn</button></td></tr>';
+        }).join("") : '<tr><td colspan="7" class="text-center text-muted">Chưa có thú cưng trong danh sách chờ khám.</td></tr>';
+    } catch (error) {
+        body.innerHTML = '<tr><td colspan="7" class="text-danger text-center">' + escapeMedicalHtml(error.message || "Không tải được danh sách chờ") + '</td></tr>';
     }
 }
