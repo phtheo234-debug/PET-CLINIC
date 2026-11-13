@@ -105,9 +105,9 @@ function extractList(res) {
 // Ánh xạ Hướng xử lý trên giao diện sang đúng ENUM trangthai của Backend
 function mapActionToStatus(huongXuLy) {
     const map = {
-        OUTPATIENT: "HOAN_THANH",
-        INPATIENT: "DANG_DIEU_TRI",
-        SURGERY: "DANG_DIEU_TRI",
+        OUTPATIENT: "CHUA_KHAM",
+        INPATIENT: "CHUA_KHAM",
+        SURGERY: "CHUA_KHAM",
         TRANSFER: "CHUYEN_VIEN",
     };
     return map[huongXuLy] || "DANG_DIEU_TRI";
@@ -354,6 +354,8 @@ async function loadMedicalRecords() {
 
 function renderMedicalHistory(records) {
     const statusMap = {
+        CHUA_KHAM: '<span class="badge badge-secondary">Chưa khám</span>',
+        DANG_DIEU_TRI: '<span class="badge badge-warning">Đang điều trị</span>',
         HOAN_THANH: '<span class="badge badge-success">Hoàn thành</span>',
         DANG_DIEU_TRI: '<span class="badge badge-warning">Đang điều trị</span>',
         CHUYEN_VIEN: '<span class="badge badge-danger">Chuyển viện</span>',
