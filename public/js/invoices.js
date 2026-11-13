@@ -13,6 +13,7 @@ async function loadRetailPosOptions() {
                 ' - ' + escapeInvoiceHtml(pet.ten_thucung || pet.name || "") + '</option>';
         }).join("");
         retailPosItems = items.filter(item => ["THUC_AN", "DO_DUNG", "DICH_VU_SPA"].includes(item.danhmuc));
+        document.getElementById("posCartRows").replaceChildren();
         addRetailPosLine();
     } catch (error) {
         petSelect.innerHTML = '<option value="">Không tải được hồ sơ thú cưng</option>';
@@ -79,8 +80,6 @@ async function submitRetailPos(event) {
             escapeInvoiceHtml(data.mahoadon || "") + '</strong> · Tổng tiền: <strong>' +
             formatCurrency(data.tong_thanhtoan) + '</strong> <button type="button" class="btn btn-sm btn-outline-primary ml-2" onclick="printInvoice(' +
             Number(data.invoice_id) + ')">In hóa đơn</button></div>';
-        document.getElementById("posCartRows").replaceChildren();
-        addRetailPosLine();
         await Promise.all([loadInvoices(), loadRetailPosOptions()]);
     } catch (error) {
         result.innerHTML = '<div class="alert alert-danger">Không thể thanh toán: ' + escapeInvoiceHtml(error.message) + '</div>';
