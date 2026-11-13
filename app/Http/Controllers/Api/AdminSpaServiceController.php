@@ -5,34 +5,43 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class AdminSpaServiceController extends Controller
 {
     public function store(Request $request)
     {
         $fields = $request->validate([
-            'masanpham' => 'required|string|max:20|unique:inventory,masanpham',
             'ten_sanpham' => 'required|string|max:100',
             'donvitinh' => 'required|string|max:20',
             'dongia' => 'required|numeric|min:0',
         ]);
 
-        $id = DB::table('inventory')->insertGetId([
-            'masanpham' => $fields['masanpham'],
-            'ten_sanpham' => $fields['ten_sanpham'],
-            'danhmuc' => 'DICH_VU_SPA',
-            'donvitinh' => $fields['donvitinh'],
-            'dongia' => $fields['dongia'],
-            'tonkhotoithieu' => 0,
-            'lieu_mg_kg' => null,
-            'mg_moi_don_vi' => null,
-        ]);
+        $service = DB::transaction(function () use ($fields) {
+            $temporaryCode = 'TMP' . Str::upper(Str::random(16));
+            $id = DB::table('inventory')->insertGetId([
+                'masanpham' => $temporaryCode,
+                'ten_sanpham' => $fields['ten_sanpham'],
+                'danhmuc' => 'DICH_VU_SPA',
+                'donvitinh' => $fields['donvitinh'],
+                'dongia' => $fields['dongia'],
+                'tonkhotoithieu' => 0,
+                'lieu_mg_kg' => null,
+                'mg_moi_don_vi' => null,
+            ]);
+            $code = 'SPA' . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
+            while (DB::table('inventory')->where('masanpham', $code)->exists()) {
+                $code = 'SPA' . str_pad((string) $id, 4, '0', STR_PAD_LEFT) . Str::upper(Str::random(4));
+            }
+            DB::table('inventory')->where('item_id', $id)->update(['masanpham' => $code]);
+
+            return DB::table('inventory')->where('item_id', $id)->first();
+        });
 
         return response()->json([
             'status' => 'success',
             'message' => 'Đã thêm dịch vụ Spa.',
-            'data' => DB::table('inventory')->where('item_id', $id)->first(),
+            'data' => $service,
         ], 201);
     }
 
@@ -48,14 +57,12 @@ class AdminSpaServiceController extends Controller
         }
 
         $fields = $request->validate([
-            'masanpham' => ['required', 'string', 'max:20', Rule::unique('inventory', 'masanpham')->ignore($id, 'item_id')],
             'ten_sanpham' => 'required|string|max:100',
             'donvitinh' => 'required|string|max:20',
             'dongia' => 'required|numeric|min:0',
         ]);
 
         DB::table('inventory')->where('item_id', $id)->update([
-            'masanpham' => $fields['masanpham'],
             'ten_sanpham' => $fields['ten_sanpham'],
             'donvitinh' => $fields['donvitinh'],
             'dongia' => $fields['dongia'],
