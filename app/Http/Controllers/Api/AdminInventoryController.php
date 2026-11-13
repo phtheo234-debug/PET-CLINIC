@@ -61,6 +61,13 @@ class AdminInventoryController extends Controller
             'mg_moi_don_vi' => 'nullable|numeric|gt:0',
         ]);
 
+        if ($item->danhmuc === 'DO_DUNG' && $fields['danhmuc'] !== 'DO_DUNG' && (int) $item->soluongton > 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể chuyển loại kho khi đồ dùng vẫn còn tồn. Hãy xử lý tồn kho trước.',
+            ], 422);
+        }
+
         if ($item->danhmuc !== $fields['danhmuc']
             && DB::table('inventory_batches')->where('item_id', $id)->exists()) {
             return response()->json([
