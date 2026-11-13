@@ -302,6 +302,12 @@ class MedicalController extends Controller
 
         $record = DB::table('medical_records')->where('record_id', $id)->first();
         abort_if(!$record, 404, 'Không tìm thấy phiếu khám.');
+        if ($record->invoice_id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Phiếu khám đã thanh toán và kết thúc, không thể thay đổi trạng thái.',
+            ], 409);
+        }
 
         DB::table('medical_records')
             ->where('record_id', $id)
