@@ -1,194 +1,36 @@
 @extends('layouts.app')
-
-@section('title', 'Thanh toán POS & Xuất viện - Pet Clinic')
-@section('page_title', 'Thanh toán POS, Bán lẻ & Xuất viện')
-
+@section('title', 'Thanh toán - Pet Clinic')
+@section('page_title', 'Thanh toán & Lập hóa đơn')
 @section('content')
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white font-weight-bold text-info">
-        <i class="fas fa-spa mr-1"></i> GHI NHẬN DỊCH VỤ SPA ĐÃ SỬ DỤNG
-    </div>
-    <div class="card-body">
-        <p class="text-muted small">Chỉ ghi nhận cho thú cưng đang nội trú. Chi phí sẽ được cộng vào hóa đơn khi thanh toán và xuất viện.</p>
-        <form id="spaUsageForm">
-            <div class="form-row">
-                <div class="form-group col-md-4">
-                    <label for="spa_usage_pet">Thú cưng <span class="text-danger">*</span></label>
-                    <select id="spa_usage_pet" class="form-control" required>
-                        <option value="">-- Chọn thú cưng --</option>
-                    </select>
-                </div>
-                <div class="form-group col-md-4">
-                    <label for="spa_usage_service">Dịch vụ Spa <span class="text-danger">*</span></label>
-                    <select id="spa_usage_service" class="form-control" required>
-                        <option value="">-- Chọn dịch vụ --</option>
-                    </select>
-                </div>
-                <div class="form-group col-md-2">
-                    <label for="spa_usage_quantity">Số lần <span class="text-danger">*</span></label>
-                    <input id="spa_usage_quantity" type="number" class="form-control" min="1" step="1" value="1" required>
-                </div>
-                <div class="form-group col-md-2">
-                    <label>Đơn giá</label>
-                    <input id="spa_usage_price" class="form-control bg-light" readonly placeholder="Tự động">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="spa_usage_note">Ghi chú</label>
-                <input id="spa_usage_note" class="form-control" maxlength="255" placeholder="Ghi chú tình trạng hoặc nội dung đã thực hiện">
-            </div>
-            <div class="d-flex justify-content-end">
-                <button type="submit" id="btnSaveSpaUsage" class="btn btn-info">
-                    <i class="fas fa-save mr-1"></i> Ghi nhận dịch vụ đã sử dụng
-                </button>
-            </div>
-        </form>
-        <div id="spaUsageResult" class="mt-3" aria-live="polite"></div>
-        <div class="table-responsive mt-3">
-            <table class="table table-sm table-bordered mb-0">
-                <thead class="thead-light">
-                    <tr><th>Thú cưng</th><th>Dịch vụ</th><th>Số lần</th><th>Thành tiền</th><th>Trạng thái hóa đơn</th><th>Nhân viên</th><th>Ngày ghi nhận</th></tr>
-                </thead>
-                <tbody id="spaUsageTableBody">
-                    <tr><td colspan="7" class="text-center text-muted">Đang tải lịch sử dịch vụ...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="card shadow-sm mb-3">
+ <div class="card-header bg-white font-weight-bold text-primary">BẢNG 1. TÌM KIẾM HỒ SƠ THÚ CƯNG</div>
+ <div class="card-body"><div class="form-row align-items-end">
+  <div class="form-group col-md-8"><label for="paymentPetSearch">Tìm theo mã hoặc tên thú cưng</label><input id="paymentPetSearch" class="form-control" list="paymentPetSuggestions" placeholder="Nhập mã TC hoặc tên thú cưng..." autocomplete="off"><datalist id="paymentPetSuggestions"></datalist><small class="form-text text-muted">Chọn một gợi ý trong danh sách.</small></div>
+  <div class="form-group col-md-4"><label for="paymentOwnerName">Tên chủ nuôi</label><input id="paymentOwnerName" class="form-control bg-light" readonly placeholder="Tự động hiển thị"></div>
+ </div><div id="paymentPetInfo" class="text-muted small">Chưa chọn hồ sơ thú cưng.</div></div>
 </div>
-
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white font-weight-bold text-primary"><i class="fas fa-receipt mr-1"></i> THANH TOÁN LƯỢT KHÁM NGOẠI TRÚ</div>
-    <div class="card-body">
-        <p class="text-muted small">Mỗi phiếu khám đã hoàn thành được tính phí khám 50.000 đồng/lần, cộng thêm thuốc/vắc-xin đã xuất từ kho nếu có. Không thực hiện xuất viện tại mục này.</p>
-        <form id="outpatientVisitForm">
-            <div class="form-row align-items-end">
-                <div class="form-group col-md-6"><label for="outpatient_record_select">Phiếu khám chưa thanh toán</label><select id="outpatient_record_select" class="form-control" required><option value="">-- Đang tải phiếu khám --</option></select></div>
-                <div class="form-group col-md-3"><label for="outpatient_payment_method">Phương thức thanh toán</label><select id="outpatient_payment_method" class="form-control"><option value="TIEN_MAT">Tiền mặt</option><option value="CHUYEN_KHOAN">Chuyển khoản</option><option value="THE">Thẻ</option></select></div>
-                <div class="form-group col-md-3"><button type="submit" id="btnPayOutpatient" class="btn btn-primary btn-block"><i class="fas fa-check mr-1"></i>Thanh toán lượt khám</button></div>
-            </div>
-        </form>
-        <div id="outpatientPaymentResult" class="mt-2" aria-live="polite"></div>
-    </div>
+<div class="card shadow-sm mb-3 d-none" id="medicalChargesSection">
+ <div class="card-header bg-white font-weight-bold text-info">BẢNG 2. CHI PHÍ KHÁM VÀ ĐIỀU TRỊ</div>
+ <div class="card-body"><div class="table-responsive"><table class="table table-bordered table-sm"><thead class="thead-light"><tr><th>Khoản thu</th><th>Số lượng / số ngày</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th></tr></thead><tbody id="medicalChargesBody"></tbody></table></div><div class="text-right font-weight-bold">Tổng chi phí khám và điều trị: <span id="medicalChargesTotal">0 ₫</span></div></div>
 </div>
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white font-weight-bold text-warning">
-        <i class="fas fa-shopping-basket mr-1"></i> POS BÁN THỨC ĂN, ĐỒ DÙNG & DỊCH VỤ (KHÔNG CẦN KHÁM)
-    </div>
-    <div class="card-body">
-        <p class="text-muted small">Có thể thanh toán trực tiếp không cần phiếu khám. Bắt buộc chọn hồ sơ chủ nuôi và thú cưng. Hàng hóa được trừ kho theo lô còn hạn; dịch vụ không trừ tồn kho.</p>
-        <form id="retailPosForm">
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="pos_pet_select">Thú cưng <span class="text-danger">*</span></label>
-                    <select id="pos_pet_select" class="form-control" required><option value="">-- Chọn thú cưng --</option></select>
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="pos_owner_name">Chủ nuôi</label>
-                    <input id="pos_owner_name" class="form-control bg-light" readonly placeholder="Tự động theo hồ sơ thú cưng">
-                </div>
-            </div>
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <strong>Danh sách hàng hóa / dịch vụ</strong>
-                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddPosLine"><i class="fas fa-plus mr-1"></i>Thêm dòng</button>
-            </div>
-            <div id="posCartRows"></div>
-            <div class="form-row align-items-end mt-3">
-                <div class="form-group col-md-4">
-                    <label for="pos_payment_method">Phương thức thanh toán</label>
-                    <select id="pos_payment_method" class="form-control">
-                        <option value="TIEN_MAT">Tiền mặt</option>
-                        <option value="CHUYEN_KHOAN">Chuyển khoản</option>
-                        <option value="THE">Thẻ</option>
-                    </select>
-                </div>
-                <div class="form-group col-md-8 text-right">
-                    <button type="submit" id="btnRetailPosCheckout" class="btn btn-warning font-weight-bold"><i class="fas fa-cash-register mr-1"></i>Thanh toán POS</button>
-                </div>
-            </div>
-        </form>
-        <div id="retailPosResult" class="mt-2" aria-live="polite"></div>
-    </div>
+<div class="card shadow-sm mb-3 d-none" id="extraServicesSection">
+ <div class="card-header bg-white font-weight-bold text-warning">BẢNG 3. DỊCH VỤ NGOÀI KHÁM</div>
+ <div class="card-body"><div class="form-row align-items-end">
+  <div class="form-group col-md-3"><label for="extraCategory">Danh mục</label><select id="extraCategory" class="form-control"><option value="DICH_VU_SPA">Dịch vụ</option><option value="THUC_AN">Thức ăn</option><option value="DO_DUNG">Đồ dùng</option></select></div>
+  <div class="form-group col-md-4"><label for="extraItem">Sản phẩm / dịch vụ</label><select id="extraItem" class="form-control"><option value="">-- Chọn --</option></select></div>
+  <div class="form-group col-md-2"><label for="extraQuantity">Số lượng</label><input type="number" id="extraQuantity" class="form-control" min="1" step="1" value="1"></div>
+  <div class="form-group col-md-3"><label>Đơn giá (VND)</label><input id="extraUnitPrice" class="form-control bg-light" readonly value="0 ₫"></div>
+ </div><div class="text-right mb-3"><button type="button" id="btnAddExtraItem" class="btn btn-outline-warning"><i class="fas fa-plus mr-1"></i>Thêm vào hóa đơn</button></div>
+ <div class="table-responsive"><table class="table table-bordered table-sm"><thead class="thead-light"><tr><th>Danh mục</th><th>Tên sản phẩm / dịch vụ</th><th>Số lượng</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th><th></th></tr></thead><tbody id="extraItemsBody"><tr><td colspan="6" class="text-center text-muted">Chưa chọn dịch vụ ngoài khám.</td></tr></tbody></table></div></div>
 </div>
-
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white font-weight-bold text-success">
-        <i class="fas fa-cash-register mr-1"></i> THANH TOÁN VÀ DUYỆT XUẤT VIỆN
-    </div>
-    <div class="card-body">
-        <form id="invoiceForm">
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="pet_select">Thú cưng nội trú <span class="text-danger">*</span></label>
-                    <select id="pet_select" class="form-control" required>
-                        <option value="">-- Đang tải danh sách thú cưng --</option>
-                    </select>
-                    <small class="form-text text-muted">
-                        Chỉ chọn thú cưng đang nội trú. Backend sẽ kiểm tra hồ sơ khám và điều kiện xuất viện trước khi thanh toán.
-                    </small>
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="inv_owner">Chủ nuôi</label>
-                    <input type="text" id="inv_owner" class="form-control bg-light" placeholder="Tự động hiển thị theo thú cưng" readonly>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="phuongthucthanhtoan">Phương thức thanh toán <span class="text-danger">*</span></label>
-                    <select id="phuongthucthanhtoan" class="form-control" required>
-                        <option value="TIEN_MAT">Tiền mặt</option>
-                        <option value="CHUYEN_KHOAN">Chuyển khoản</option>
-                        <option value="THE">Thẻ</option>
-                    </select>
-                </div>
-                <div class="form-group col-md-6">
-                    <label>Chi phí thanh toán</label>
-                    <div class="form-control bg-light text-muted" aria-live="polite">
-                        Backend tự tính tiền thuốc chưa thanh toán và phí lưu trú theo số ngày thực tế.
-                    </div>
-                </div>
-            </div>
-
-            <div class="alert alert-info mb-3">
-                <i class="fas fa-info-circle mr-1"></i>
-                Không nhập tổng tiền thủ công. Hóa đơn và chi tiết từng khoản phí sẽ được Backend tính toán, lưu lại khi thanh toán thành công.
-            </div>
-
-            <div class="d-flex justify-content-end">
-                <button type="submit" id="btnCheckout" class="btn btn-success font-weight-bold">
-                    <i class="fas fa-check-circle mr-1"></i> Thanh toán & Duyệt Xuất viện
-                </button>
-            </div>
-        </form>
-        <div id="checkoutResult" class="mt-3" aria-live="polite"></div>
-    </div>
+<div class="card shadow-sm mb-4 d-none" id="finalPaymentSection">
+ <div class="card-header bg-white font-weight-bold text-success">BẢNG 4. TỔNG HỢP VÀ XÁC NHẬN THANH TOÁN</div>
+ <div class="card-body"><div class="table-responsive"><table class="table table-bordered table-sm"><thead class="thead-light"><tr><th>Khoản phải trả</th><th>Số lượng</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th></tr></thead><tbody id="finalChargesBody"></tbody><tfoot><tr><th colspan="3" class="text-right">TỔNG CỘNG</th><th class="text-success" id="finalGrandTotal">0 ₫</th></tr></tfoot></table></div>
+ <div class="form-row align-items-end"><div class="form-group col-md-4"><label for="finalPaymentMethod">Phương thức thanh toán</label><select id="finalPaymentMethod" class="form-control"><option value="TIEN_MAT">Tiền mặt</option><option value="CHUYEN_KHOAN">Chuyển khoản</option><option value="THE">Quẹt thẻ</option></select></div><div class="form-group col-md-8 text-right"><button type="button" id="btnPaymentSuccess" class="btn btn-success btn-lg"><i class="fas fa-check-circle mr-1"></i>Thanh toán thành công</button></div></div>
+ <small class="text-muted">Chỉ bấm nút sau khi xác nhận chủ nuôi đã trả tiền. Mã hóa đơn được tạo tại thời điểm xác nhận.</small><div id="unifiedPaymentResult" class="mt-3" aria-live="polite"></div></div>
 </div>
-
-<div class="card shadow-sm">
-    <div class="card-header bg-white font-weight-bold">Danh sách Hóa đơn đã xuất</div>
-    <div class="card-body table-responsive">
-        <table class="table table-hover mb-0">
-            <thead class="thead-light">
-                <tr>
-                    <th>Mã HĐ</th>
-                    <th>Thú cưng</th>
-                    <th>Chủ nuôi</th>
-                    <th>Tổng tiền</th>
-                    <th>Thanh toán</th>
-                    <th>Trạng thái</th>
-                    <th>Ngày tạo</th>
-                    <th>In hóa đơn</th>
-                </tr>
-            </thead>
-            <tbody id="invoicesTableBody">
-                <tr><td colspan="8" class="text-center text-muted">Đang tải danh sách hóa đơn...</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+<div class="card shadow-sm"><div class="card-header bg-white font-weight-bold">Danh sách hóa đơn đã xuất</div><div class="card-body table-responsive"><table class="table table-hover mb-0"><thead class="thead-light"><tr><th>Mã HĐ</th><th>Thú cưng</th><th>Chủ nuôi</th><th>Tổng tiền</th><th>Thanh toán</th><th>Ngày tạo</th><th>In hóa đơn</th></tr></thead><tbody id="invoicesTableBody"><tr><td colspan="7" class="text-center text-muted">Đang tải danh sách hóa đơn...</td></tr></tbody></table></div></div>
 @endsection
-
 @push('scripts')
-<script src="{{ asset('js/invoices.js') }}"></script>
+<script src="{{ asset('js/invoices.js') }}?v={{ filemtime(public_path('js/invoices.js')) }}"></script>
 @endpush
