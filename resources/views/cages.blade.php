@@ -332,6 +332,36 @@
 
 @endif
 
+
+{{-- Modal tự xếp lồng --}}
+<div class="modal fade" id="manualCageModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold">Tự xếp thú cưng vào lồng</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Đóng"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small" id="manualCagePetInfo"></p>
+                <div class="form-group mb-0">
+                    <label for="manualCageSelect">Chọn lồng phù hợp</label>
+                    <select class="form-control" id="manualCageSelect"></select>
+                    <small class="form-text text-muted">Chỉ hiển thị lồng đúng loại yêu cầu, đúng loài, đủ sức chứa và giới hạn cân nặng.</small>
+                </div>
+                <div class="alert alert-info small mt-3 mb-0">
+                    Lồng chỉ được giữ sau khi bạn bấm xác nhận và hệ thống kiểm tra thành công.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmManualCage">
+                    <i class="fas fa-check mr-1"></i> Xác nhận xếp lồng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 
