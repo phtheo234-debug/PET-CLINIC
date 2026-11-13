@@ -212,6 +212,18 @@ class PetController extends Controller
     {
         $this->findOrFail($id);
 
+        // Bác sĩ chỉ được cập nhật cân nặng phục vụ theo dõi lâm sàng.
+        if (
+            $request->user()
+            && $request->user()->vaitro === 'BAC_SI'
+            && array_diff(array_keys($request->all()), ['weight'])
+        ) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bác sĩ chỉ được cập nhật cân nặng của thú cưng tại chức năng này.',
+            ], 403);
+        }
+
         $v = $request->validate([
             'owner_id'       => 'sometimes|integer|min:1|exists:owners,owner_id',
             'name'           => 'sometimes|string|max:50',
