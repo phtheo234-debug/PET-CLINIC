@@ -272,9 +272,11 @@ class MedicalController extends Controller
             ->join('pets as p', 'p.pet_id', '=', 'mr.pet_id')
             ->leftJoin('owners as o', 'o.owner_id', '=', 'p.owner_id')
             ->leftJoin('users as u', 'u.user_id', '=', 'mr.doctor_id')
+            ->leftJoin('surgeries as s', 's.surgery_id', '=', 'mr.surgery_id')
             ->where('mr.record_id', $id)
             ->select('mr.*', 'p.mathucung', 'p.ten_thucung', 'p.loai', 'p.giong', 'p.gioitinh', 'p.ngaysinh',
-                'o.ho_ten as ten_chu_nuoi', 'o.phone as sdt_chu_nuoi', 'u.ho_ten as ten_bac_si')
+                'o.ho_ten as ten_chu_nuoi', 'o.phone as sdt_chu_nuoi', 'u.ho_ten as ten_bac_si',
+                's.ma_phauthuat', 's.ten_phauthuat')
             ->first();
         abort_if(!$record, 404, 'Không tìm thấy phiếu khám.');
         $record->items = DB::table('prescriptions as rx')
