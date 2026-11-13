@@ -212,7 +212,7 @@ class InventoryController extends Controller
         }
 
         $item = DB::table('inventory')->where('item_id', $itemId)->lockForUpdate()->first();
-        if (!$item || $item->danhmuc === 'DICH_VU_SPA') {
+        if (!$item || !in_array($item->danhmuc, ['THUOC', 'VAC_XIN', 'THUC_AN'], true)) {
             throw new Exception('Mặt hàng không hợp lệ để xuất kho.');
         }
 
