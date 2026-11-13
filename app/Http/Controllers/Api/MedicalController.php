@@ -70,6 +70,7 @@ class MedicalController extends Controller
             'trangthai' => 'required|in:DANG_DIEU_TRI,HOAN_THANH,CHUYEN_VIEN',
             'huong_xuly' => 'nullable|in:OUTPATIENT,INPATIENT,SURGERY,TRANSFER',
             'yeu_cau_cach_ly' => 'nullable|boolean',
+            'surgery_id' => 'nullable|required_if:huong_xuly,SURGERY|integer|exists:surgeries,surgery_id',
             'items' => 'nullable|array',
             'items.*.item_id' => 'required|integer|exists:inventory,item_id',
             'items.*.soluong' => 'required|integer|min:1',
@@ -92,6 +93,17 @@ class MedicalController extends Controller
 
                 $huongXuLy = $fields['huong_xuly'] ?? 'OUTPATIENT';
                 $needsIsolation = (bool) ($fields['yeu_cau_cach_ly'] ?? false);
+                $surgery = null;
+                if ($huongXuLy === 'SURGERY') {
+                    $surgery = DB::table('surgeries')->where('surgery_id', $fields['surgery_id'])
+                        ->where('trangthai', 1)->first();
+                    if (!$surgery) {
+                        throw new Exception('Loại phẫu thuật không tồn tại hoặc đã ngừng áp dụng.');
+                    }
+                }
+                if ($huongXuLy === 'TRANSFER' && !empty($fields['items'])) {
+                    throw new Exception('Chuyển viện không được kê thuốc/vắc-xin tại phiếu này.');
+                }
 
                 $recordId = DB::table('medical_records')->insertGetId([
                     'pet_id' => $fields['pet_id'],
@@ -103,6 +115,8 @@ class MedicalController extends Controller
                     'trangthai' => $fields['trangthai'],
                     'huong_xuly' => $huongXuLy,
                     'yeu_cau_cach_ly' => $needsIsolation,
+                    'surgery_id' => $surgery->surgery_id ?? null,
+                    'surgery_price' => $surgery->gia ?? null,
                 ]);
 
                 DB::table('weight_logs')->insert([
@@ -114,7 +128,7 @@ class MedicalController extends Controller
                 ]);
 
                 // Chọn thuốc/vắc-xin từ kho và trừ tồn theo FEFO ngay khi lưu phiếu khám.
-                foreach (($fields['items'] ?? []) as $usedItem) {
+                foreach (($huongXuLy === 'TRANSFER' ? [] : ($fields['items'] ?? [])) as $usedItem) {
                     $inventoryItem = DB::table('inventory')->where('item_id', $usedItem['item_id'])->lockForUpdate()->first();
                     if (!$inventoryItem || !in_array($inventoryItem->danhmuc, ['THUOC', 'VAC_XIN'], true)) {
                         throw new Exception('Chỉ được sử dụng thuốc hoặc vắc-xin có trong danh mục kho.');
