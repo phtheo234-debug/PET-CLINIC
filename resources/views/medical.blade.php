@@ -33,6 +33,17 @@
                 </div>
             </div>
             <div class="form-row">
+                <div class="form-group col-md-12" id="isolationOptionGroup">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="isolation_required" value="1">
+                        <label class="custom-control-label font-weight-bold text-danger" for="isolation_required">
+                            Vào lồng cách ly
+                        </label>
+                    </div>
+                    <small class="form-text text-muted">Chỉ áp dụng khi chọn nhập viện hoặc phẫu thuật. Lồng cách ly chỉ chứa một thú cưng.</small>
+                </div>
+            </div>
+            <div class="form-row">
                 <div class="form-group col-md-4">
                     <label>Triệu chứng lâm sàng <span class="text-danger">*</span></label>
                     <textarea id="trieuchung" class="form-control" rows="2" placeholder="VD: Bỏ ăn, sốt nhẹ..." required></textarea>
