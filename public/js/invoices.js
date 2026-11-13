@@ -20,8 +20,8 @@ document.addEventListener("DOMContentLoaded", async function() {
     document.getElementById("extraItem").addEventListener("change",updateExtraUnitPrice);
     document.getElementById("extraQuantity").addEventListener("input",recalculatePayment);
     document.getElementById("btnAddExtraItem").addEventListener("click",addExtraCharge);
-    document.getElementById("btnFinishExtra").addEventListener("click",function(){ document.getElementById("finalPaymentSection").classList.remove("d-none"); recalculatePayment(); });
     document.getElementById("btnPaymentSuccess").addEventListener("click",submitUnifiedPayment);
+    document.getElementById("btnPrintNewInvoice").addEventListener("click",function(){ const id=Number(this.dataset.invoiceId); if(id) printInvoice(id); });
 });
 async function loadPaymentPets() {
     paymentPets=invoiceList(await apiRequest("/pets"));
@@ -37,6 +37,7 @@ async function choosePaymentPet(id) {
     if(Number(selectedPaymentPetId)===Number(id)&&paymentPreview)return;
     selectedPaymentPetId=Number(id); extraChargeLines=[];
     document.getElementById("unifiedPaymentResult").innerHTML="";
+    document.getElementById("invoicePrintAction").classList.add("d-none");
     try {
         paymentPreview=invoiceUnwrap(await apiRequest("/payment/pets/"+selectedPaymentPetId+"/preview"));
         const p=paymentPreview.pet||{};
@@ -49,7 +50,8 @@ async function choosePaymentPet(id) {
         renderExtraItemOptions();
         document.getElementById("medicalChargesSection").classList.toggle("d-none",medicalChargeLines.length===0);
         document.getElementById("extraServicesSection").classList.remove("d-none");
-        document.getElementById("finalPaymentSection").classList.add("d-none");
+        document.getElementById("finalPaymentSection").classList.remove("d-none");
+        document.getElementById("invoicePrintAction").classList.add("d-none");
         renderExtraCharges(); recalculatePayment();
     } catch(e) {
         paymentPreview=null; document.getElementById("paymentOwnerName").value="";
@@ -109,7 +111,11 @@ async function submitUnifiedPayment() {
     try {
         const response=await apiRequest("/payment/checkout",{method:"POST",body:JSON.stringify({pet_id:selectedPaymentPetId,payment_method:document.getElementById("finalPaymentMethod").value,items:extraChargeLines.map(x=>({item_id:x.item_id,quantity:x.quantity}))})});
         const data=invoiceUnwrap(response);
-        document.getElementById("unifiedPaymentResult").innerHTML='<div class="alert alert-success">Đã lập hóa đơn <strong>'+escapeInvoiceHtml(data.mahoadon)+'</strong> · Tổng tiền: <strong>'+invoiceMoney(data.tong_thanhtoan)+'</strong> <button type="button" class="btn btn-sm btn-outline-primary ml-2" onclick="printInvoice('+Number(data.invoice_id)+')">In hóa đơn</button></div>';
+        document.getElementById("unifiedPaymentResult").innerHTML='<div class="alert alert-success">Đã thanh toán và lập hóa đơn <strong>'+escapeInvoiceHtml(data.mahoadon)+'</strong> · Tổng tiền: <strong>'+invoiceMoney(data.tong_thanhtoan)+'</strong></div>';
+        const printAction=document.getElementById("invoicePrintAction");
+        const printButton=document.getElementById("btnPrintNewInvoice");
+        printButton.dataset.invoiceId=String(Number(data.invoice_id));
+        printAction.classList.remove("d-none");
         selectedPaymentPetId=null;paymentPreview=null;
         document.getElementById("paymentPetSearch").value="";document.getElementById("paymentOwnerName").value="";
         document.getElementById("paymentPetInfo").textContent="Chưa chọn hồ sơ thú cưng.";
