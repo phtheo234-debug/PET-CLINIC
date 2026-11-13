@@ -88,9 +88,6 @@
                         <input id="spa_service_name" class="form-control" maxlength="100" required>
                     </div>
                     <div class="form-group">
-                        
-                    </div>
-                    <div class="form-group">
                         <label for="spa_service_price">Đơn giá (VNĐ)</label>
                         <input id="spa_service_price" type="number" min="0" step="0.01" class="form-control" required>
                     </div>
