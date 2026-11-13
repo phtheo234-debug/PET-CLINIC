@@ -53,11 +53,12 @@ class AdminInventoryController extends Controller
         $fields = $request->validate([
             'ten_sanpham' => 'required|string|max:100',
             'danhmuc' => ['required', Rule::in(self::CATEGORIES)],
-            'donvitinh' => 'required|string|max:20',
+            'donvitinh' => 'nullable|string|max:20',
             'dongia' => 'required|numeric|min:0',
             'tonkhotoithieu' => 'nullable|integer|min:0',
-            'lieu_mg_kg' => 'required_if:danhmuc,THUOC|nullable|numeric|gt:0',
-            'mg_moi_don_vi' => 'required_if:danhmuc,THUOC|nullable|numeric|gt:0',
+            'soluongton' => 'required_if:danhmuc,DO_DUNG|nullable|integer|min:0',
+            'lieu_mg_kg' => 'nullable|numeric|gt:0',
+            'mg_moi_don_vi' => 'nullable|numeric|gt:0',
         ]);
 
         if ($item->danhmuc === 'THUOC' && $fields['danhmuc'] !== 'THUOC'
