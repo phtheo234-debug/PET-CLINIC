@@ -143,6 +143,38 @@ class BoardingController extends Controller
                     ], 422);
                 }
 
+                if ($actualCount > 0) {
+                    $occupants = DB::table('pets')->where('cage_id', $cage->cage_id)->get();
+                    foreach ($occupants as $occupant) {
+                        $normalize = fn ($value) => \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii(trim((string) $value)));
+                        if ($normalize($occupant->loai) !== $normalize($pet->loai)) {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'Không thể xếp khác loài vào chung một lồng.',
+                            ], 422);
+                        }
+                        if ($occupant->gioitinh !== 'CHUA_XAC_DINH' && $pet->gioitinh !== 'CHUA_XAC_DINH'
+                            && $occupant->gioitinh !== $pet->gioitinh) {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'Không thể xếp thú cưng khác giới tính vào chung một lồng.',
+                            ], 422);
+                        }
+                        $occupantIsolation = DB::table('pet_boardings')
+                            ->where('pet_id', $occupant->pet_id)
+                            ->where('cage_id', $cage->cage_id)
+                            ->where('status', 'checked_in')
+                            ->whereNull('check_out')
+                            ->value('isolation_required');
+                        if ((bool) $occupantIsolation) {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'Lồng đang có thú cưng cách ly, không thể xếp thêm thú khác.',
+                            ], 422);
+                        }
+                    }
+                }
+
                 if (\Illuminate\Support\Facades\Schema::hasColumn('cages', 'loai_phu_hop')
                     && $cage->loai_phu_hop !== null
                     && $cage->loai_phu_hop !== 'TAT_CA') {
