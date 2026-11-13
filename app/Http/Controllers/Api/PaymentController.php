@@ -649,6 +649,7 @@ class PaymentController extends Controller
         $boardingRows = DB::table('pet_boardings as pb')
             ->leftJoin('cages as c', 'c.cage_id', '=', 'pb.cage_id')
             ->where('pb.pet_id', $petId)
+            ->whereNull('pb.invoice_id')
             ->whereNotNull('pb.check_in')
             ->orderBy('pb.check_in')
             ->get([
@@ -748,6 +749,7 @@ class PaymentController extends Controller
                 // Khóa và tính phí tất cả lượt lưu trú của thú cưng, không chỉ lồng hiện tại.
                 $boardingRows = DB::table('pet_boardings')
                     ->where('pet_id', $pet->pet_id)
+                    ->whereNull('invoice_id')
                     ->whereNotNull('check_in')
                     ->orderBy('check_in')
                     ->lockForUpdate()
@@ -822,6 +824,13 @@ class PaymentController extends Controller
                         'ghichu'=>$row['note'] ?? null,'created_at'=>now(),'updated_at'=>now()
                     ]);
                 }
+                if ($boardingRows->isNotEmpty()) {
+                    DB::table('pet_boardings')
+                        ->whereIn('id', $boardingRows->pluck('id'))
+                        ->whereNull('invoice_id')
+                        ->update(['invoice_id' => $invoiceId, 'updated_at' => now()]);
+                }
+
                 if ($prescriptions->isNotEmpty()) DB::table('prescriptions')->whereIn('prescription_id',$prescriptions->pluck('prescription_id'))->update(['invoice_id'=>$invoiceId]);
                 if ($records->isNotEmpty()) {
                     DB::table('medical_records')->whereIn('record_id',$records->pluck('record_id'))->update([
