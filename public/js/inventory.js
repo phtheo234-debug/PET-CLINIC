@@ -48,7 +48,9 @@ function renderExpiryNotice(items) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const limit = new Date(today);
+    const originalDay = limit.getDate();
     limit.setMonth(limit.getMonth() + 6);
+    if (limit.getDate() !== originalDay) limit.setDate(0);
     const soon = [];
     const expired = [];
     items.filter(item => ["THUOC", "VAC_XIN", "THUC_AN"].includes(item.danhmuc))
@@ -98,9 +100,12 @@ function renderInventory(items) {
             const batchNo = item.solo || item.batches?.[0]?.solo || "-";
             const qty = item.tong_ton_kho ?? item.soluong ?? item.tong_ton ?? 0;
             const isExpired = expiry !== "-" && expiry < today;
-            const statusHtml = isExpired
-                ? '<span class="badge badge-danger">Quá hạn - Khóa xuất (BR-06)</span>'
-                : '<span class="badge badge-success">Khả dụng (FEFO)</span>';
+            const hasExpiredLot = (item.batches || []).some(batch => batch.ngayhethan && batch.ngayhethan < today && Number(batch.soluong) > 0);
+            const statusHtml = isExpired || (hasExpiredLot && Number(qty) <= 0)
+                ? '<span class="badge badge-danger">Hết hạn - Đã khóa</span>'
+                : Number(qty) <= 0
+                    ? '<span class="badge badge-secondary">Hết hàng</span>'
+                    : '<span class="badge badge-success">Khả dụng (FEFO)</span>';
             const actions = isAdminInventory ? `
                 <td class="text-nowrap">
                     <button type="button" class="btn btn-sm btn-outline-success mr-1" onclick="openInventoryBatchForm(${Number(item.item_id)})">
