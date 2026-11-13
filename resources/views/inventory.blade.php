@@ -4,38 +4,44 @@
 @section('page_title', 'Quản lý các kho hàng & Dịch vụ')
 
 @section('content')
+<div id="inventoryExpiryNotice" class="mb-3"></div>
+
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <strong class="text-primary">Kho thuốc & vắc-xin (FEFO)</strong>
-        <button type="button" id="btnAddInventory" class="btn btn-primary btn-sm d-none" onclick="openInventoryForm()">
-            <i class="fas fa-plus mr-1"></i> Thêm mặt hàng
-        </button>
+        <strong class="text-primary">Kho thuốc & vắc-xin</strong>
+        <button type="button" class="btn btn-primary btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'THUOC')"><i class="fas fa-plus mr-1"></i>Thêm thuốc / vắc-xin</button>
     </div>
-    <div class="card-body">
-        <div id="inventoryExpiryNotice" class="mb-3"></div>
-        <div class="btn-group mb-3" role="group" aria-label="Chọn kho">
-            <button type="button" class="btn btn-primary" id="btnWarehouseMedical" onclick="filterInventoryWarehouse('medical')">Kho thuốc & vắc-xin</button>
-            <button type="button" class="btn btn-outline-primary" id="btnWarehouseRetail" onclick="filterInventoryWarehouse('retail')">Kho thức ăn & đồ dùng</button>
-            <button type="button" class="btn btn-outline-secondary" id="btnWarehouseAll" onclick="filterInventoryWarehouse('all')">Tất cả hàng hóa</button>
-        </div>
-        <div class="table-responsive">
-        <table class="table table-hover">
-            <thead class="thead-light">
-                <tr>
-                    <th>Mã SP</th>
-                    <th>Tên sản phẩm</th>
-                    <th>Danh mục</th>
-                    <th>Số lô</th>
-                    <th>Tồn kho</th>
-                    <th>Hạn sử dụng</th>
-                    <th>Đơn giá</th>
-                    <th>Trạng thái</th>
-                    <th id="inventoryActionHeader" class="d-none">Thao tác</th>
-                </tr>
-            </thead>
-            <tbody id="inventoryTableBody"></tbody>
+    <div class="card-body table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="thead-light"><tr><th>Mã</th><th>Tên thuốc / vắc-xin</th><th>Số lô</th><th>Số lượng</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
+            <tbody id="medicalInventoryTableBody"></tbody>
         </table>
-        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong class="text-success">Kho thức ăn (quản lý theo lô và hạn sử dụng)</strong>
+        <button type="button" class="btn btn-success btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'THUC_AN')"><i class="fas fa-plus mr-1"></i>Thêm thức ăn</button>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="thead-light"><tr><th>Mã</th><th>Tên thức ăn</th><th>Số lô</th><th>Số lượng</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
+            <tbody id="foodInventoryTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong class="text-warning">Kho đồ dùng</strong>
+        <button type="button" class="btn btn-warning btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'DO_DUNG')"><i class="fas fa-plus mr-1"></i>Thêm đồ dùng</button>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="thead-light"><tr><th>Mã</th><th>Tên đồ dùng</th><th>Số lượng tồn</th><th>Giá bán</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
+            <tbody id="goodsInventoryTableBody"></tbody>
+        </table>
     </div>
 </div>
 
@@ -52,7 +58,7 @@
                 <tr>
                     <th>Mã DV</th>
                     <th>Tên gói dịch vụ</th>
-                    <th>Đơn giá</th>
+                    <th>Giá dịch vụ</th>
                     <th id="spaActionHeader" class="d-none">Thao tác</th>
                 </tr>
             </thead>
@@ -82,8 +88,7 @@
                         <input id="spa_service_name" class="form-control" maxlength="100" required>
                     </div>
                     <div class="form-group">
-                        <label for="spa_service_unit">Đơn vị tính</label>
-                        <input id="spa_service_unit" class="form-control" maxlength="20" placeholder="Lần, buổi, gói..." required>
+                        
                     </div>
                     <div class="form-group">
                         <label for="spa_service_price">Đơn giá (VNĐ)</label>
@@ -141,20 +146,7 @@
                             <input id="inventory_minimum" type="number" class="form-control" min="0" step="1" value="10">
                         </div>
                     </div>
-                    <div id="medicineDosageFields" class="border rounded p-3">
-                        <strong class="d-block mb-2">Cấu hình liều dùng (chỉ áp dụng cho thuốc)</strong>
-                        <div class="form-row">
-                            <div class="form-group col-md-6 mb-0">
-                                <label for="inventory_dose">Liều dùng (mg/kg)</label>
-                                <input id="inventory_dose" type="number" class="form-control" min="0.01" step="0.01">
-                            </div>
-                            <div class="form-group col-md-6 mb-0">
-                                <label for="inventory_mg_unit">Hàm lượng (mg/đơn vị)</label>
-                                <input id="inventory_mg_unit" type="number" class="form-control" min="0.01" step="0.01">
-                            </div>
-                        </div>
-                        <small class="text-muted">Hai thông số này cần được khai báo để hệ thống tính liều và kê đơn thuốc.</small>
-                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
@@ -176,8 +168,8 @@
                 <input type="hidden" id="batch_item_id">
                 <p class="text-muted mb-3" id="batch_item_label"></p>
                 <div class="form-group">
-                    <label for="batch_code">Mã lô</label>
-                    <input id="batch_code" class="form-control" maxlength="50" required>
+                    <label>Mã lô tự động</label>
+                    <input class="form-control" value="Hệ thống tự sinh khi xác nhận nhập kho" readonly>
                 </div>
                 <div class="form-group">
                     <label for="batch_quantity">Số lượng nhập</label>
