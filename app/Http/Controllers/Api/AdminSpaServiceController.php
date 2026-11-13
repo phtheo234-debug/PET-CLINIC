@@ -12,14 +12,14 @@ class AdminSpaServiceController extends Controller
     public function store(Request $request)
     {
         $fields = $request->validate([
+            'masanpham' => ['required', 'string', 'max:50', 'regex:/^SPA-[0-9]{8}-[0-9]{6}$/', 'unique:inventory,masanpham'],
             'ten_sanpham' => 'required|string|max:100',
             'dongia' => 'required|numeric|min:0',
         ]);
 
         $service = DB::transaction(function () use ($fields) {
-            $temporaryCode = 'TMP' . Str::upper(Str::random(16));
             $id = DB::table('inventory')->insertGetId([
-                'masanpham' => $temporaryCode,
+                'masanpham' => $fields['masanpham'],
                 'ten_sanpham' => $fields['ten_sanpham'],
                 'danhmuc' => 'DICH_VU_SPA',
                 'donvitinh' => '',
@@ -28,12 +28,6 @@ class AdminSpaServiceController extends Controller
                 'lieu_mg_kg' => null,
                 'mg_moi_don_vi' => null,
             ]);
-            $code = 'SPA' . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
-            while (DB::table('inventory')->where('masanpham', $code)->exists()) {
-                $code = 'SPA' . str_pad((string) $id, 4, '0', STR_PAD_LEFT) . Str::upper(Str::random(4));
-            }
-            DB::table('inventory')->where('item_id', $id)->update(['masanpham' => $code]);
-
             return DB::table('inventory')->where('item_id', $id)->first();
         });
 
