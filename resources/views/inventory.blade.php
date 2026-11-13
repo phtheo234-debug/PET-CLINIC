@@ -149,6 +149,10 @@
                             <input id="inventory_lot_preview" class="form-control" readonly>
                             <small class="form-text text-muted">Mã lô hiển thị tại đây sẽ được lưu đúng như vậy.</small>
                         </div>
+                        <div class="form-group col-md-6 d-none" id="inventoryImportGroup">
+                            <label for="inventory_import_date">Ngày nhập</label>
+                            <input id="inventory_import_date" type="date" class="form-control">
+                        </div>
                         <div class="form-group col-md-6 d-none" id="inventoryManufactureGroup">
                             <label for="inventory_manufacture">Ngày sản xuất</label>
                             <input id="inventory_manufacture" type="date" class="form-control">
