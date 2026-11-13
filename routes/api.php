@@ -110,7 +110,6 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::get('/payment/visits/pending', [PaymentController::class, 'pendingVisits']);
         Route::post('/payment/visits/checkout', [PaymentController::class, 'createVisitInvoice']);
         Route::post('/payment/pos/checkout', [PaymentController::class, 'createRetailInvoice']);
-        Route::post('/payment/checkout', [PaymentController::class, 'createInvoiceAndCheckout']);
     });
 
     Route::get('/analytics/dashboard', [DashboardController::class, 'getOverview']);
