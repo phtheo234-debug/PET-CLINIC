@@ -204,7 +204,7 @@ async function loadSurgeryTypes() {
 function updateMedicalSections() {
     const action = document.getElementById("huong_xuly")?.value;
     const checkbox = document.getElementById("yeu_cau_cach_ly");
-    const canRequestStay = ["INPATIENT", "SURGERY"].includes(action);
+    const canRequestStay = ["OUTPATIENT", "INPATIENT", "SURGERY"].includes(action);
     const showMedicine = ["OUTPATIENT", "INPATIENT", "SURGERY"].includes(action);
     document.getElementById("isolationOption")?.classList.toggle("d-none", !canRequestStay);
     document.getElementById("medicalInventorySection")?.classList.toggle("d-none", !showMedicine);
