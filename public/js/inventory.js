@@ -19,6 +19,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("inventoryBatchForm")?.addEventListener("submit", saveInventoryBatch);
     document.getElementById("inventory_category")?.addEventListener("change", () => toggleInventoryFields(false));
     document.getElementById("inventory_stock")?.addEventListener("input", () => toggleInventoryFields(false));
+    document.getElementById("inventory_manufacture")?.addEventListener("change", () => updateInitialExpiryMinimum());
+    document.getElementById("batch_import_date")?.addEventListener("change", updateBatchDateLimits);
+    document.getElementById("batch_manufacture_date")?.addEventListener("change", updateBatchDateLimits);
     toggleInventoryFields(false);
     await loadInventory();
 });
@@ -139,6 +142,31 @@ function renderInventory(items) {
     }).join("") : '<tr><td colspan="' + (isAdminSpa ? 4 : 3) + '" class="text-center text-muted">Chưa có dịch vụ.</td></tr>';
 }
 
+function localInventoryDate() {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function generateInventoryLotCode() {
+    const date = localInventoryDate().replaceAll("-", "");
+    const suffix = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+    return "LO-" + date + "-" + suffix;
+}
+
+function updateInitialExpiryMinimum() {
+    const manufacture = document.getElementById("inventory_manufacture")?.value;
+    const expiry = document.getElementById("inventory_expiry");
+    if (expiry) expiry.min = manufacture || localInventoryDate();
+}
+
+function updateBatchDateLimits() {
+    const importDate = document.getElementById("batch_import_date")?.value || localInventoryDate();
+    const manufacture = document.getElementById("batch_manufacture_date");
+    const expiry = document.getElementById("batch_expiry_date");
+    if (manufacture) manufacture.max = importDate;
+    if (expiry) expiry.min = manufacture?.value || importDate;
+}
+
 function openInventoryBatchForm(itemId) {
     if (!isAdminInventory) return;
     const item = inventoryItems.find((row) => Number(row.item_id) === Number(itemId));
@@ -150,11 +178,13 @@ function openInventoryBatchForm(itemId) {
     document.getElementById("batch_item_label").innerText = item.masanpham + " · " + item.ten_sanpham + " (" + item.donvitinh + ")";
     document.getElementById("batch_import_date").value = localToday;
     document.getElementById("batch_import_date").max = localToday;
+    document.getElementById("batch_lot_preview").value = generateInventoryLotCode();
+    const manufactureInput = document.getElementById("batch_manufacture_date");
     const expiryInput = document.getElementById("batch_expiry_date");
+    manufactureInput.value = localToday;
+    manufactureInput.max = localToday;
     expiryInput.min = localToday;
-    expiryInput.required = ["THUOC", "VAC_XIN", "THUC_AN"].includes(item.danhmuc);
-    expiryInput.disabled = item.danhmuc === "DO_DUNG";
-    if (item.danhmuc === "DO_DUNG") expiryInput.value = "";
+    updateBatchDateLimits();
     $("#inventoryBatchModal").modal("show");
 }
 
@@ -163,19 +193,24 @@ async function saveInventoryBatch(event) {
     if (!isAdminInventory) return;
     const payload = {
         item_id: Number(document.getElementById("batch_item_id").value),
+        solo: document.getElementById("batch_lot_preview").value,
         soluong: Number(document.getElementById("batch_quantity").value),
         ngaynhap: document.getElementById("batch_import_date").value,
+        ngaysanxuat: document.getElementById("batch_manufacture_date").value,
         ngayhethan: document.getElementById("batch_expiry_date").value || null,
     };
     if (!Number.isInteger(payload.soluong) || payload.soluong < 1) {
         alert("Số lượng nhập không hợp lệ."); return;
     }
     const batchItem = inventoryItems.find(item => Number(item.item_id) === payload.item_id);
-    if (!payload.ngayhethan && ["THUOC", "VAC_XIN", "THUC_AN"].includes(batchItem?.danhmuc)) {
-        alert("Thuốc, vắc-xin và thức ăn bắt buộc phải có hạn sử dụng."); return;
+    if (!payload.ngaysanxuat || !payload.ngayhethan) {
+        alert("Vui lòng nhập ngày sản xuất và hạn sử dụng."); return;
     }
-    if (payload.ngayhethan && payload.ngayhethan <= payload.ngaynhap) {
-        alert("Hạn sử dụng phải sau ngày nhập."); return;
+    if (payload.ngaysanxuat > payload.ngaynhap) {
+        alert("Ngày sản xuất không được sau ngày nhập."); return;
+    }
+    if (payload.ngayhethan <= payload.ngaysanxuat || payload.ngayhethan <= payload.ngaynhap) {
+        alert("Hạn sử dụng phải sau ngày sản xuất và ngày nhập."); return;
     }
     const button = document.getElementById("btnSaveInventoryBatch");
     button.disabled = true;
@@ -201,6 +236,8 @@ function toggleInventoryFields(isEditing = false) {
     const categoryGroup = document.getElementById("inventoryCategoryGroup");
     const unitGroup = document.getElementById("inventoryUnitGroup");
     const expiryGroup = document.getElementById("inventoryExpiryGroup");
+    const manufactureGroup = document.getElementById("inventoryManufactureGroup");
+    const batchFields = document.getElementById("inventoryBatchFields");
     const unit = document.getElementById("inventory_unit");
     const stock = document.getElementById("inventory_stock");
     const stockLabel = document.getElementById("inventoryStockLabel");
@@ -209,6 +246,8 @@ function toggleInventoryFields(isEditing = false) {
     if (unitGroup) unitGroup.classList.toggle("d-none", isGoods);
     if (unit) unit.required = !isGoods;
     if (expiryGroup) expiryGroup.classList.toggle("d-none", !hasBatch || isEditing);
+    if (manufactureGroup) manufactureGroup.classList.toggle("d-none", !hasBatch || isEditing);
+    if (batchFields) batchFields.classList.toggle("d-none", !hasBatch || isEditing);
     if (stockLabel) stockLabel.textContent = isEditing && hasBatch ? "Tồn kho hiện tại" : (hasBatch ? "Số lượng nhập ban đầu" : "Số lượng");
     if (stockHelp) stockHelp.textContent = isEditing && hasBatch
         ? "Tồn kho được quản lý theo từng lô; dùng chức năng Nhập lô để bổ sung."
@@ -220,11 +259,14 @@ function toggleInventoryFields(isEditing = false) {
             stock.value = Number(item?.tong_ton_kho ?? 0);
         }
     }
+    const manufacture = document.getElementById("inventory_manufacture");
     const expiry = document.getElementById("inventory_expiry");
+    if (manufacture) {
+        manufacture.max = localInventoryDate();
+        manufacture.required = hasBatch && !isEditing && Number(stock?.value || 0) > 0;
+    }
     if (expiry) {
-        const today = new Date();
-        const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-        expiry.min = localToday;
+        expiry.min = manufacture?.value || localInventoryDate();
         expiry.required = hasBatch && !isEditing && Number(stock?.value || 0) > 0;
     }
 }
@@ -238,10 +280,14 @@ function openInventoryForm(item = null, category = null) {
     document.getElementById("inventory_name").value = item?.ten_sanpham || "";
     document.getElementById("inventory_category").value = item?.danhmuc || category || "THUOC";
     document.getElementById("inventory_unit").value = item?.donvitinh || "";
-    document.getElementById("inventory_price").value = item?.dongia ?? "";
+    document.getElementById("inventory_price").value = item ? (Number(item.dongia || 0) / 1000) : "";
     document.getElementById("inventory_stock").value = item
         ? (item.danhmuc === "DO_DUNG" ? Number(item.soluongton || 0) : Number(item.tong_ton_kho || 0))
         : 0;
+    if (!item && ["THUOC", "VAC_XIN", "THUC_AN"].includes(category || "THUOC")) {
+        document.getElementById("inventory_lot_preview").value = generateInventoryLotCode();
+        document.getElementById("inventory_manufacture").value = localInventoryDate();
+    }
     toggleInventoryFields(!!item);
     $("#inventoryFormModal").modal("show");
 }
@@ -268,14 +314,20 @@ async function saveInventoryItem(event) {
     const isBatchCategory = ["THUOC", "VAC_XIN", "THUC_AN"].includes(category);
     const quantity = Number(document.getElementById("inventory_stock").value || 0);
     const expiry = document.getElementById("inventory_expiry").value;
+    const manufacture = document.getElementById("inventory_manufacture").value;
+    const lotCode = document.getElementById("inventory_lot_preview").value;
     const todayDate = new Date();
     const localToday = new Date(todayDate.getTime() - todayDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    if (!id && isBatchCategory && quantity > 0 && !expiry) {
-        alert("Vui lòng nhập hạn sử dụng cho lô hàng ban đầu.");
+    if (!id && isBatchCategory && quantity > 0 && (!manufacture || !expiry)) {
+        alert("Vui lòng nhập ngày sản xuất và hạn sử dụng cho lô ban đầu.");
         return;
     }
-    if (!id && isBatchCategory && expiry && expiry <= localToday) {
-        alert("Hạn sử dụng phải sau ngày nhập hiện tại.");
+    if (!id && isBatchCategory && quantity > 0 && manufacture > localToday) {
+        alert("Ngày sản xuất không được sau ngày hiện tại.");
+        return;
+    }
+    if (!id && isBatchCategory && quantity > 0 && (expiry <= manufacture || expiry <= localToday)) {
+        alert("Hạn sử dụng phải sau ngày sản xuất và ngày nhập.");
         return;
     }
     const payload = {
@@ -283,13 +335,15 @@ async function saveInventoryItem(event) {
         danhmuc: category,
         donvitinh: category === "DO_DUNG" ? "" : document.getElementById("inventory_unit").value.trim(),
         soluong: quantity,
-        dongia: Number(document.getElementById("inventory_price").value),
+        dongia: Number(document.getElementById("inventory_price").value) * 1000,
         lieu_mg_kg: null,
         mg_moi_don_vi: null,
     };
     if (!id && isBatchCategory) {
         payload.ngaynhap = localToday;
+        payload.ngaysanxuat = manufacture || null;
         payload.ngayhethan = expiry || null;
+        payload.solo = lotCode;
     }
     if (id && category === "DO_DUNG") {
         payload.soluong = quantity;
@@ -339,7 +393,7 @@ function openSpaServiceForm(service = null) {
     document.getElementById("spaServiceFormTitle").innerText = service ? "Cập nhật dịch vụ Spa" : "Thêm dịch vụ Spa";
     document.getElementById("spa_service_code").value = service?.masanpham || "";
     document.getElementById("spa_service_name").value = service?.ten_sanpham || "";
-    document.getElementById("spa_service_price").value = service?.dongia ?? "";
+    document.getElementById("spa_service_price").value = service ? (Number(service.dongia || 0) / 1000) : "";
     $("#spaServiceFormModal").modal("show");
 }
 
@@ -365,7 +419,7 @@ async function saveSpaService(event) {
     const id = document.getElementById("spa_service_form_id").value;
     const payload = {
         ten_sanpham: document.getElementById("spa_service_name").value.trim(),
-        dongia: Number(document.getElementById("spa_service_price").value),
+        dongia: Number(document.getElementById("spa_service_price").value) * 1000,
     };
 
     const button = document.getElementById("btnSaveSpaService");
