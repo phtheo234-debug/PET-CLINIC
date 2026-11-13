@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\CageOccupancyService;
+use App\Services\CageWaitingListService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,8 @@ class MedicalController extends Controller
 {
     public function __construct(
         protected InventoryController $inventory,
-        private CageOccupancyService $cageOccupancy
+        private CageOccupancyService $cageOccupancy,
+        private CageWaitingListService $cageWaitingList
     ) {
     }
 
@@ -63,6 +65,7 @@ class MedicalController extends Controller
             'chandoan'        => 'required|string',
             'trangthai'       => 'required|in:DANG_DIEU_TRI,HOAN_THANH,CHUYEN_VIEN',
             'huong_xuly'      => 'nullable|in:OUTPATIENT,INPATIENT,SURGERY,TRANSFER',
+            'isolation_required' => 'nullable|boolean',
         ]);
 
         try {
@@ -81,6 +84,8 @@ class MedicalController extends Controller
                     'chandoan'        => $fields['chandoan'],
                     'cannangkhi_kham' => $fields['cannangkhi_kham'],
                     'trangthai'       => $fields['trangthai'],
+                    'huong_xuly'      => $fields['huong_xuly'] ?? null,
+                    'isolation_required' => (bool) ($fields['isolation_required'] ?? false),
                 ]);
 
                 // 2. Tự động lưu lịch sử cân nặng vào weight_logs (BR-04)
@@ -95,21 +100,29 @@ class MedicalController extends Controller
                 $assignedCage = null;
                 $huongXuLy = $fields['huong_xuly'] ?? null;
 
-                // 3. Nếu chọn Nhập viện (INPATIENT) hoặc Phẫu thuật (SURGERY) -> Tự động tìm & xếp lồng phù hợp
-                if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)) {
-                    if ($pet->cage_id) {
-                        $assignedCage = $this->cageOccupancy->sync((int) $pet->cage_id);
-                    } else {
-                        $assignedCage = $this->autoAssignSuitableCage(
-                            $pet,
-                            (float) $fields['cannangkhi_kham'],
-                            $huongXuLy
-                        );
-                    }
+                // 3. Nhập viện/phẫu thuật: xếp tự động theo loài, cân nặng và yêu cầu cách ly.
+                $isolationRequired = (bool) ($fields['isolation_required'] ?? false);
+                $waitingForCage = false;
+
+                if (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)
+                    && $fields['trangthai'] !== 'CHUYEN_VIEN') {
+                    $assignment = $this->cageWaitingList->assignOrQueue(
+                        (int) $pet->pet_id,
+                        (float) $fields['cannangkhi_kham'],
+                        $huongXuLy,
+                        $isolationRequired
+                    );
+                    $assignedCage = $assignment['cage'];
+                    $waitingForCage = $assignment['waiting'];
                 }
 
                 // 4. Nếu chẩn đoán kết luận CHUYEN_VIEN -> Tự động giải phóng lồng lưu trú
                 if ($fields['trangthai'] === 'CHUYEN_VIEN' || $huongXuLy === 'TRANSFER') {
+                    DB::table('pet_cage_waitlist')
+                        ->where('pet_id', $pet->pet_id)
+                        ->where('status', 'WAITING')
+                        ->update(['status' => 'CANCELLED', 'updated_at' => now()]);
+
                     if ($pet->cage_id) {
                         $oldCageId = (int) $pet->cage_id;
                         $activeBoarding = DB::table('pet_boardings')
@@ -136,6 +149,7 @@ class MedicalController extends Controller
                         ]);
 
                         $this->cageOccupancy->sync($oldCageId);
+                        $this->cageWaitingList->dispatchWaiting();
                     }
 
                     DB::table('pets')->where('pet_id', $fields['pet_id'])->update([
@@ -147,8 +161,8 @@ class MedicalController extends Controller
                 $msg = 'Tạo phiếu khám bệnh thành công!';
                 if ($assignedCage) {
                     $msg .= " Đã tự động xếp vào lồng {$assignedCage->malong} ({$assignedCage->ten_long}).";
-                } elseif (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true)) {
-                    $msg .= ' Lưu ý: Hiện không còn lồng trống phù hợp tiêu chí, vui lòng xếp lồng thủ công!';
+                } elseif (in_array($huongXuLy, ['INPATIENT', 'SURGERY'], true) && $waitingForCage) {
+                    $msg .= ' Hiện chưa có lồng phù hợp; thú cưng đã được đưa vào danh sách chờ và quản trị viên sẽ được thông báo trên trang lồng.';
                 }
 
                 return response()->json([

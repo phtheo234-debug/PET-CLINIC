@@ -70,6 +70,7 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
 
     // Lồng: tất cả được xem; chỉ nhân viên/quản trị thực hiện xếp và trả lồng.
     Route::get('/boarding/cages', [BoardingController::class, 'index']);
+    Route::get('/boarding/waiting-list', [BoardingController::class, 'waitingList']);
     Route::post('/boarding/assign', [BoardingController::class, 'assignCage'])->middleware('role:QUAN_TRI,NHAN_VIEN');
     Route::post('/boarding/release', [BoardingController::class, 'releaseCage'])->middleware('role:QUAN_TRI,NHAN_VIEN');
 

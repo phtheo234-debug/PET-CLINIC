@@ -1,17 +1,18 @@
 <?php
 
-namespace App\\Http\\Middleware;
+namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\\Http\\Request;
-use Symfony\\Component\\HttpFoundation\\Response;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
     /**
-     * Cho phép một hoặc nhiều vai trò, phân tách bằng dấu phẩy.
+     * Cho phép một hoặc nhiều vai trò được truyền qua middleware:
+     * role:QUAN_TRI,NHAN_VIEN
      */
-    public function handle(Request $request, Closure $next, string $roles): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
 
@@ -22,7 +23,7 @@ class RoleMiddleware
             ], 401);
         }
 
-        $allowedRoles = array_filter(array_map('trim', explode(',', $roles)));
+        $allowedRoles = array_filter(array_map('trim', $roles));
 
         if (!in_array($user->vaitro, $allowedRoles, true)) {
             return response()->json([

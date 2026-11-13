@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\CageOccupancyService;
+use App\Services\CageWaitingListService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -11,7 +12,10 @@ use Illuminate\Validation\Rule;
 
 class AdminCageController extends Controller
 {
-    public function __construct(private CageOccupancyService $cageOccupancy)
+    public function __construct(
+        private CageOccupancyService $cageOccupancy,
+        private CageWaitingListService $cageWaitingList
+    )
     {
     }
 
@@ -21,6 +25,8 @@ class AdminCageController extends Controller
             'ten_long' => 'required|string|max:50',
             'loailong' => ['required', Rule::in(['THUONG', 'CAP_CUU_ICU', 'CACH_LY'])],
             'succhua' => 'required|integer|min:1|max:100',
+            'loai_phu_hop' => ['nullable', Rule::in(['TAT_CA', 'CHO', 'MEO'])],
+            'tai_trong_toi_da' => 'nullable|numeric|min:0.1|max:9999',
             'trangthai' => ['nullable', Rule::in(['CON_TRONG', 'DANG_VE_SINH', 'BAO_TRI'])],
         ]);
 
@@ -31,7 +37,9 @@ class AdminCageController extends Controller
                 'malong' => $temporaryCode,
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
-                'succhua' => $fields['succhua'],
+                'succhua' => $fields['loailong'] === 'CACH_LY' ? 1 : $fields['succhua'],
+                'loai_phu_hop' => $fields['loai_phu_hop'] ?? 'TAT_CA',
+                'tai_trong_toi_da' => $fields['tai_trong_toi_da'] ?? null,
                 'soluonghientai' => 0,
                 'trangthai' => $fields['trangthai'] ?? 'CON_TRONG',
             ], 'cage_id');
@@ -41,6 +49,8 @@ class AdminCageController extends Controller
 
             return DB::table('cages')->where('cage_id', $id)->first();
         });
+
+        $this->cageWaitingList->dispatchWaiting();
 
         return response()->json([
             'status' => 'success',
@@ -55,6 +65,8 @@ class AdminCageController extends Controller
             'ten_long' => 'required|string|max:50',
             'loailong' => ['required', Rule::in(['THUONG', 'CAP_CUU_ICU', 'CACH_LY'])],
             'succhua' => 'required|integer|min:1|max:100',
+            'loai_phu_hop' => ['nullable', Rule::in(['TAT_CA', 'CHO', 'MEO'])],
+            'tai_trong_toi_da' => 'nullable|numeric|min:0.1|max:9999',
             'trangthai' => ['required', Rule::in(['CON_TRONG', 'DA_CO_THU', 'DANG_VE_SINH', 'BAO_TRI'])],
         ]);
 
@@ -65,7 +77,15 @@ class AdminCageController extends Controller
             }
 
             $actualCount = DB::table('pets')->where('cage_id', $id)->count();
-            if ((int) $fields['succhua'] < $actualCount) {
+            if ($actualCount > 0 && $fields['loailong'] !== $cage->loailong) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Không thể đổi loại lồng khi vẫn đang có thú lưu trú. Vui lòng chuyển thú sang lồng phù hợp trước.',
+                ], 422);
+            }
+
+            $requestedCapacity = $fields['loailong'] === 'CACH_LY' ? 1 : (int) $fields['succhua'];
+            if ($requestedCapacity < $actualCount) {
                 return response()->json([
                     'status' => 'error',
                     'message' => "Sức chứa mới không được nhỏ hơn số thú đang ở trong lồng ({$actualCount}).",
@@ -86,10 +106,14 @@ class AdminCageController extends Controller
             DB::table('cages')->where('cage_id', $id)->update([
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
-                'succhua' => $fields['succhua'],
+                'succhua' => $requestedCapacity,
+                'loai_phu_hop' => $fields['loai_phu_hop'] ?? 'TAT_CA',
+                'tai_trong_toi_da' => $fields['tai_trong_toi_da'] ?? null,
                 'soluonghientai' => $actualCount,
                 'trangthai' => $status,
             ]);
+
+            $this->cageWaitingList->dispatchWaiting();
 
             return response()->json([
                 'status' => 'success',
