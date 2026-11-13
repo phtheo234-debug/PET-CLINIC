@@ -23,10 +23,10 @@
     <div class="card-body table-responsive">
         <table class="table table-hover mb-0">
             <thead class="thead-light">
-                <tr><th>Mã TC</th><th>Tên & Giống loài</th><th>Chủ nuôi</th><th>Cân nặng</th><th>Trạng thái</th><th>Thao tác</th></tr>
+                <tr><th>Mã TC</th><th>Tên & Giống loài</th><th>Chủ nuôi</th><th>Cân nặng</th><th>Trạng thái lưu trú</th><th>Trạng thái khám</th><th>Thao tác</th></tr>
             </thead>
             <tbody id="petsTableBody">
-                <tr><td colspan="6" class="text-center text-muted">Đang tải danh sách thú cưng...</td></tr>
+                <tr><td colspan="7" class="text-center text-muted">Đang tải danh sách thú cưng...</td></tr>
             </tbody>
         </table>
     </div>
