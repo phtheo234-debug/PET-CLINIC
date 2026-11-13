@@ -234,6 +234,10 @@ function toggleInventoryFields(isEditing = false) {
     const isGoods = category === "DO_DUNG";
     const hasBatch = ["THUOC", "VAC_XIN", "THUC_AN"].includes(category);
     const categoryGroup = document.getElementById("inventoryCategoryGroup");
+    const categorySelect = document.getElementById("inventory_category");
+    if (categorySelect) Array.from(categorySelect.options).forEach(option => {
+        if (["THUC_AN", "DO_DUNG"].includes(option.value)) option.hidden = true;
+    });
     const unitGroup = document.getElementById("inventoryUnitGroup");
     const expiryGroup = document.getElementById("inventoryExpiryGroup");
     const manufactureGroup = document.getElementById("inventoryManufactureGroup");
