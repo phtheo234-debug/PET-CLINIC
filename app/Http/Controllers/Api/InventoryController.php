@@ -108,18 +108,20 @@ class InventoryController extends Controller
     {
         $fields = $request->validate([
             'item_id'    => 'required|integer|exists:inventory,item_id',
-            'solo'       => 'nullable|string|max:50',
+            'solo'       => 'required|string|max:50|regex:/^LO-[0-9]{8}-[0-9]{6}$/',
             'soluong'    => 'required|integer|min:1',
             'ngaynhap'   => 'required|date|before_or_equal:today',
-            'ngayhethan' => 'nullable|date|after:ngaynhap|after_or_equal:today',
+            'ngaysanxuat' => 'required|date|before_or_equal:ngaynhap|before_or_equal:today',
+            'ngayhethan' => 'required|date|after:ngaysanxuat|after:ngaynhap|after_or_equal:today',
         ]);
 
         $itemCategory = DB::table('inventory')->where('item_id', $fields['item_id'])->value('danhmuc');
         if ($itemCategory === 'DO_DUNG') {
             return response()->json(['status' => 'error', 'message' => 'Kho đồ dùng không nhập theo lô. Vui lòng cập nhật số lượng trực tiếp tại bảng kho đồ dùng.'], 422);
         }
-        if (in_array($itemCategory, ['THUOC', 'VAC_XIN', 'THUC_AN'], true) && empty($fields['ngayhethan'])) {
-            return response()->json(['status' => 'error', 'message' => 'Thuốc, vắc-xin và thức ăn bắt buộc phải có hạn sử dụng.'], 422);
+        if (in_array($itemCategory, ['THUOC', 'VAC_XIN', 'THUC_AN'], true)
+            && DB::table('inventory_batches')->where('item_id', $fields['item_id'])->where('solo', $fields['solo'])->exists()) {
+            return response()->json(['status' => 'error', 'message' => 'Mã lô đã tồn tại, vui lòng tạo mã lô mới.'], 422);
         }
 
         try {
@@ -133,17 +135,15 @@ class InventoryController extends Controller
                     throw new Exception('Chỉ được nhập lô cho mặt hàng hàng hóa trong kho.');
                 }
 
-                $temporaryCode = 'TMP' . strtoupper(bin2hex(random_bytes(8)));
                 $batchId = DB::table('inventory_batches')->insertGetId([
                     'item_id'    => $fields['item_id'],
-                    'solo'       => $temporaryCode,
+                    'solo'       => $fields['solo'],
                     'soluong'    => $fields['soluong'],
                     'ngaynhap'   => $fields['ngaynhap'],
+                    'ngaysanxuat' => $fields['ngaysanxuat'],
                     'ngayhethan' => $fields['ngayhethan'],
                     'trangthai'  => 'DANG_SU_DUNG',
                 ]);
-                $lotCode = 'LO-' . now()->format('Ymd') . '-' . str_pad((string) $batchId, 6, '0', STR_PAD_LEFT);
-                DB::table('inventory_batches')->where('batch_id', $batchId)->update(['solo' => $lotCode]);
                 return $batchId;
             });
         } catch (Exception $e) {
