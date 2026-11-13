@@ -190,7 +190,7 @@ class PetController extends Controller
             ->leftJoin('surgeries as s', 's.surgery_id', '=', 'mr.surgery_id')
             ->leftJoin('invoices as i', 'i.invoice_id', '=', 'mr.invoice_id')
             ->where('mr.pet_id', $id)
-            ->select('mr.record_id', 'mr.ngaykham', 'mr.chandoan', 'mr.huongxuly', 'mr.trangthai', 'mr.invoice_id', 'i.mahoadon', 's.ten_phauthuat')
+            ->select('mr.record_id', 'mr.ngaykham', 'mr.chandoan', 'mr.huong_xuly', 'mr.trangthai', 'mr.invoice_id', 'i.mahoadon', 's.ten_phauthuat')
             ->orderByDesc('mr.ngaykham')->orderByDesc('mr.record_id')->get();
         $latestExam = $medicalHistory->first();
 
