@@ -56,6 +56,7 @@
         </button>
     </div>
     <div class="card-body table-responsive">
+        <div class="input-group input-group-sm mb-3 inventory-search" data-inventory-search="spa"><input type="text" class="form-control" id="searchInventory_spa" placeholder="Nhập tên hoặc mã dịch vụ cần tìm"><div class="input-group-append"><button type="button" class="btn btn-outline-primary" data-search-inventory="spa"><i class="fas fa-search mr-1"></i>Tìm kiếm</button></div></div>
         <table class="table table-bordered">
             <thead class="thead-light">
                 <tr>
