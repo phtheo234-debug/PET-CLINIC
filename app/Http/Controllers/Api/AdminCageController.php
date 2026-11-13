@@ -33,7 +33,7 @@ class AdminCageController extends Controller
                 'malong' => $temporaryCode,
                 'ten_long' => trim($fields['ten_long']),
                 'loailong' => $fields['loailong'],
-                'succhua' => $fields['succhua'],
+                'succhua' => $fields['loailong'] === 'CACH_LY' ? 1 : $fields['succhua'],
                 'loai_phu_hop' => $fields['loai_phu_hop'] ?? 'TAT_CA',
                 'tai_trong_toi_da' => $fields['tai_trong_toi_da'] ?? null,
                 'soluonghientai' => 0,
@@ -71,6 +71,13 @@ class AdminCageController extends Controller
             }
 
             $actualCount = DB::table('pets')->where('cage_id', $id)->count();
+            if ($actualCount > 0 && $fields['loailong'] !== $cage->loailong) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Không thể đổi loại lồng khi vẫn đang có thú lưu trú. Vui lòng chuyển thú sang lồng phù hợp trước.',
+                ], 422);
+            }
+
             if ((int) $fields['succhua'] < $actualCount) {
                 return response()->json([
                     'status' => 'error',
