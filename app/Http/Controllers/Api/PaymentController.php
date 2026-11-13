@@ -705,7 +705,7 @@ class PaymentController extends Controller
                 'medicine_total' => $medicineTotal, 'surgery_total' => $surgeryTotal,
                 'boardings' => $boardings, 'boarding_total' => $boardingTotal,
                 'prescriptions' => $prescriptions,
-                'surgeries' => $records->filter(fn($r) => $r->trangthai === 'HOAN_THANH' && (float)($r->surgery_price ?? 0) > 0)->map(fn($r) => [
+                'surgeries' => $billableRecords->filter(fn($r) => (float)($r->surgery_price ?? 0) > 0)->map(fn($r) => [
                     'name' => 'Phẫu thuật - Phiếu #' . $r->record_id, 'price' => (float)$r->surgery_price
                 ])->values(),
             ],
