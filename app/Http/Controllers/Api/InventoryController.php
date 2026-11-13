@@ -18,11 +18,24 @@ class InventoryController extends Controller
 
         foreach ($items as $item) {
             if ($item->danhmuc !== 'DICH_VU_SPA') {
+                $item->batches = DB::table('inventory_batches')
+                    ->where('item_id', $item->item_id)
+                    ->orderBy('ngayhethan')
+                    ->orderBy('batch_id')
+                    ->get();
                 $item->tong_ton_kho = (int) DB::table('inventory_batches')
                     ->where('item_id', $item->item_id)
                     ->where('trangthai', 'DANG_SU_DUNG')
+                    ->where('soluong', '>', 0)
                     ->whereDate('ngayhethan', '>=', now()->toDateString())
                     ->sum('soluong');
+                $firstUsableBatch = $item->batches->first(function ($batch) {
+                    return $batch->trangthai === 'DANG_SU_DUNG'
+                        && (int) $batch->soluong > 0
+                        && $batch->ngayhethan >= now()->toDateString();
+                });
+                $item->solo = $firstUsableBatch->solo ?? null;
+                $item->ngayhethan = $firstUsableBatch->ngayhethan ?? null;
             }
         }
 
@@ -79,18 +92,36 @@ class InventoryController extends Controller
             'item_id'    => 'required|integer|exists:inventory,item_id',
             'solo'       => 'required|string|max:50',
             'soluong'    => 'required|integer|min:1',
-            'ngaynhap'   => 'required|date',
-            'ngayhethan' => 'required|date|after:ngaynhap',
+            'ngaynhap'   => 'required|date|before_or_equal:today',
+            'ngayhethan' => 'required|date|after:ngaynhap|after_or_equal:today',
         ]);
 
-        $batchId = DB::table('inventory_batches')->insertGetId([
-            'item_id'    => $fields['item_id'],
-            'solo'       => $fields['solo'],
-            'soluong'    => $fields['soluong'],
-            'ngaynhap'   => $fields['ngaynhap'],
-            'ngayhethan' => $fields['ngayhethan'],
-            'trangthai'  => 'DANG_SU_DUNG',
-        ]);
+        $batchId = DB::transaction(function () use ($fields) {
+            $item = DB::table('inventory')
+                ->where('item_id', $fields['item_id'])
+                ->lockForUpdate()
+                ->first();
+            if (!$item || $item->danhmuc === 'DICH_VU_SPA') {
+                throw new Exception('Chỉ được nhập lô cho mặt hàng hàng hóa trong kho.');
+            }
+
+            $duplicateBatch = DB::table('inventory_batches')
+                ->where('item_id', $item->item_id)
+                ->where('solo', $fields['solo'])
+                ->exists();
+            if ($duplicateBatch) {
+                throw new Exception('Mã lô này đã tồn tại cho mặt hàng đã chọn.');
+            }
+
+            return DB::table('inventory_batches')->insertGetId([
+                'item_id'    => $fields['item_id'],
+                'solo'       => $fields['solo'],
+                'soluong'    => $fields['soluong'],
+                'ngaynhap'   => $fields['ngaynhap'],
+                'ngayhethan' => $fields['ngayhethan'],
+                'trangthai'  => 'DANG_SU_DUNG',
+            ]);
+        });
 
         return response()->json([
             'status'  => 'success',
@@ -132,6 +163,15 @@ class InventoryController extends Controller
      */
     public function fefoDeduct(int $itemId, int $qty): array
     {
+        if ($qty < 1) {
+            throw new Exception('Số lượng xuất phải lớn hơn 0.');
+        }
+
+        $item = DB::table('inventory')->where('item_id', $itemId)->lockForUpdate()->first();
+        if (!$item || $item->danhmuc === 'DICH_VU_SPA') {
+            throw new Exception('Mặt hàng không hợp lệ để xuất kho.');
+        }
+
         $batches = DB::table('inventory_batches')
             ->where('item_id', $itemId)
             ->where('soluong', '>', 0)
