@@ -28,6 +28,9 @@
                     <li class="{{ request()->routeIs('admin.users') ? 'active' : '' }}">
                         <a href="{{ route('admin.users') }}"><i class="fas fa-users-cog"></i> Quản lý tài khoản</a>
                     </li>
+                    <li class="{{ request()->routeIs('admin.statistics') ? 'active' : '' }}">
+                        <a href="{{ route('admin.statistics') }}"><i class="fas fa-chart-pie"></i> Thống kê doanh thu</a>
+                    </li>
                 @endif
 
                 <li class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
