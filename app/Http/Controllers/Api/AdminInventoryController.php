@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class AdminInventoryController extends Controller
@@ -16,6 +15,7 @@ class AdminInventoryController extends Controller
     public function store(Request $request)
     {
         $fields = $request->validate([
+            'masanpham' => ['required', 'string', 'max:50', 'regex:/^(THUOC|VACXIN|THUCAN|DODUNG)-[0-9]{8}-[0-9]{6}$/', 'unique:inventory,masanpham'],
             'ten_sanpham' => 'required|string|max:100',
             'danhmuc' => ['required', Rule::in(self::CATEGORIES)],
             'donvitinh' => 'nullable|string|max:20',
@@ -32,12 +32,9 @@ class AdminInventoryController extends Controller
         }
 
         $item = DB::transaction(function () use ($fields) {
-            $temporaryCode = 'TMP' . Str::upper(Str::random(16));
             $id = DB::table('inventory')->insertGetId(
-                array_merge($this->values($fields), ['masanpham' => $temporaryCode])
+                array_merge($this->values($fields), ['masanpham' => $fields['masanpham']])
             );
-            $code = $this->generatedCode($fields['danhmuc'], $id);
-            DB::table('inventory')->where('item_id', $id)->update(['masanpham' => $code]);
 
             if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0) {
                 $lotCode = $fields['solo'] ?? ('LO-' . now()->format('Ymd') . '-' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT));
@@ -153,24 +150,6 @@ class AdminInventoryController extends Controller
 
             return response()->json(['status' => 'success', 'message' => 'Đã xóa mặt hàng.']);
         });
-    }
-
-    private function generatedCode(string $category, int $id): string
-    {
-        $prefixes = [
-            'THUOC' => 'THUOC',
-            'VAC_XIN' => 'VACXIN',
-            'THUC_AN' => 'THUCAN',
-            'DO_DUNG' => 'DODUNG',
-        ];
-        $prefix = $prefixes[$category] ?? 'SP';
-        $code = $prefix . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
-
-        while (DB::table('inventory')->where('masanpham', $code)->exists()) {
-            $code = $prefix . str_pad((string) $id, 4, '0', STR_PAD_LEFT) . Str::upper(Str::random(4));
-        }
-
-        return $code;
     }
 
     private function values(array $fields): array
