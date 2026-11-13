@@ -59,6 +59,8 @@ class AdminCageController extends Controller
             'ten_long' => 'required|string|max:50',
             'loailong' => ['required', Rule::in(['THUONG', 'CAP_CUU_ICU', 'CACH_LY'])],
             'succhua' => 'required|integer|min:1|max:100',
+            'loai_phu_hop' => ['nullable', Rule::in(['TAT_CA', 'CHO', 'MEO'])],
+            'tai_trong_toi_da' => 'nullable|numeric|min:0.1|max:9999',
             'trangthai' => ['required', Rule::in(['CON_TRONG', 'DA_CO_THU', 'DANG_VE_SINH', 'BAO_TRI'])],
         ]);
 
