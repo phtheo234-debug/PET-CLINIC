@@ -175,6 +175,19 @@ class PetController extends Controller
 
                     if ($existingOwner) {
                         $ownerId = $existingOwner->owner_id;
+
+                        // Cập nhật email/địa chỉ nếu người tiếp nhận có nhập thông tin mới.
+                        // Nếu để trống, giữ nguyên dữ liệu đã lưu của chủ nuôi.
+                        $ownerUpdate = [];
+                        if (!empty($v['email'])) {
+                            $ownerUpdate['email'] = trim($v['email']);
+                        }
+                        if (!empty($v['diachi'])) {
+                            $ownerUpdate['diachi'] = trim($v['diachi']);
+                        }
+                        if ($ownerUpdate) {
+                            DB::table('owners')->where('owner_id', $ownerId)->update($ownerUpdate);
+                        }
                     } else {
                         $ownerId = DB::table('owners')->insertGetId([
                             'ho_ten'  => trim($v['ho_ten']),
