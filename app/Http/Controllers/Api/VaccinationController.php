@@ -16,7 +16,7 @@ class VaccinationController extends Controller
             'data' => DB::table('vaccination_types')
                 ->where('is_active', true)
                 ->orderBy('vaccination_type_id')
-                ->get(['vaccination_type_id as id', 'name']),
+                ->get(['vaccination_type_id as id', 'name', 'inventory_item_id']),
         ]);
     }
 
@@ -26,12 +26,28 @@ class VaccinationController extends Controller
             'name' => ['required', 'string', 'max:100', 'unique:vaccination_types,name'],
         ]);
 
-        $id = DB::table('vaccination_types')->insertGetId([
-            'name' => trim($data['name']),
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $id = DB::transaction(function () use ($data) {
+            do {
+                $code = 'VX-' . now()->format('Ymd') . '-' . str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
+            } while (DB::table('inventory')->where('masanpham', $code)->exists());
+
+            $itemId = DB::table('inventory')->insertGetId([
+                'masanpham' => $code,
+                'ten_sanpham' => trim($data['name']),
+                'danhmuc' => 'VAC_XIN',
+                'donvitinh' => 'liều',
+                'dongia' => 0,
+                'tonkhotoithieu' => 0,
+            ]);
+
+            return DB::table('vaccination_types')->insertGetId([
+                'name' => trim($data['name']),
+                'is_active' => true,
+                'inventory_item_id' => $itemId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
 
         return response()->json([
             'status' => 'success',
@@ -52,10 +68,17 @@ class VaccinationController extends Controller
             ],
         ]);
 
-        DB::table('vaccination_types')->where('vaccination_type_id', $id)->update([
-            'name' => trim($data['name']),
-            'updated_at' => now(),
-        ]);
+        DB::transaction(function () use ($id, $data, $type) {
+            DB::table('vaccination_types')->where('vaccination_type_id', $id)->update([
+                'name' => trim($data['name']),
+                'updated_at' => now(),
+            ]);
+            if ($type->inventory_item_id) {
+                DB::table('inventory')->where('item_id', $type->inventory_item_id)->update([
+                    'ten_sanpham' => trim($data['name']),
+                ]);
+            }
+        });
 
         return response()->json(['status' => 'success', 'message' => 'Đã cập nhật tên vắc-xin.']);
     }
@@ -80,7 +103,7 @@ class VaccinationController extends Controller
         }
 
         DB::table('vaccination_types')->where('vaccination_type_id', $id)->delete();
-        return response()->json(['status' => 'success', 'message' => 'Đã xóa loại vắc-xin.']);
+        return response()->json(['status' => 'success', 'message' => 'Đã xóa loại vắc-xin khỏi danh mục tiêm. Mặt hàng trong kho được giữ lại để bảo toàn lịch sử kho.']);
     }
 
     public function petIndex($petId)
