@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const money = (value) => formatCurrency(Number(value || 0));
     const categoryNames = {
         THUOC: "Thuốc", VAC_XIN: "Vắc-xin", THUC_AN: "Thức ăn",
-        DO_DUNG: "Đồ dùng", PHI_KHAM: "Phí khám", LUU_TRU: "Lưu trú",
+        PHAU_THUAT: "Phẫu thuật", DO_DUNG: "Đồ dùng", PHI_KHAM: "Phí khám", LUU_TRU: "Lưu trú",
         DICH_VU_SPA: "Dịch vụ Spa"
     };
     let report = null;
