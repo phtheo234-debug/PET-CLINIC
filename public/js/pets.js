@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             await apiRequest("/pets/" + petId, { method: "PUT", body: JSON.stringify({ owner_id: ownerId, name: document.getElementById("editPetName").value.trim(), species: document.getElementById("editPetSpecies").value, breed: document.getElementById("editPetBreed").value.trim() || null, gender: document.getElementById("editPetGender").value, dob: document.getElementById("editPetDob").value || null }) });
             $("#editPetModal").modal("hide");
             await Promise.all([loadPets(), loadOwners()]);
-            alert("Đã cập nhật hồ sơ thú cưng và thông tin chủ nuôi liên kết.");
+            alert("Đã cập nhật hồ sơ thú cưng và chủ nuôi liên kết.");
         } catch (error) { alert("Không thể cập nhật: " + error.message); }
     });
 
