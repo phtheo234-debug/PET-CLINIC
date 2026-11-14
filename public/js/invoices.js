@@ -23,11 +23,10 @@ document.addEventListener("DOMContentLoaded", async function() {
         document.getElementById("paymentPetInfo").textContent = "Không tải được danh sách thú cưng: " + e.message;
     });
 
-    document.getElementById("paymentPetSearch").addEventListener("change",selectPaymentPetFromSearch);
-    document.getElementById("paymentPetSearch").addEventListener("input",function(){
-        const v=this.value.trim().toLowerCase();
-        const p=paymentPets.find(x=>(x.mathucung||"").toLowerCase()===v||(x.name||"").toLowerCase()===v);
-        if(p) choosePaymentPet(p.id||p.pet_id);
+    document.getElementById("paymentPetSearch").addEventListener("input",renderEligiblePaymentPets);
+    document.getElementById("eligiblePaymentPetsBody").addEventListener("click",function(event){
+        const button=event.target.closest("[data-select-payment-pet]");
+        if(button) choosePaymentPet(Number(button.dataset.selectPaymentPet));
     });
     document.getElementById("extraCategory").addEventListener("change",renderExtraItemOptions);
     document.getElementById("extraItem").addEventListener("change",updateExtraUnitPrice);
@@ -37,14 +36,26 @@ document.addEventListener("DOMContentLoaded", async function() {
     document.getElementById("btnPrintNewInvoice").addEventListener("click",function(){ const id=Number(this.dataset.invoiceId); if(id) printInvoice(id); });
 });
 async function loadPaymentPets() {
-    paymentPets=invoiceList(await apiRequest("/pets"));
-    document.getElementById("paymentPetSuggestions").innerHTML=paymentPets.map(p=>'<option value="'+escapeInvoiceHtml(p.mathucung)+'">'+escapeInvoiceHtml(p.name||"")+'</option>').join("");
+    paymentPets=invoiceList(await apiRequest("/payment/eligible-pets"));
+    renderEligiblePaymentPets();
 }
-function selectPaymentPetFromSearch() {
-    const v=document.getElementById("paymentPetSearch").value.trim().toLowerCase();
-    const p=paymentPets.find(x=>(x.mathucung||"").toLowerCase()===v||(x.name||"").toLowerCase()===v||((x.mathucung||"")+" - "+(x.name||"")).toLowerCase()===v);
-    if(p) choosePaymentPet(p.id||p.pet_id);
-    else document.getElementById("paymentPetInfo").textContent="Hãy chọn đúng thú cưng từ danh sách gợi ý.";
+function renderEligiblePaymentPets() {
+    const body=document.getElementById("eligiblePaymentPetsBody");
+    if(!body)return;
+    const keyword=(document.getElementById("paymentPetSearch").value||"").trim().toLowerCase();
+    const rows=paymentPets.filter(p=>{
+        const owner=p.owner||{};
+        return [p.mathucung,p.name,owner.name,owner.phone].some(v=>String(v||"").toLowerCase().includes(keyword));
+    }).sort((a,b)=>{
+        if(Number(a.id)===Number(selectedPaymentPetId))return -1;
+        if(Number(b.id)===Number(selectedPaymentPetId))return 1;
+        return 0;
+    });
+    body.innerHTML=rows.length?rows.map(p=>{
+        const id=Number(p.id||p.pet_id), owner=p.owner||{};
+        const selected=id===Number(selectedPaymentPetId);
+        return '<tr'+(selected?' class="table-primary"':'')+'><td><strong>'+escapeInvoiceHtml(p.mathucung||"-")+'</strong> - '+escapeInvoiceHtml(p.name||"")+'</td><td>'+escapeInvoiceHtml(owner.name||"-")+'</td><td>'+escapeInvoiceHtml(owner.phone||"-")+'</td><td class="text-center"><button type="button" class="btn btn-sm '+(selected?'btn-primary':'btn-outline-primary')+'" data-select-payment-pet="'+id+'">Chọn</button></td></tr>';
+    }).join(""):'<tr><td colspan="4" class="text-center text-muted">'+(paymentPets.length?'Không tìm thấy thú cưng phù hợp.':'Không có thú cưng đủ điều kiện thanh toán.')+'</td></tr>';
 }
 async function choosePaymentPet(id) {
     if(Number(selectedPaymentPetId)===Number(id)&&paymentPreview)return;
@@ -56,9 +67,8 @@ async function choosePaymentPet(id) {
     try {
         paymentPreview=invoiceUnwrap(await apiRequest("/payment/pets/"+selectedPaymentPetId+"/preview"));
         const p=paymentPreview.pet||{};
-        document.getElementById("paymentPetSearch").value=(p.mathucung||"")+" - "+(p.ten_thucung||"");
-        document.getElementById("paymentOwnerName").value=p.ten_chu_nuoi||"";
-        document.getElementById("paymentPetInfo").innerHTML="<strong>"+escapeInvoiceHtml(p.mathucung)+" - "+escapeInvoiceHtml(p.ten_thucung)+"</strong> · Trạng thái: "+escapeInvoiceHtml(p.trangthai||"-")+" · SĐT chủ: "+escapeInvoiceHtml(p.phone||"-");
+        renderEligiblePaymentPets();
+        document.getElementById("paymentPetInfo").innerHTML="<strong>Đã chọn: "+escapeInvoiceHtml(p.mathucung)+" - "+escapeInvoiceHtml(p.ten_thucung)+"</strong> · Chủ nuôi: "+escapeInvoiceHtml(p.ten_chu_nuoi||"-")+" · SĐT: "+escapeInvoiceHtml(p.phone||"-");
         const inventoryResponse = await apiRequest("/inventory");
         paymentCatalog = invoiceList(inventoryResponse).filter(x => ["DICH_VU_SPA","THUC_AN","DO_DUNG"].includes(x.danhmuc) && (x.danhmuc === "DICH_VU_SPA" || Number(x.tong_ton_kho ?? x.soluongton ?? 0) > 0));
         renderMedicalCharges(paymentPreview.charges||{});
@@ -69,7 +79,7 @@ async function choosePaymentPet(id) {
         document.getElementById("invoicePrintAction").classList.add("d-none");
         renderExtraCharges(); recalculatePayment();
     } catch(e) {
-        paymentPreview=null; document.getElementById("paymentOwnerName").value="";
+        paymentPreview=null;
         document.getElementById("paymentPetInfo").innerHTML='<span class="text-danger">'+escapeInvoiceHtml(e.message)+'</span>';
         ["medicalChargesSection","extraServicesSection","finalPaymentSection"].forEach(id=>document.getElementById(id).classList.add("d-none"));
     }
@@ -132,8 +142,7 @@ async function submitUnifiedPayment() {
         printButton.dataset.invoiceId=String(Number(data.invoice_id));
         printAction.classList.remove("d-none");
         selectedPaymentPetId=null;paymentPreview=null;
-        document.getElementById("paymentPetSearch").value="";document.getElementById("paymentOwnerName").value="";
-        document.getElementById("paymentPetInfo").textContent="Chưa chọn hồ sơ thú cưng.";
+        document.getElementById("paymentPetInfo").textContent="Đã thanh toán. Chọn thú cưng khác trong danh sách nếu cần.";
         ["medicalChargesSection","extraServicesSection","finalPaymentSection"].forEach(id=>document.getElementById(id).classList.add("d-none"));
 
         // Giữ nguyên trang sau thanh toán: chỉ cập nhật danh sách hóa đơn và
