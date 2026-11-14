@@ -117,6 +117,7 @@ class PaymentController extends Controller
                     }
 
                     $quantity = (int) $line['quantity'];
+                    $qty = 1;
                     if ($item->danhmuc === 'DO_DUNG') {
                         if ((int) $item->soluongton < $quantity) {
                             throw new Exception('Không đủ tồn kho đồ dùng "' . $item->ten_sanpham . '". Còn ' . (int) $item->soluongton . '.');
@@ -889,13 +890,17 @@ class PaymentController extends Controller
                     $cage = DB::table('cages')->where('cage_id', $activeBoarding->cage_id)->lockForUpdate()->first();
                 }
 
+                $submittedItemIds = array_column($fields['items'] ?? [], 'item_id');
+                if (count($submittedItemIds) !== count(array_unique($submittedItemIds))) {
+                    throw new Exception('Mỗi dịch vụ hoặc sản phẩm chỉ được thêm một lần vào hóa đơn.');
+                }
+
                 foreach (($fields['items'] ?? []) as $line) {
                     $item = DB::table('inventory')->where('item_id',$line['item_id'])->lockForUpdate()->first();
                     if (!$item || !in_array($item->danhmuc,['DICH_VU_SPA','THUC_AN','DO_DUNG'],true)) {
                         throw new Exception('Chỉ được chọn dịch vụ, thức ăn hoặc đồ dùng ở bảng dịch vụ ngoài khám.');
                     }
-                    // Chỉ dịch vụ Spa có số lượng do nhân viên nhập; thức ăn/đồ dùng tính một sản phẩm mỗi lần thêm.
-                    $qty = $item->danhmuc === 'DICH_VU_SPA' ? (int)$line['quantity'] : 1;
+                    // Mỗi dịch vụ/sản phẩm ngoài khám chỉ được tính một lần, không nhập số lượng.
                     if ($item->danhmuc === 'DO_DUNG') {
                         if ((int)$item->soluongton < $qty) throw new Exception('Không đủ tồn kho: '.$item->ten_sanpham);
                         DB::table('inventory')->where('item_id',$item->item_id)->decrement('soluongton',$qty);
