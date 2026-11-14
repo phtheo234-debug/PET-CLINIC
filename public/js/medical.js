@@ -326,6 +326,9 @@ function updateMedicalSections() {
     if (!canRequestStay && checkbox) checkbox.checked = false;
     if (action === "TRANSFER") {
         selectedMedicalItems = [];
+        currentMedicalVaccination = null;
+        const vaccineSelect = document.getElementById("medicalVaccinationType");
+        if (vaccineSelect) vaccineSelect.value = "";
         renderSelectedMedicalItems();
     }
 }
@@ -618,6 +621,7 @@ function selectMedicalVaccination() {
         return;
     }
     // Mỗi mũi tiêm tự thêm đúng một liều vào danh sách xuất kho; backend trừ theo FEFO.
+    selectedMedicalItems = selectedMedicalItems.filter(item => Number(item.item_id) !== Number(stockItem.item_id));
     selectedMedicalItems.push({item_id:Number(stockItem.item_id), soluong:1, huongdan:"Tiêm phòng: " + type.name, isVaccination:true});
     currentMedicalVaccination = {vaccination_type_id:typeId, inventory_item_id:Number(stockItem.item_id), name:type.name};
     renderSelectedMedicalItems();
