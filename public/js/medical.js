@@ -1,3 +1,81 @@
+
+let surgeryCatalogItems = [];
+
+async function loadSurgeryCatalog() {
+    const body = document.getElementById("surgeryCatalogBody");
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Đang tải danh mục...</td></tr>';
+    try {
+        const response = await apiRequest("/surgeries");
+        surgeryCatalogItems = extractList(response);
+        renderSurgeryCatalog();
+    } catch (error) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Không tải được danh mục: ' + escapeMedicalHtml(error.message) + '</td></tr>';
+        console.error(error);
+    }
+}
+
+function renderSurgeryCatalog() {
+    const body = document.getElementById("surgeryCatalogBody");
+    if (!body) return;
+    body.innerHTML = surgeryCatalogItems.length ? surgeryCatalogItems.map(item => {
+        const active = Number(item.trangthai) === 1;
+        return '<tr><td>' + escapeMedicalHtml(item.ma_phauthuat) + '</td><td>' + escapeMedicalHtml(item.ten_phauthuat) +
+            '</td><td class="text-right">' + Number(item.gia || 0).toLocaleString("vi-VN") +
+            '</td><td>' + (active ? '<span class="badge badge-success">Đang áp dụng</span>' : '<span class="badge badge-secondary">Ngừng áp dụng</span>') +
+            '</td><td><button type="button" class="btn btn-sm btn-outline-primary mr-1" data-surgery-edit="' + Number(item.surgery_id) + '">Sửa</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger" data-surgery-delete="' + Number(item.surgery_id) + '">Xóa</button></td></tr>';
+    }).join("") : '<tr><td colspan="5" class="text-center text-muted">Chưa có loại phẫu thuật.</td></tr>';
+}
+
+function openSurgeryForm(id = null) {
+    const item = surgeryCatalogItems.find(row => Number(row.surgery_id) === Number(id));
+    document.getElementById("surgeryForm").reset();
+    document.getElementById("surgery_form_id").value = item ? item.surgery_id : "";
+    document.getElementById("surgeryFormTitle").textContent = item ? "Cập nhật loại phẫu thuật" : "Thêm loại phẫu thuật";
+    document.getElementById("surgery_code").value = item?.ma_phauthuat || "";
+    document.getElementById("surgery_name").value = item?.ten_phauthuat || "";
+    document.getElementById("surgery_price").value = item?.gia ?? "";
+    document.getElementById("surgery_status").value = item && !Number(item.trangthai) ? "0" : "1";
+    $("#surgeryFormModal").modal("show");
+}
+
+async function handleSurgeryCatalogAction(event) {
+    const edit = event.target.closest("[data-surgery-edit]");
+    const del = event.target.closest("[data-surgery-delete]");
+    if (edit) openSurgeryForm(Number(edit.dataset.surgeryEdit));
+    if (del) {
+        const id = Number(del.dataset.surgeryDelete);
+        if (!confirm("Bạn có chắc muốn xóa/ngừng áp dụng loại phẫu thuật này?")) return;
+        try {
+            const result = await apiRequest("/admin/surgeries/" + id, {method:"DELETE"});
+            alert(result.message || "Đã cập nhật danh mục phẫu thuật.");
+            await Promise.all([loadSurgeryCatalog(), loadSurgeryTypes()]);
+        } catch (error) { alert(error.message); }
+    }
+}
+
+async function saveSurgery(event) {
+    event.preventDefault();
+    const id = document.getElementById("surgery_form_id").value;
+    const payload = {
+        ma_phauthuat: document.getElementById("surgery_code").value.trim(),
+        ten_phauthuat: document.getElementById("surgery_name").value.trim(),
+        gia: Number(document.getElementById("surgery_price").value),
+        trangthai: document.getElementById("surgery_status").value === "1"
+    };
+    const button = document.getElementById("btnSaveSurgery");
+    button.disabled = true;
+    try {
+        await apiRequest(id ? "/admin/surgeries/" + id : "/admin/surgeries", {
+            method: id ? "PUT" : "POST", body: JSON.stringify(payload)
+        });
+        $("#surgeryFormModal").modal("hide");
+        await Promise.all([loadSurgeryCatalog(), loadSurgeryTypes()]);
+    } catch (error) { alert(error.message); }
+    finally { button.disabled = false; }
+}
+
 async function loadMedicalInventory() {
     const select = document.getElementById("medicalInventorySelect");
     const search = document.getElementById("medicalInventorySearch");
@@ -193,7 +271,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     actionSelect?.addEventListener("change", updateMedicalSections);
     document.getElementById("yeu_cau_cach_ly")?.addEventListener("change", updateMedicalSections);
     loadSurgeryTypes();
+    loadSurgeryCatalog();
     updateMedicalSections();
+    document.getElementById("surgeryForm")?.addEventListener("submit", saveSurgery);
+    document.getElementById("surgeryCatalogBody")?.addEventListener("click", handleSurgeryCatalogAction);
 
     document
         .getElementById("cannangkhi_kham")
@@ -327,13 +408,14 @@ async function loadSurgeryTypes() {
 function updateMedicalSections() {
     const action = document.getElementById("huong_xuly")?.value;
     const checkbox = document.getElementById("yeu_cau_cach_ly");
+    const isTransfer = action === "TRANSFER";
     const canRequestStay = ["OUTPATIENT", "INPATIENT", "SURGERY"].includes(action);
-    const showMedicine = ["OUTPATIENT", "INPATIENT", "SURGERY"].includes(action);
     document.getElementById("isolationOption")?.classList.toggle("d-none", !canRequestStay);
-    document.getElementById("medicalInventorySection")?.classList.toggle("d-none", !showMedicine);
+    document.getElementById("medicalInventorySection")?.classList.toggle("d-none", isTransfer || action === "SURGERY");
+    document.getElementById("medicalVaccinationSection")?.classList.toggle("d-none", isTransfer);
     document.getElementById("medicalSurgerySection")?.classList.toggle("d-none", action !== "SURGERY");
     if (!canRequestStay && checkbox) checkbox.checked = false;
-    if (action === "TRANSFER") {
+    if (isTransfer) {
         selectedMedicalItems = [];
         currentMedicalVaccination = null;
         const vaccineSelect = document.getElementById("medicalVaccinationSearch");
