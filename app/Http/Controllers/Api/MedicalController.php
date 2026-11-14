@@ -160,6 +160,11 @@ class MedicalController extends Controller
             'items.*.item_id' => 'required|integer|exists:inventory,item_id',
             'items.*.soluong' => 'required|integer|min:1',
             'items.*.huongdan' => 'nullable|string|max:1000',
+            'vaccination' => 'nullable|array',
+            'vaccination.vaccination_type_id' => 'required_with:vaccination|integer|exists:vaccination_types,vaccination_type_id',
+            'vaccination.vaccinated_at' => 'required_with:vaccination|date',
+            'vaccination.next_due_date' => 'nullable|date|after_or_equal:vaccination.vaccinated_at',
+            'vaccination.notes' => 'nullable|string|max:2000',
         ]);
 
         try {
@@ -229,6 +234,34 @@ class MedicalController extends Controller
                         'created_at' => now(), 'updated_at' => now(),
                     ]);
                 }
+                // Ghi nhận mũi tiêm trong cùng giao dịch với phiếu khám và xuất kho.
+                if (!empty($fields['vaccination'])) {
+                    $vaccination = $fields['vaccination'];
+                    $vaccineType = DB::table('vaccination_types')
+                        ->where('vaccination_type_id', $vaccination['vaccination_type_id'])
+                        ->where('is_active', true)->first();
+                    if (!$vaccineType || !$vaccineType->inventory_item_id) {
+                        throw new Exception('Loại vắc-xin chưa được liên kết với mặt hàng trong kho.');
+                    }
+                    $includedDose = collect($fields['items'] ?? [])->contains(function ($usedItem) use ($vaccineType) {
+                        return (int) $usedItem['item_id'] === (int) $vaccineType->inventory_item_id
+                            && (int) $usedItem['soluong'] === 1;
+                    });
+                    if (!$includedDose) {
+                        throw new Exception('Không tìm thấy đúng 1 liều vắc-xin trong danh sách xuất kho.');
+                    }
+                    DB::table('pet_vaccinations')->insert([
+                        'pet_id' => $fields['pet_id'],
+                        'vaccination_type_id' => $vaccineType->vaccination_type_id,
+                        'vaccinated_at' => $vaccination['vaccinated_at'],
+                        'next_due_date' => $vaccination['next_due_date'] ?? null,
+                        'notes' => $vaccination['notes'] ?? null,
+                        'administered_by' => $request->user()->user_id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
                 $boardingRequest = null;
                 $alreadyBoarded = false;
 
