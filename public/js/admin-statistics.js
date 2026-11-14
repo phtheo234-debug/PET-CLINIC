@@ -122,11 +122,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         const popup = window.open("", "_blank", "width=850,height=650");
         if (!popup) { alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép pop-up rồi thử lại."); return; }
         const htmlRows = rows.map(row => "<tr><td>" + escapeHtml(row[0]) + "</td><td>" + escapeHtml(row[1]) + "</td></tr>").join("");
+        popup.document.open();
         popup.document.write("<!doctype html><html lang='vi'><head><meta charset='utf-8'><title>" + escapeHtml(title) +
-            "</title><style>body{font-family:Arial;padding:28px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}td,th{border:1px solid #999;padding:9px}th{background:#eee}td:last-child{text-align:right}</style></head><body><h2>" +
+            "</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#222}h2{text-align:center;margin-bottom:24px}table{width:100%;border-collapse:collapse;margin-top:20px}td,th{border:1px solid #999;padding:10px}th{background:#eee;text-align:left}td:last-child{text-align:right}.print-date{text-align:right;color:#666;font-size:12px;margin-top:24px}</style></head><body><h2>" +
             escapeHtml(title) + "</h2><table><thead><tr><th>Nội dung</th><th>Giá trị</th></tr></thead><tbody>" + htmlRows +
-            "</tbody></table><script>window.onload=()=>window.print();<\/script></body></html>");
+            "</tbody></table><p class='print-date'>Ngày in: " + escapeHtml(new Date().toLocaleString('vi-VN')) +
+            "</p></body></html>");
         popup.document.close();
+        popup.focus();
+        // Gọi lệnh in sau khi cửa sổ đã được ghi nội dung.
+        window.setTimeout(() => {
+            if (!popup.closed) popup.print();
+        }, 300);
     };
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
