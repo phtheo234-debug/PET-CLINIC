@@ -69,7 +69,7 @@
                 </div>
                 <div class="form-group col-md-4">
                     <label class="font-weight-bold">Hướng xử lý / Kết luận</label>
-                    <select id="huong_xuly" class="form-control">
+                    <select id="huong_xuly" class="form-control" onchange="updateMedicalSections()">
                         <option value="OUTPATIENT">1. Điều trị ngoại trú (Kê đơn về nhà)</option>
                         <option value="INPATIENT">2. Nhập viện nội trú (Tạo yêu cầu lưu trú)</option>
                         <option value="SURGERY">3. Chỉ định Phẫu thuật (Tạo yêu cầu lồng ICU)</option>
