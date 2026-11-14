@@ -98,6 +98,10 @@ function renderMedicalCharges(c) {
 }
 function renderExtraItemOptions() {
     const category=document.getElementById("extraCategory").value;
+    const quantityGroup=document.getElementById("extraQuantityGroup");
+    const isService=category==="DICH_VU_SPA";
+    quantityGroup.classList.toggle("d-none",!isService);
+    document.querySelector("#extraQuantityGroup label").textContent="Số lượng dịch vụ";
     const items=paymentCatalog.filter(x=>x.danhmuc===category);
     document.getElementById("extraItem").innerHTML='<option value="">-- Chọn sản phẩm / dịch vụ --</option>'+items.map(x=>'<option value="'+Number(x.item_id)+'">'+escapeInvoiceHtml(x.masanpham)+' - '+escapeInvoiceHtml(x.ten_sanpham)+' ('+invoiceMoney(x.dongia)+')</option>').join("");
     updateExtraUnitPrice();
@@ -109,15 +113,15 @@ function updateExtraUnitPrice() {
 }
 function addExtraCharge() {
     const id=Number(document.getElementById("extraItem").value), item=paymentCatalog.find(x=>Number(x.item_id)===id);
-    const qty=Number(document.getElementById("extraQuantity").value);
-    if(!item||!Number.isInteger(qty)||qty<1){alert("Vui lòng chọn mặt hàng và số lượng hợp lệ.");return;}
+    const qty=item&&item.danhmuc==="DICH_VU_SPA"?Number(document.getElementById("extraQuantity").value):1;
+    if(!item||(item.danhmuc==="DICH_VU_SPA"&&(!Number.isInteger(qty)||qty<1))){alert("Vui lòng chọn sản phẩm/dịch vụ và nhập số lượng dịch vụ hợp lệ.");return;}
     const old=extraChargeLines.find(x=>x.item_id===id);
     if(old)old.quantity+=qty;else extraChargeLines.push({item_id:id,name:item.ten_sanpham,category:item.danhmuc,quantity:qty,price:Number(item.dongia),unit:item.donvitinh||""});
     document.getElementById("extraQuantity").value=1; renderExtraCharges(); recalculatePayment();
 }
 function renderExtraCharges() {
     const body=document.getElementById("extraItemsBody");
-    body.innerHTML=extraChargeLines.length?extraChargeLines.map((x,i)=>'<tr><td>'+invoiceCategoryLabel(x.category)+'</td><td>'+escapeInvoiceHtml(x.name)+'</td><td>'+x.quantity+' '+escapeInvoiceHtml(x.unit)+'</td><td>'+invoiceMoney(x.price)+'</td><td>'+invoiceMoney(x.price*x.quantity)+'</td><td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExtraCharge('+i+')">Xóa</button></td></tr>').join(""):'<tr><td colspan="6" class="text-center text-muted">Chưa chọn dịch vụ ngoài khám.</td></tr>';
+    body.innerHTML=extraChargeLines.length?extraChargeLines.map((x,i)=>'<tr><td>'+invoiceCategoryLabel(x.category)+'</td><td>'+escapeInvoiceHtml(x.name)+'</td><td>'+(x.category==="DICH_VU_SPA"?x.quantity+" "+escapeInvoiceHtml(x.unit):"-")+'</td><td>'+invoiceMoney(x.price)+'</td><td>'+invoiceMoney(x.price*x.quantity)+'</td><td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExtraCharge('+i+')">Xóa</button></td></tr>').join(""):'<tr><td colspan="6" class="text-center text-muted">Chưa chọn dịch vụ ngoài khám.</td></tr>';
 }
 function removeExtraCharge(i){extraChargeLines.splice(i,1);renderExtraCharges();recalculatePayment();}
 function recalculatePayment() {
