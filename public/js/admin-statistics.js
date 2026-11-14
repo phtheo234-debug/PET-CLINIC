@@ -152,8 +152,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     $("chonNgay").value = dateValue(today);
     $("chonTuan").value = dateValue(today);
-    $("chonThang").value = monthValue(today);
-    $("chonNam").value = today.getFullYear();
+    // Giữ tháng/năm hiện tại do Laravel render; fallback nếu input chưa có giá trị.
+    if (!$("chonThang").value) $("chonThang").value = monthValue(today);
+    if (!$("chonNam").value) $("chonNam").value = today.getFullYear();
 
     $("btnNgay").addEventListener("click", loadStatistics);
     $("btnTuan").addEventListener("click", loadStatistics);
