@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class VaccinationController extends Controller
 {
@@ -18,92 +17,6 @@ class VaccinationController extends Controller
                 ->orderBy('vaccination_type_id')
                 ->get(['vaccination_type_id as id', 'name', 'inventory_item_id']),
         ]);
-    }
-
-    public function storeType(Request $request)
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:vaccination_types,name'],
-        ]);
-
-        $id = DB::transaction(function () use ($data) {
-            do {
-                $code = 'VX-' . now()->format('Ymd') . '-' . str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
-            } while (DB::table('inventory')->where('masanpham', $code)->exists());
-
-            $itemId = DB::table('inventory')->insertGetId([
-                'masanpham' => $code,
-                'ten_sanpham' => trim($data['name']),
-                'danhmuc' => 'VAC_XIN',
-                'donvitinh' => 'liều',
-                'dongia' => 0,
-                'tonkhotoithieu' => 0,
-            ]);
-
-            return DB::table('vaccination_types')->insertGetId([
-                'name' => trim($data['name']),
-                'is_active' => true,
-                'inventory_item_id' => $itemId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        });
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Đã thêm loại vắc-xin.',
-            'data' => DB::table('vaccination_types')->where('vaccination_type_id', $id)->first(),
-        ], 201);
-    }
-
-    public function updateType(Request $request, $id)
-    {
-        $type = DB::table('vaccination_types')->where('vaccination_type_id', $id)->first();
-        abort_if(!$type, 404, 'Không tìm thấy loại vắc-xin.');
-
-        $data = $request->validate([
-            'name' => [
-                'required', 'string', 'max:100',
-                Rule::unique('vaccination_types', 'name')->ignore($id, 'vaccination_type_id'),
-            ],
-        ]);
-
-        DB::transaction(function () use ($id, $data, $type) {
-            DB::table('vaccination_types')->where('vaccination_type_id', $id)->update([
-                'name' => trim($data['name']),
-                'updated_at' => now(),
-            ]);
-            if ($type->inventory_item_id) {
-                DB::table('inventory')->where('item_id', $type->inventory_item_id)->update([
-                    'ten_sanpham' => trim($data['name']),
-                ]);
-            }
-        });
-
-        return response()->json(['status' => 'success', 'message' => 'Đã cập nhật tên vắc-xin.']);
-    }
-
-    public function destroyType($id)
-    {
-        $type = DB::table('vaccination_types')->where('vaccination_type_id', $id)->first();
-        abort_if(!$type, 404, 'Không tìm thấy loại vắc-xin.');
-
-        $hasHistory = DB::table('pet_vaccinations')
-            ->where('vaccination_type_id', $id)->exists();
-
-        if ($hasHistory) {
-            DB::table('vaccination_types')->where('vaccination_type_id', $id)->update([
-                'is_active' => false,
-                'updated_at' => now(),
-            ]);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Loại vắc-xin đã có lịch sử nên được ngừng sử dụng; dữ liệu tiêm cũ vẫn được giữ.',
-            ]);
-        }
-
-        DB::table('vaccination_types')->where('vaccination_type_id', $id)->delete();
-        return response()->json(['status' => 'success', 'message' => 'Đã xóa loại vắc-xin khỏi danh mục tiêm. Mặt hàng trong kho được giữ lại để bảo toàn lịch sử kho.']);
     }
 
     public function petIndex($petId)
