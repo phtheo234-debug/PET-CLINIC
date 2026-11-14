@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\MedicalController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\SpaUsageController;
 use App\Http\Controllers\Api\SurgeryController;
+use App\Http\Controllers\Api\VaccinationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +63,11 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::post('/spa-services', [AdminSpaServiceController::class, 'store']);
         Route::put('/spa-services/{id}', [AdminSpaServiceController::class, 'update']);
         Route::delete('/spa-services/{id}', [AdminSpaServiceController::class, 'destroy']);
+
+        // Quản lý danh mục vắc-xin: chỉ quản trị viên.
+        Route::post('/vaccination-types', [VaccinationController::class, 'storeType']);
+        Route::put('/vaccination-types/{id}', [VaccinationController::class, 'updateType']);
+        Route::delete('/vaccination-types/{id}', [VaccinationController::class, 'destroyType']);
     });
 
     // Hồ sơ thú cưng: mọi vai trò được xem; nhân viên/quản trị tiếp nhận và xóa;
@@ -73,6 +79,13 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::patch('/pets/{pet}', [PetController::class, 'update'])->middleware('role:QUAN_TRI,BAC_SI,NHAN_VIEN');
     Route::delete('/pets/{pet}', [PetController::class, 'destroy'])->middleware('role:QUAN_TRI,NHAN_VIEN');
     Route::get('/owners', [PetController::class, 'owners']);
+
+    // Lịch tiêm chủng: xem lịch/danh mục; ghi nhận và xóa lần tiêm dành cho nhân viên, bác sĩ, quản trị.
+    Route::get('/vaccinations/types', [VaccinationController::class, 'types']);
+    Route::get('/vaccinations/schedule', [VaccinationController::class, 'schedule']);
+    Route::get('/pets/{pet}/vaccinations', [VaccinationController::class, 'petIndex']);
+    Route::post('/pets/{pet}/vaccinations', [VaccinationController::class, 'storeForPet'])->middleware('role:QUAN_TRI,BAC_SI,NHAN_VIEN');
+    Route::delete('/pets/{pet}/vaccinations/{id}', [VaccinationController::class, 'destroyForPet'])->middleware('role:QUAN_TRI,BAC_SI,NHAN_VIEN');
 
     // Lồng: tất cả được xem; hệ thống đề xuất, nhân viên/quản trị xác nhận xếp lồng.
     Route::get('/boarding/cages', [BoardingController::class, 'index']);

@@ -67,6 +67,64 @@ document.addEventListener("DOMContentLoaded", async () => {
         addPetButton.classList.remove("d-none");
     }
 
+    const manageVaccinesButton = document.getElementById("btnManageVaccines");
+    if (manageVaccinesButton && currentUserRole === "QUAN_TRI") {
+        manageVaccinesButton.classList.remove("d-none");
+    }
+
+    $("#manageVaccinesModal").on("show.bs.modal", () => loadVaccineTypes(true));
+    $("#vaccinationScheduleModal").on("show.bs.modal", loadVaccinationSchedule);
+
+    document.getElementById("vaccineTypeForm")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const input = document.getElementById("newVaccineTypeName");
+        const name = input.value.trim();
+        if (!name) return;
+        try {
+            await apiRequest("/admin/vaccination-types", {
+                method: "POST",
+                body: JSON.stringify({ name })
+            });
+            input.value = "";
+            await loadVaccineTypes(true);
+            alert("Đã thêm loại vắc-xin.");
+        } catch (error) {
+            alert("Không thêm được loại vắc-xin: " + error.message);
+        }
+    });
+
+    document.getElementById("vaccineTypesTable")?.addEventListener("click", async event => {
+        const editButton = event.target.closest("[data-edit-vaccine]");
+        const deleteButton = event.target.closest("[data-delete-vaccine]");
+        if (editButton) {
+            const id = Number(editButton.dataset.editVaccine);
+            const oldName = editButton.dataset.name || "";
+            const name = prompt("Nhập tên mới cho loại vắc-xin:", oldName);
+            if (name === null || !name.trim()) return;
+            try {
+                await apiRequest("/admin/vaccination-types/" + id, {
+                    method: "PUT",
+                    body: JSON.stringify({ name: name.trim() })
+                });
+                await loadVaccineTypes(true);
+                alert("Đã cập nhật tên loại vắc-xin.");
+            } catch (error) {
+                alert("Không sửa được loại vắc-xin: " + error.message);
+            }
+        }
+        if (deleteButton) {
+            const id = Number(deleteButton.dataset.deleteVaccine);
+            if (!confirm("Bạn có chắc muốn xóa/ngừng sử dụng loại vắc-xin này?")) return;
+            try {
+                const result = await apiRequest("/admin/vaccination-types/" + id, { method: "DELETE" });
+                await loadVaccineTypes(true);
+                alert(result?.message || "Đã xóa loại vắc-xin.");
+            } catch (error) {
+                alert("Không xóa được loại vắc-xin: " + error.message);
+            }
+        }
+    });
+
     // Tự động điền mã thú cưng khi mở modal tiếp nhận
     $("#addPetModal").on("show.bs.modal", function () {
         const codeInput = document.getElementById("mathucung");
@@ -425,6 +483,10 @@ async function openPetDetail(petId) {
                 ${examStatusControl}
             </div>
 
+            <div id="petVaccinationSection" class="card border-0 bg-light mb-4">
+                <div class="card-body"><h6 class="font-weight-bold text-primary"><i class="fas fa-syringe mr-1"></i>Lịch sử tiêm chủng</h6><div class="text-muted small">Đang tải lịch tiêm...</div></div>
+            </div>
+
             <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-history mr-1"></i>Lịch sử khám bệnh</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
@@ -433,6 +495,50 @@ async function openPetDetail(petId) {
                 </table>
             </div>
         `;
+
+        await loadPetVaccinations(petId);
+
+        content.querySelector("#petVaccinationSection")?.addEventListener("submit", async event => {
+            if (event.target.id !== "petVaccinationForm") return;
+            event.preventDefault();
+            const form = event.target;
+            const payload = {
+                vaccination_type_id: Number(form.querySelector("[name=vaccination_type_id]").value),
+                vaccinated_at: form.querySelector("[name=vaccinated_at]").value,
+                next_due_date: form.querySelector("[name=next_due_date]").value || null,
+                notes: form.querySelector("[name=notes]").value.trim() || null
+            };
+            if (!payload.vaccination_type_id || !payload.vaccinated_at) {
+                alert("Vui lòng chọn vắc-xin và nhập ngày tiêm.");
+                return;
+            }
+            const submit = form.querySelector("button[type=submit]");
+            submit.disabled = true;
+            try {
+                await apiRequest("/pets/" + petId + "/vaccinations", {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                await loadPetVaccinations(petId);
+                alert("Đã lưu lịch sử tiêm chủng.");
+            } catch (error) {
+                alert("Không lưu được lịch tiêm: " + error.message);
+            } finally {
+                submit.disabled = false;
+            }
+        });
+
+        content.querySelector("#petVaccinationSection")?.addEventListener("click", async event => {
+            const button = event.target.closest("[data-delete-vaccination]");
+            if (!button) return;
+            if (!confirm("Xóa lần ghi nhận tiêm chủng này?")) return;
+            try {
+                await apiRequest("/pets/" + petId + "/vaccinations/" + button.dataset.deleteVaccination, { method: "DELETE" });
+                await loadPetVaccinations(petId);
+            } catch (error) {
+                alert("Không xóa được bản ghi: " + error.message);
+            }
+        });
 
         document.getElementById("btnUpdatePetWeight").addEventListener("click", async () => {
             const input = document.getElementById("detailPetWeight");
@@ -490,4 +596,86 @@ async function printPetProfile(petId) {
             "</tbody></table><script>window.onload=function(){window.print();};<\\/script></body></html>");
         w.document.close();
     } catch (error) { alert("Không thể in hồ sơ thú cưng: " + error.message); }
+}
+
+
+// Danh mục vắc-xin: quản trị viên có quyền thêm, sửa, xóa.
+async function loadVaccineTypes(showInactive = false) {
+    const tbody = document.getElementById("vaccineTypesTable");
+    try {
+        const response = await apiRequest("/vaccinations/types");
+        const types = extractList(response);
+        if (tbody) {
+            tbody.innerHTML = types.length ? types.map((item, index) => `
+                <tr><td>${index + 1}</td><td>${escapePetHtml(item.name)}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-primary mr-1" data-edit-vaccine="${Number(item.id)}" data-name="${escapePetHtml(item.name)}"><i class="fas fa-edit"></i> Sửa</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-delete-vaccine="${Number(item.id)}"><i class="fas fa-trash"></i> Xóa</button>
+                </td></tr>`).join("") : '<tr><td colspan="3" class="text-center text-muted">Chưa có loại vắc-xin đang hoạt động.</td></tr>';
+        }
+        return types;
+    } catch (error) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-danger text-center">' + escapePetHtml(error.message) + '</td></tr>';
+        return [];
+    }
+}
+
+// Tải và hiển thị lịch tiêm của một thú cưng.
+async function loadPetVaccinations(petId) {
+    const section = document.getElementById("petVaccinationSection");
+    if (!section) return;
+    try {
+        const [typeResponse, recordResponse] = await Promise.all([
+            apiRequest("/vaccinations/types"),
+            apiRequest("/pets/" + petId + "/vaccinations")
+        ]);
+        const types = extractList(typeResponse);
+        const records = extractList(recordResponse);
+        const canWrite = ["QUAN_TRI", "BAC_SI", "NHAN_VIEN"].includes(currentUserRole);
+        const rows = records.length ? records.map(item => `
+            <tr><td>${escapePetHtml(item.vaccine_name)}</td><td>${escapePetHtml(item.vaccinated_at)}</td>
+            <td>${escapePetHtml(item.next_due_date || "Chưa hẹn")}</td><td>${escapePetHtml(item.notes || "-")}</td>
+            <td>${canWrite ? '<button type="button" class="btn btn-sm btn-outline-danger" data-delete-vaccination="' + Number(item.id) + '" title="Xóa bản ghi"><i class="fas fa-trash"></i></button>' : ""}</td></tr>`).join("") : '<tr><td colspan="5" class="text-center text-muted">Chưa có lịch sử tiêm chủng.</td></tr>';
+        section.innerHTML = `
+            <div class="card-body">
+                <h6 class="font-weight-bold text-primary"><i class="fas fa-syringe mr-1"></i>Lịch sử tiêm chủng</h6>
+                <div class="table-responsive mb-3"><table class="table table-sm table-bordered bg-white mb-0">
+                    <thead class="thead-light"><tr><th>Loại vắc-xin</th><th>Ngày tiêm</th><th>Hẹn tiêm tiếp</th><th>Ghi chú</th><th></th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table></div>
+                ${canWrite ? `
+                <form id="petVaccinationForm">
+                    <div class="form-row">
+                        <div class="form-group col-md-4"><label>Loại vắc-xin</label><select class="form-control" name="vaccination_type_id" required><option value="">-- Chọn vắc-xin --</option>${types.map(type => '<option value="' + Number(type.id) + '">' + escapePetHtml(type.name) + '</option>').join("")}</select></div>
+                        <div class="form-group col-md-3"><label>Ngày tiêm</label><input type="date" class="form-control" name="vaccinated_at" required></div>
+                        <div class="form-group col-md-3"><label>Ngày hẹn tiếp</label><input type="date" class="form-control" name="next_due_date"></div>
+                        <div class="form-group col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save mr-1"></i>Lưu</button></div>
+                    </div>
+                    <div class="form-group mb-0"><label>Ghi chú</label><input type="text" class="form-control" name="notes" maxlength="2000" placeholder="Số lô, phản ứng sau tiêm..."></div>
+                </form>` : ""}
+            </div>`;
+    } catch (error) {
+        section.innerHTML = '<div class="card-body"><div class="text-danger">Không tải được lịch tiêm: ' + escapePetHtml(error.message) + '</div></div>';
+    }
+}
+
+// Lịch tiêm toàn phòng khám, đánh dấu quá hạn và sắp đến hạn.
+async function loadVaccinationSchedule() {
+    const tbody = document.getElementById("vaccinationScheduleTable");
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Đang tải...</td></tr>';
+    try {
+        const response = await apiRequest("/vaccinations/schedule");
+        const rows = extractList(response);
+        tbody.innerHTML = rows.length ? rows.map(item => {
+            const status = item.status === "QUA_HAN"
+                ? '<span class="badge badge-danger">Quá hạn</span>'
+                : item.status === "SAP_DEN_HAN"
+                    ? '<span class="badge badge-warning">Sắp đến hạn</span>'
+                    : '<span class="badge badge-success">Còn hạn</span>';
+            return '<tr><td>' + escapePetHtml(item.mathucung) + '</td><td>' + escapePetHtml(item.ten_thucung) + '</td><td>' + escapePetHtml(item.owner_name || "-") + '<br><small>' + escapePetHtml(item.owner_phone || "") + '</small></td><td>' + escapePetHtml(item.vaccine_name) + '</td><td>' + escapePetHtml(item.vaccinated_at) + '</td><td>' + escapePetHtml(item.next_due_date) + '</td><td>' + status + '</td></tr>';
+        }).join("") : '<tr><td colspan="7" class="text-center text-muted">Chưa có lịch hẹn tiêm chủng.</td></tr>';
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-danger text-center">' + escapePetHtml(error.message) + '</td></tr>';
+    }
 }
