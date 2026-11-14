@@ -27,6 +27,11 @@ class AdminInventoryController extends Controller
             'solo' => 'nullable|string|max:50|regex:/^LO-[0-9]{8}-[0-9]{6}$/',
         ]);
 
+        if ($fields['danhmuc'] === 'VAC_XIN'
+            && DB::table('vaccination_types')->where('name', $fields['ten_sanpham'])->whereNotNull('inventory_item_id')->exists()) {
+            return response()->json(['status' => 'error', 'message' => 'Tên vắc-xin này đã có trong kho. Hãy mở mặt hàng hiện có để cập nhật hoặc nhập thêm lô.'], 422);
+        }
+
         if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0 && (empty($fields['ngaysanxuat']) || empty($fields['ngayhethan']))) {
             return response()->json(['status' => 'error', 'message' => 'Khi thêm số lượng thuốc, vắc-xin hoặc thức ăn, cần nhập ngày sản xuất và hạn sử dụng.'], 422);
         }
@@ -50,6 +55,25 @@ class AdminInventoryController extends Controller
                     'ngayhethan' => $fields['ngayhethan'],
                     'trangthai' => 'DANG_SU_DUNG',
                 ]);
+            }
+
+            if ($fields['danhmuc'] === 'VAC_XIN') {
+                $existingType = DB::table('vaccination_types')->where('name', $fields['ten_sanpham'])->first();
+                if ($existingType) {
+                    DB::table('vaccination_types')->where('vaccination_type_id', $existingType->vaccination_type_id)->update([
+                        'inventory_item_id' => $id,
+                        'is_active' => true,
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    DB::table('vaccination_types')->insert([
+                        'name' => $fields['ten_sanpham'],
+                        'inventory_item_id' => $id,
+                        'is_active' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
 
             return DB::table('inventory')->where('item_id', $id)->first();

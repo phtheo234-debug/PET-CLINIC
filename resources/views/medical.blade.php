@@ -126,21 +126,21 @@
                     </div>
                 </div>
                 <div class="form-group col-md-12 d-none" id="medicalInventorySection">
-                    <label class="font-weight-bold">Thuốc / Vắc-xin sử dụng từ kho</label>
+                    <label class="font-weight-bold">Thuốc sử dụng từ kho</label>
                     <div class="form-row align-items-end">
                         <div class="form-group col-md-4 mb-2">
                             <label for="medicalInventorySearch">Mặt hàng trong kho</label>
-                            <input type="text" id="medicalInventorySearch" class="form-control" list="medicalInventorySuggestions" placeholder="Nhập tên hoặc mã thuốc/vắc-xin..." autocomplete="off">
+                            <input type="text" id="medicalInventorySearch" class="form-control" list="medicalInventorySuggestions" placeholder="Nhập tên hoặc mã thuốc..." autocomplete="off">
                             <datalist id="medicalInventorySuggestions"></datalist>
-                            <select id="medicalInventorySelect" class="d-none" aria-hidden="true" tabindex="-1"><option value="">-- Chọn thuốc hoặc vắc-xin --</option></select>
-                            <small class="form-text text-muted">Gõ tên hoặc mã để xem các mặt hàng liên quan còn trong kho.</small>
+                            <select id="medicalInventorySelect" class="d-none" aria-hidden="true" tabindex="-1"><option value="">-- Chọn thuốc --</option></select>
+                            <small class="form-text text-muted">Chỉ hiển thị thuốc còn tồn. Vắc-xin được chọn riêng ở phần Tiêm phòng phía trên.</small>
                         </div>
                         <div class="form-group col-md-2 mb-2"><label for="medicalInventoryQty">Số lượng</label><input type="number" id="medicalInventoryQty" class="form-control" min="1" step="1" value="1"></div>
                         <div class="form-group col-md-4 mb-2"><label for="medicalInventoryNote">Liều dùng / Hướng dẫn</label><input type="text" id="medicalInventoryNote" class="form-control" maxlength="1000" placeholder="VD: 1 viên/lần, ngày 2 lần..."></div>
                         <div class="form-group col-md-2 mb-2"><button type="button" id="btnAddMedicalItem" class="btn btn-outline-primary btn-block"><i class="fas fa-plus mr-1"></i>Thêm</button></div>
                     </div>
                     <div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr><th>Loại</th><th>Tên mặt hàng</th><th>Số lượng</th><th>Hướng dẫn</th><th></th></tr></thead><tbody id="medicalItemsBody"><tr><td colspan="5" class="text-center text-muted">Chưa chọn thuốc/vắc-xin</td></tr></tbody></table></div>
-                    <small class="form-text text-muted">Chỉ chọn thuốc/vắc-xin đã có trong kho và còn tồn. Khi lưu phiếu, hệ thống tự xuất kho theo hạn sử dụng gần nhất (FEFO).</small>
+                    <small class="form-text text-muted">Chỉ chọn thuốc còn tồn trong kho thuốc. Vắc-xin được tự động xuất từ kho vắc-xin khi ghi nhận tiêm phòng.</small>
                 </div>
             </div>
             <button type="submit" id="btnSaveMedical" class="btn btn-primary mr-2"><i class="fas fa-save mr-1"></i> Lưu Phiếu Khám</button>

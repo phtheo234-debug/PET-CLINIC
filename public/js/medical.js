@@ -7,17 +7,18 @@ async function loadMedicalInventory() {
         medicalInventoryItems = extractList(response).filter((item) =>
             ["THUOC", "VAC_XIN"].includes(item.danhmuc) && Number(item.tong_ton_kho) > 0
         );
-        select.innerHTML = '<option value="">-- Chọn thuốc hoặc vắc-xin --</option>' + medicalInventoryItems.map((item) =>
+        const medicineItems = medicalInventoryItems.filter(item => item.danhmuc === "THUOC");
+        select.innerHTML = '<option value="">-- Chọn thuốc --</option>' + medicineItems.map((item) =>
             '<option value="' + Number(item.item_id) + '">' + escapeMedicalHtml(item.ten_sanpham) + '</option>'
         ).join("");
-        suggestions.innerHTML = medicalInventoryItems.map((item) => {
+        suggestions.innerHTML = medicineItems.map((item) => {
             const code = item.masanpham ? item.masanpham + " - " : "";
-            const kind = item.danhmuc === "THUOC" ? "Thuốc" : "Vắc-xin";
+            const kind = "Thuốc";
             return '<option value="' + escapeMedicalHtml(code + item.ten_sanpham) + '">' +
                 escapeMedicalHtml(kind + " · còn " + Number(item.tong_ton_kho) + " " + (item.donvitinh || "")) + '</option>';
         }).join("");
-        if (!medicalInventoryItems.length) {
-            suggestions.innerHTML = '<option value="Kho chưa có thuốc/vắc-xin còn hàng"></option>';
+        if (!medicineItems.length) {
+            suggestions.innerHTML = '<option value="Kho thuốc chưa có mặt hàng còn hàng"></option>';
         }
         search.value = "";
         select.value = "";
@@ -33,7 +34,7 @@ function syncMedicalInventorySearch() {
     const value = search.value.trim().toLocaleLowerCase("vi");
     const item = medicalInventoryItems.find((entry) => {
         const codeName = ((entry.masanpham || "") + " - " + (entry.ten_sanpham || "")).toLocaleLowerCase("vi");
-        return value && (value === codeName || value === String(entry.ten_sanpham || "").toLocaleLowerCase("vi"));
+        return entry.danhmuc === "THUOC" && value && (value === codeName || value === String(entry.ten_sanpham || "").toLocaleLowerCase("vi"));
     });
     select.value = item ? String(item.item_id) : "";
     return item || null;
@@ -613,7 +614,7 @@ function selectMedicalVaccination() {
     currentMedicalVaccination = null;
     if (!typeId) { renderSelectedMedicalItems(); return; }
     const type = medicalVaccinationTypes.find(item => Number(item.id) === typeId);
-    const stockItem = medicalInventoryItems.find(item => Number(item.item_id) === Number(type?.inventory_item_id));
+    const stockItem = medicalInventoryItems.find(item => item.danhmuc === "VAC_XIN" && Number(item.item_id) === Number(type?.inventory_item_id));
     if (!type || !stockItem || stockItem.danhmuc !== "VAC_XIN" || Number(stockItem.tong_ton_kho) < 1) {
         alert("Vắc-xin này chưa có lô hàng còn hạn hoặc đã hết tồn. Vui lòng kiểm tra kho.");
         select.value = "";
