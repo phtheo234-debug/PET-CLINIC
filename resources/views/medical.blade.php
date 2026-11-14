@@ -110,7 +110,11 @@
                     <div class="border rounded p-3 bg-light">
                         <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-syringe mr-1"></i>Tiêm phòng trong lần khám này</h6>
                         <div class="form-row">
-                            <div class="form-group col-md-3"><label for="medicalVaccinationType">Loại vắc-xin</label><select id="medicalVaccinationType" class="form-control"><option value="">-- Không ghi nhận tiêm --</option></select></div>
+                            <div class="form-group col-md-3">
+                                <label for="medicalVaccinationSearch">Loại vắc-xin</label>
+                                <input type="text" id="medicalVaccinationSearch" class="form-control" list="medicalVaccinationSuggestions" placeholder="Nhập tên hoặc mã vắc-xin..." autocomplete="off">
+                                <datalist id="medicalVaccinationSuggestions"></datalist>
+                            </div>
                             <div class="form-group col-md-2"><label for="medicalVaccinatedAt">Ngày tiêm</label><input type="date" id="medicalVaccinatedAt" class="form-control"></div>
                             <div class="form-group col-md-2"><label for="medicalNextDueDate">Ngày hẹn tiếp</label><input type="date" id="medicalNextDueDate" class="form-control"></div>
                             <div class="form-group col-md-5"><label for="medicalVaccinationNote">Ghi chú</label><input type="text" id="medicalVaccinationNote" class="form-control" maxlength="2000" placeholder="Số lô, phản ứng sau tiêm..."></div>
