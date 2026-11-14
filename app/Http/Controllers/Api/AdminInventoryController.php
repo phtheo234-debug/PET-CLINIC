@@ -52,6 +52,25 @@ class AdminInventoryController extends Controller
                 ]);
             }
 
+            if ($fields['danhmuc'] === 'VAC_XIN') {
+                $existingType = DB::table('vaccination_types')->where('name', $fields['ten_sanpham'])->first();
+                if ($existingType) {
+                    DB::table('vaccination_types')->where('vaccination_type_id', $existingType->vaccination_type_id)->update([
+                        'inventory_item_id' => $id,
+                        'is_active' => true,
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    DB::table('vaccination_types')->insert([
+                        'name' => $fields['ten_sanpham'],
+                        'inventory_item_id' => $id,
+                        'is_active' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
             return DB::table('inventory')->where('item_id', $id)->first();
         });
 
