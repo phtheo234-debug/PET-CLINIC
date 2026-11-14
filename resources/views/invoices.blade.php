@@ -28,7 +28,7 @@
  <div class="card-body"><div class="form-row align-items-end">
   <div class="form-group col-md-3"><label for="extraCategory">Danh mục</label><select id="extraCategory" class="form-control"><option value="DICH_VU_SPA">Dịch vụ</option><option value="THUC_AN">Thức ăn</option><option value="DO_DUNG">Đồ dùng</option></select></div>
   <div class="form-group col-md-4"><label for="extraItem">Sản phẩm / dịch vụ</label><select id="extraItem" class="form-control"><option value="">-- Chọn --</option></select></div>
-  <div class="form-group col-md-2"><label for="extraQuantity">Số lượng</label><input type="number" id="extraQuantity" class="form-control" min="1" step="1" value="1"></div>
+  <div class="form-group col-md-2" id="extraQuantityGroup"><label for="extraQuantity">Số lượng dịch vụ</label><input type="number" id="extraQuantity" class="form-control" min="1" step="1" value="1"></div>
   <div class="form-group col-md-3"><label>Đơn giá (VND)</label><input id="extraUnitPrice" class="form-control bg-light" readonly value="0 ₫"></div>
  </div><div class="text-right mb-3"><button type="button" id="btnAddExtraItem" class="btn btn-outline-warning"><i class="fas fa-plus mr-1"></i>Thêm vào hóa đơn</button></div>
  <div class="table-responsive"><table class="table table-bordered table-sm"><thead class="thead-light"><tr><th>Danh mục</th><th>Tên sản phẩm / dịch vụ</th><th>Số lượng</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th><th></th></tr></thead><tbody id="extraItemsBody"><tr><td colspan="6" class="text-center text-muted">Chưa chọn dịch vụ ngoài khám.</td></tr></tbody></table></div>
