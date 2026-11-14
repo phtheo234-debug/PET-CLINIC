@@ -106,6 +106,25 @@
                     </select>
                     <small class="form-text text-muted">Giá phẫu thuật được lấy từ danh mục phẫu thuật của phòng khám.</small>
                 </div>
+                <div class="form-group col-md-12" id="medicalVaccinationSection">
+                    <div class="border rounded p-3 bg-light">
+                        <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-syringe mr-1"></i>Tiêm phòng trong lần khám này</h6>
+                        <div class="form-row">
+                            <div class="form-group col-md-3"><label for="medicalVaccinationType">Loại vắc-xin</label><select id="medicalVaccinationType" class="form-control"><option value="">-- Không ghi nhận tiêm --</option></select></div>
+                            <div class="form-group col-md-2"><label for="medicalVaccinatedAt">Ngày tiêm</label><input type="date" id="medicalVaccinatedAt" class="form-control"></div>
+                            <div class="form-group col-md-2"><label for="medicalNextDueDate">Ngày hẹn tiếp</label><input type="date" id="medicalNextDueDate" class="form-control"></div>
+                            <div class="form-group col-md-5"><label for="medicalVaccinationNote">Ghi chú</label><input type="text" id="medicalVaccinationNote" class="form-control" maxlength="2000" placeholder="Số lô, phản ứng sau tiêm..."></div>
+                        </div>
+                        <small class="form-text text-muted">Khi lưu phiếu khám, hệ thống ghi lịch sử tiêm và tự động xuất 1 liều từ kho theo FEFO. Cần có lô vắc-xin còn hạn và còn tồn.</small>
+                    </div>
+                    <div class="mt-3">
+                        <h6 class="font-weight-bold"><i class="fas fa-history mr-1"></i>Lịch sử tiêm chủng của thú cưng đang khám</h6>
+                        <div class="table-responsive"><table class="table table-sm table-bordered bg-white mb-0">
+                            <thead class="thead-light"><tr><th>Loại vắc-xin</th><th>Ngày tiêm</th><th>Ngày hẹn tiếp</th><th>Ghi chú</th><th>Người tiêm</th></tr></thead>
+                            <tbody id="medicalVaccinationHistory"><tr><td colspan="5" class="text-center text-muted">Chọn thú cưng trong hàng chờ để xem lịch sử tiêm.</td></tr></tbody>
+                        </table></div>
+                    </div>
+                </div>
                 <div class="form-group col-md-12 d-none" id="medicalInventorySection">
                     <label class="font-weight-bold">Thuốc / Vắc-xin sử dụng từ kho</label>
                     <div class="form-row align-items-end">
