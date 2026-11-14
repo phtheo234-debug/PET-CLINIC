@@ -291,8 +291,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadOwners() {
     const body = document.getElementById("ownersTableBody"); if (!body) return;
     try { const owners = extractList(await apiRequest("/owners"));
+        const canManageOwners = ["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole);
         body.innerHTML = owners.length ? owners.map(owner => { const encoded = encodeURIComponent(JSON.stringify(owner));
-            return `<tr><td>${escapePetHtml(owner.ho_ten)}</td><td>${escapePetHtml(owner.phone)}</td><td>${escapePetHtml(owner.email || "-")}</td><td>${escapePetHtml(owner.diachi || "-")}</td><td class="text-nowrap"><button type="button" class="btn btn-sm btn-outline-primary" data-edit-owner data-owner="${encoded}">Sửa</button> <button type="button" class="btn btn-sm btn-outline-danger" data-delete-owner="${Number(owner.owner_id)}">Xóa</button> <small class="text-muted ml-1">${Number(owner.pet_count || 0)} thú cưng</small></td></tr>`;
+            const actions = canManageOwners ? `<button type="button" class="btn btn-sm btn-outline-primary" data-edit-owner data-owner="${encoded}">Sửa</button> <button type="button" class="btn btn-sm btn-outline-danger" data-delete-owner="${Number(owner.owner_id)}" ${Number(owner.pet_count || 0) > 0 ? "disabled" : ""}>Xóa</button>` : '<span class="text-muted">Chỉ xem</span>';
+            return `<tr><td>${escapePetHtml(owner.ho_ten)}</td><td>${escapePetHtml(owner.phone)}</td><td>${escapePetHtml(owner.email || "-")}</td><td>${escapePetHtml(owner.diachi || "-")}</td><td class="text-nowrap">${actions} <small class="text-muted ml-1">${Number(owner.pet_count || 0)} thú cưng</small></td></tr>`;
         }).join("") : '<tr><td colspan="5" class="text-center text-muted">Chưa có chủ nuôi.</td></tr>';
     } catch (error) { body.innerHTML = `<tr><td colspan="5" class="text-danger text-center">${escapePetHtml(error.message)}</td></tr>`; }
 }
