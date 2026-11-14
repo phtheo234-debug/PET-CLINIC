@@ -696,7 +696,7 @@ class PaymentController extends Controller
                 'boardings' => $boardings, 'boarding_total' => $boardingTotal,
                 'prescriptions' => $prescriptions,
                 'surgeries' => $billableRecords->filter(fn($r) => (float)($r->surgery_price ?? 0) > 0)->map(fn($r) => [
-                    'name' => 'Phẫu thuật: ' . trim(($r->ma_phauthuat ? $r->ma_phauthuat . ' - ' : '') . ($r->ten_phauthuat ?? '')),
+                    'name' => 'Phẫu thuật: ' . (trim(($r->ma_phauthuat ? $r->ma_phauthuat . ' - ' : '') . ($r->ten_phauthuat ?? '')) ?: 'Theo chỉ định bác sĩ'),
                     'price' => (float)$r->surgery_price
                 ])->values(),
             ],
