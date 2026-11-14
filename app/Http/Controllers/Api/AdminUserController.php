@@ -136,6 +136,42 @@ class AdminUserController extends Controller
     }
 
 
+    /** Cập nhật thông tin tài khoản nhân viên/bác sĩ. */
+    public function update(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        if ($user->vaitro === 'QUAN_TRI' || (int) $user->user_id === (int) $request->user()->user_id) {
+            return response()->json(['status' => 'error', 'message' => 'Không thể chỉnh sửa tài khoản quản trị hệ thống hoặc tài khoản đang đăng nhập.'], 403);
+        }
+        $fields = $request->validate([
+            'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($user->user_id, 'user_id')],
+            'ho_ten' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($user->user_id, 'user_id')],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'vaitro' => ['required', Rule::in(['BAC_SI', 'NHAN_VIEN'])],
+        ]);
+        $user->fill($fields);
+        $user->save();
+        return response()->json(['status' => 'success', 'message' => 'Cập nhật tài khoản thành công.', 'data' => [
+            'user_id' => $user->user_id, 'username' => $user->username, 'ho_ten' => $user->ho_ten,
+            'email' => $user->email, 'phone' => $user->phone, 'vaitro' => $user->vaitro, 'trangthai' => $user->trangthai,
+        ]]);
+    }
+
+    /** Xóa tài khoản nhân viên/bác sĩ. */
+    public function destroy(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        if ($user->vaitro === 'QUAN_TRI' || (int) $user->user_id === (int) $request->user()->user_id) {
+            return response()->json(['status' => 'error', 'message' => 'Không thể xóa tài khoản quản trị hệ thống hoặc tài khoản đang đăng nhập.'], 403);
+        }
+        try {
+            $user->delete();
+        } catch (\\Illuminate\\Database\\QueryException $e) {
+            return response()->json(['status' => 'error', 'message' => 'Không thể xóa tài khoản vì đã phát sinh dữ liệu nghiệp vụ liên quan. Hãy khóa tài khoản thay thế.'], 409);
+        }
+        return response()->json(['status' => 'success', 'message' => 'Đã xóa tài khoản thành công.']);
+    }
     /**
      * Quản trị viên cấp lại mật khẩu.
      */
