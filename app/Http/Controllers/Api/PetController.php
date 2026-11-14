@@ -74,6 +74,32 @@ class PetController extends Controller
         ];
     }
 
+    /** Cập nhật thông tin chủ nuôi. */
+    public function updateOwner(Request $request, $id)
+    {
+        $owner = DB::table('owners')->where('owner_id', $id)->first();
+        abort_if(!$owner, 404, 'Không tìm thấy chủ nuôi.');
+        $fields = $request->validate([
+            'ho_ten' => 'required|string|max:100',
+            'phone' => 'required|string|max:20|unique:owners,phone,' . $id . ',owner_id',
+            'diachi' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:100',
+        ]);
+        DB::table('owners')->where('owner_id', $id)->update($fields);
+        return response()->json(['status' => 'success', 'message' => 'Cập nhật thông tin chủ nuôi thành công.']);
+    }
+
+    /** Chỉ xóa chủ nuôi khi không còn thú cưng liên kết. */
+    public function destroyOwner($id)
+    {
+        $owner = DB::table('owners')->where('owner_id', $id)->first();
+        abort_if(!$owner, 404, 'Không tìm thấy chủ nuôi.');
+        if (DB::table('pets')->where('owner_id', $id)->exists()) {
+            return response()->json(['status' => 'error', 'message' => 'Không thể xóa chủ nuôi đang có hồ sơ thú cưng. Hãy chuyển hoặc xóa các hồ sơ liên quan trước.'], 409);
+        }
+        DB::table('owners')->where('owner_id', $id)->delete();
+        return response()->json(['status' => 'success', 'message' => 'Đã xóa chủ nuôi thành công.']);
+    }
     // Lấy danh sách chủ nuôi đổ vào Dropdown chọn Chủ nuôi ở Frontend
     public function owners()
     {
