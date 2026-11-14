@@ -59,6 +59,11 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::delete('/inventory/{id}', [AdminInventoryController::class, 'destroy']);
         Route::delete('/inventory/batches/{id}', [InventoryController::class, 'deleteExpiredBatch']);
 
+        Route::get('/surgeries', [SurgeryController::class, 'index']);
+        Route::post('/surgeries', [SurgeryController::class, 'store']);
+        Route::put('/surgeries/{id}', [SurgeryController::class, 'update']);
+        Route::delete('/surgeries/{id}', [SurgeryController::class, 'destroy']);
+
         Route::post('/spa-services', [AdminSpaServiceController::class, 'store']);
         Route::put('/spa-services/{id}', [AdminSpaServiceController::class, 'update']);
         Route::delete('/spa-services/{id}', [AdminSpaServiceController::class, 'destroy']);
