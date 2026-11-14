@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const inputDenNgay = document.getElementById("den_ngay");
     const errorBox = document.getElementById("thongKeError");
     let revenueChart = null;
+    let currentRevenueData = null;
 
     const today = new Date();
     const toDateInput = (date) => {
@@ -72,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
             const response = await apiRequest(`/analytics/revenue?${query.toString()}`);
             const data = response.data || {};
+            currentRevenueData = data;
 
             document.getElementById("tongDoanhThu").textContent = formatCurrency(data.tong_doanh_thu || 0);
             document.getElementById("soHoaDon").textContent = data.so_hoa_don || 0;
@@ -106,8 +108,30 @@ document.addEventListener("DOMContentLoaded", async () => {
                 tr.appendChild(cell(categoryNames[row.loai_chiphi] || row.loai_chiphi || "Khác"));
                 tr.appendChild(cell(Number(row.so_hoa_don || 0).toLocaleString("vi-VN"), "text-right"));
                 tr.appendChild(cell(formatCurrency(row.tong_doanh_thu || 0), "text-right font-weight-bold"));
+
+                const actions = document.createElement("td");
+                actions.className = "text-center text-nowrap";
+                const exportButton = document.createElement("button");
+                exportButton.type = "button";
+                exportButton.className = "btn btn-sm btn-outline-success mr-1";
+                exportButton.textContent = "Xuất";
+                exportButton.addEventListener("click", () => exportRevenueCsv(
+                    [row],
+                    "doanh-thu-" + (row.loai_chiphi || "khac").toLowerCase() + ".csv",
+                    "Doanh thu " + (categoryNames[row.loai_chiphi] || row.loai_chiphi || "Khác")
+                ));
+                const printButton = document.createElement("button");
+                printButton.type = "button";
+                printButton.className = "btn btn-sm btn-outline-dark";
+                printButton.textContent = "In";
+                printButton.addEventListener("click", () => printRevenueReport(
+                    "Doanh thu " + (categoryNames[row.loai_chiphi] || row.loai_chiphi || "Khác"),
+                    [row]
+                ));
+                actions.append(exportButton, printButton);
+                tr.appendChild(actions);
                 return tr;
-            }, 3);
+            }, 4);
 
             renderRows("bangTheoNgay", dailyRows, "Chưa có doanh thu.", (row) => {
                 const tr = document.createElement("tr");
@@ -121,6 +145,104 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
+
+
+    const csvEscape = (value) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+
+    const exportRevenueCsv = (rows, filename, title) => {
+        const lines = [
+            [title, "Từ ngày", currentRevenueData?.tu_ngay || "", "Đến ngày", currentRevenueData?.den_ngay || ""],
+            ["Loại doanh thu", "Số hóa đơn", "Doanh thu (VND)"],
+            ...rows.map(row => [
+                categoryNames[row.loai_chiphi] || row.loai_chiphi || "Khác",
+                Number(row.so_hoa_don || 0),
+                Number(row.tong_doanh_thu || 0)
+            ])
+        ];
+        const csv = "\uFEFF" + lines.map(line => line.map(csvEscape).join(",")).join("\r\n");
+        const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const printRevenueReport = (title, rows, includeSummary = false) => {
+        const data = currentRevenueData || {};
+        const rowHtml = rows.map(row => `
+            <tr>
+                <td>${escapeHtml(categoryNames[row.loai_chiphi] || row.loai_chiphi || "Khác")}</td>
+                <td class="number">${Number(row.so_hoa_don || 0).toLocaleString("vi-VN")}</td>
+                <td class="number">${formatCurrency(row.tong_doanh_thu || 0)}</td>
+            </tr>`).join("");
+        const summary = includeSummary ? `
+            <p><strong>Tổng doanh thu:</strong> ${formatCurrency(data.tong_doanh_thu || 0)}</p>
+            <p><strong>Số hóa đơn đã thanh toán:</strong> ${Number(data.so_hoa_don || 0).toLocaleString("vi-VN")}</p>
+            <p><strong>Trung bình / hóa đơn:</strong> ${formatCurrency(data.doanh_thu_trung_binh || 0)}</p>` : "";
+        const popup = window.open("", "_blank", "width=900,height=700");
+        if (!popup) {
+            alert("Trình duyệt đang chặn cửa sổ in. Vui lòng cho phép pop-up rồi thử lại.");
+            return;
+        }
+        popup.document.write(`<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+            <style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h2{text-align:center}
+            table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #999;padding:9px}
+            th{background:#eee}.number{text-align:right}.meta{margin:8px 0}</style></head><body>
+            <h2>${escapeHtml(title)}</h2>
+            <p class="meta">Thời gian: ${escapeHtml(formatDate(data.tu_ngay))} - ${escapeHtml(formatDate(data.den_ngay))}</p>
+            ${summary}
+            <table><thead><tr><th>Loại doanh thu</th><th>Số hóa đơn</th><th>Doanh thu</th></tr></thead>
+            <tbody>${rowHtml || '<tr><td colspan="3">Không có dữ liệu</td></tr>'}</tbody></table>
+            <script>window.onload=()=>window.print();<\/script></body></html>`);
+        popup.document.close();
+    };
+
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[char]);
+
+    const exportConsolidatedRevenue = () => {
+        if (!currentRevenueData) return alert("Chưa có dữ liệu doanh thu để xuất.");
+        const rows = currentRevenueData.theo_loai_chi_phi || [];
+        const csvRows = [
+            ["BÁO CÁO TỔNG HỢP DOANH THU"],
+            ["Từ ngày", currentRevenueData.tu_ngay, "Đến ngày", currentRevenueData.den_ngay],
+            ["Tổng doanh thu", Number(currentRevenueData.tong_doanh_thu || 0)],
+            ["Số hóa đơn đã thanh toán", Number(currentRevenueData.so_hoa_don || 0)],
+            ["Trung bình / hóa đơn", Number(currentRevenueData.doanh_thu_trung_binh || 0)],
+            [],
+            ["Loại doanh thu", "Số hóa đơn", "Doanh thu (VND)"],
+            ...rows.map(row => [
+                categoryNames[row.loai_chiphi] || row.loai_chiphi || "Khác",
+                Number(row.so_hoa_don || 0),
+                Number(row.tong_doanh_thu || 0)
+            ]),
+            [],
+            ["Ngày", "Số hóa đơn", "Doanh thu (VND)"],
+            ...(currentRevenueData.theo_ngay || []).map(row => [
+                formatDate(row.ngay), Number(row.so_hoa_don || 0), Number(row.tong_doanh_thu || 0)
+            ])
+        ];
+        const csv = "\uFEFF" + csvRows.map(line => line.map(csvEscape).join(",")).join("\r\n");
+        const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `bao-cao-doanh-thu-${currentRevenueData.tu_ngay}-${currentRevenueData.den_ngay}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const printConsolidatedRevenue = () => {
+        if (!currentRevenueData) return alert("Chưa có dữ liệu doanh thu để in.");
+        printRevenueReport("BÁO CÁO TỔNG HỢP DOANH THU", currentRevenueData.theo_loai_chi_phi || [], true);
+    };
 
     const loadInventoryAlerts = async () => {
         const formatDate = (value) => {
@@ -187,5 +309,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         setThisMonth();
         loadStatistics();
     });
+    document.getElementById("btnXuatTongHop").addEventListener("click", exportConsolidatedRevenue);
+    document.getElementById("btnInTongHop").addEventListener("click", printConsolidatedRevenue);
     await Promise.all([loadStatistics(), loadInventoryAlerts()]);
 });
