@@ -43,7 +43,7 @@ async function loadInventory() {
         inventoryItems = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
         renderInventory(inventoryItems);
     } catch (err) {
-        ["medicalInventoryTableBody", "foodInventoryTableBody", "goodsInventoryTableBody"].forEach(id => {
+        ["medicalInventoryTableBody", "vaccineInventoryTableBody", "foodInventoryTableBody", "goodsInventoryTableBody"].forEach(id => {
             const body = document.getElementById(id);
             if (body) body.innerHTML = `<tr><td colspan="8" class="text-danger text-center">${escapeInventoryHtml(err.message || "Lỗi tải kho")}</td></tr>`;
         });
@@ -130,7 +130,8 @@ function renderInventory(items) {
         }).join("") : '<tr><td colspan="' + (isAdminInventory ? 9 : 8) + '" class="text-center text-muted">Chưa có mặt hàng.</td></tr>';
     };
 
-    renderBatchTable(items.filter(item => ["THUOC", "VAC_XIN"].includes(item.danhmuc)), "medicalInventoryTableBody");
+    renderBatchTable(items.filter(item => item.danhmuc === "THUOC"), "medicalInventoryTableBody");
+    renderBatchTable(items.filter(item => item.danhmuc === "VAC_XIN"), "vaccineInventoryTableBody");
     renderBatchTable(items.filter(item => item.danhmuc === "THUC_AN"), "foodInventoryTableBody");
 
     const goods = items.filter(item => item.danhmuc === "DO_DUNG");
@@ -261,12 +262,13 @@ async function saveInventoryBatch(event) {
 function toggleInventoryFields(isEditing = false) {
     const category = document.getElementById("inventory_category")?.value;
     const isMedical = ["THUOC", "VAC_XIN"].includes(category);
+    const isVaccine = category === "VAC_XIN";
     const isGoods = category === "DO_DUNG";
     const hasBatch = ["THUOC", "VAC_XIN", "THUC_AN"].includes(category);
     const categoryGroup = document.getElementById("inventoryCategoryGroup");
     const categorySelect = document.getElementById("inventory_category");
     if (categorySelect) Array.from(categorySelect.options).forEach(option => {
-        if (["THUC_AN", "DO_DUNG"].includes(option.value)) option.hidden = true;
+        if (["THUC_AN", "DO_DUNG", "VAC_XIN"].includes(option.value)) option.hidden = true;
     });
     const unitGroup = document.getElementById("inventoryUnitGroup");
     const expiryGroup = document.getElementById("inventoryExpiryGroup");
@@ -277,7 +279,7 @@ function toggleInventoryFields(isEditing = false) {
     const stock = document.getElementById("inventory_stock");
     const stockLabel = document.getElementById("inventoryStockLabel");
     const stockHelp = document.getElementById("inventoryStockHelp");
-    if (categoryGroup) categoryGroup.classList.toggle("d-none", !isMedical);
+    if (categoryGroup) categoryGroup.classList.toggle("d-none", !isMedical || isVaccine);
     if (unitGroup) unitGroup.classList.toggle("d-none", isGoods);
     if (unit) unit.required = !isGoods;
     if (importGroup) importGroup.classList.toggle("d-none", !hasBatch || isEditing);
@@ -504,7 +506,7 @@ async function deleteSpaService(serviceId) {
 function searchInventoryTable(type) {
     const input = document.getElementById("searchInventory_" + type);
     const keyword = String(input?.value || "").trim().toLocaleLowerCase("vi");
-    const config = {medical:["medicalInventoryTableBody"],food:["foodInventoryTableBody"],goods:["goodsInventoryTableBody"],spa:["spaTableBody"]};
+    const config = {medical:["medicalInventoryTableBody"],vaccine:["vaccineInventoryTableBody"],food:["foodInventoryTableBody"],goods:["goodsInventoryTableBody"],spa:["spaTableBody"]};
     (config[type] || []).forEach(id => {
         const body = document.getElementById(id);
         if (!body) return;
