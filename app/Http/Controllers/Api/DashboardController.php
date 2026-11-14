@@ -127,7 +127,7 @@ class DashboardController extends Controller
 
         $ngay = Carbon::parse($validated['ngay'] ?? Carbon::today())->startOfDay();
         $tuan = Carbon::parse($validated['tuan'] ?? Carbon::today())->startOfWeek(Carbon::MONDAY);
-        $thang = Carbon::createFromFormat('Y-m', $validated['thang'] ?? Carbon::today()->format('Y-m'))->startOfMonth();
+        $thang = Carbon::createFromFormat('Y-m-d', ($validated['thang'] ?? Carbon::today()->format('Y-m')) . '-01')->startOfMonth();
         $nam = (int) ($validated['nam'] ?? Carbon::today()->year);
 
         $paidInvoices = DB::table('invoices')->where('trangthai', 'DA_THANH_TOAN');
