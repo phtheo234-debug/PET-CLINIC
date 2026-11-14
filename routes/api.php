@@ -44,6 +44,8 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::get('/users/{id}', [AdminUserController::class, 'show']);
         Route::post('/users', [AdminUserController::class, 'store']);
+        Route::put('/users/{id}', [AdminUserController::class, 'update']);
+        Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
         Route::put('/users/{id}/reset-password', [AdminUserController::class, 'resetPassword']);
         Route::put('/users/{id}/status', [AdminUserController::class, 'updateStatus']);
 
