@@ -626,9 +626,12 @@ class PaymentController extends Controller
             ->first();
         abort_if(!$pet, 404, 'Không tìm thấy hồ sơ thú cưng.');
 
-        $records = DB::table('medical_records')
-            ->where('pet_id', $petId)->whereNull('invoice_id')
-            ->orderBy('ngaykham')->get();
+        $records = DB::table('medical_records as mr')
+            ->leftJoin('surgeries as s', 's.surgery_id', '=', 'mr.surgery_id')
+            ->where('mr.pet_id', $petId)->whereNull('mr.invoice_id')
+            ->orderBy('mr.ngaykham')
+            ->select('mr.*', 's.ma_phauthuat', 's.ten_phauthuat')
+            ->get();
         $prescriptions = DB::table('prescriptions as rx')
             ->join('medical_records as mr', 'mr.record_id', '=', 'rx.record_id')
             ->join('inventory as i', 'i.item_id', '=', 'rx.item_id')
@@ -693,7 +696,8 @@ class PaymentController extends Controller
                 'boardings' => $boardings, 'boarding_total' => $boardingTotal,
                 'prescriptions' => $prescriptions,
                 'surgeries' => $billableRecords->filter(fn($r) => (float)($r->surgery_price ?? 0) > 0)->map(fn($r) => [
-                    'name' => 'Phẫu thuật - Phiếu #' . $r->record_id, 'price' => (float)$r->surgery_price
+                    'name' => 'Phẫu thuật: ' . trim(($r->ma_phauthuat ? $r->ma_phauthuat . ' - ' : '') . ($r->ten_phauthuat ?? '')),
+                    'price' => (float)$r->surgery_price
                 ])->values(),
             ],
             'catalog' => $catalog,
@@ -721,8 +725,13 @@ class PaymentController extends Controller
                     throw new Exception('Thú cưng đã xuất viện hoặc chuyển viện, không thể lập hóa đơn điều trị mới.');
                 }
 
-                $records = DB::table('medical_records')->where('pet_id', $pet->pet_id)
-                    ->whereNull('invoice_id')->orderBy('ngaykham')->lockForUpdate()->get();
+                $records = DB::table('medical_records as mr')
+                    ->leftJoin('surgeries as s', 's.surgery_id', '=', 'mr.surgery_id')
+                    ->where('mr.pet_id', $pet->pet_id)
+                    ->whereNull('mr.invoice_id')
+                    ->orderBy('mr.ngaykham')
+                    ->select('mr.*', 's.ma_phauthuat', 's.ten_phauthuat')
+                    ->lockForUpdate()->get();
                 // Thanh toán thành công là mốc chốt ca khám/xuất viện.
                 // Các phiếu đang điều trị được chốt HOAN_THANH trong cùng transaction;
                 // phiếu chuyển viện không được tự chuyển thành hoàn thành tại phòng khám này.
@@ -739,7 +748,8 @@ class PaymentController extends Controller
                 foreach ($records as $record) {
                     $detailRows[] = ['type'=>'PHI_KHAM','name'=>'Phí khám bệnh - Phiếu #'.$record->record_id,'unit'=>'lần','qty'=>1,'price'=>50000,'note'=>'Ngày khám: '.$record->ngaykham];
                     if ((float)($record->surgery_price ?? 0) > 0) {
-                        $detailRows[] = ['type'=>'PHAU_THUAT','name'=>'Phẫu thuật - Phiếu #'.$record->record_id,'unit'=>'ca','qty'=>1,'price'=>(float)$record->surgery_price,'note'=>null];
+                        $surgeryLabel = trim(($record->ma_phauthuat ? $record->ma_phauthuat . ' - ' : '') . ($record->ten_phauthuat ?? ''));
+                        $detailRows[] = ['type'=>'PHAU_THUAT','name'=>'Phẫu thuật: '.($surgeryLabel ?: 'Theo chỉ định bác sĩ'),'unit'=>'ca','qty'=>1,'price'=>(float)$record->surgery_price,'note'=>null];
                     }
                 }
                 foreach ($prescriptions as $line) {
