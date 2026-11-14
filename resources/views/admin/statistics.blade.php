@@ -84,7 +84,7 @@
             <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center">
                 <strong>Doanh thu theo tháng</strong>
                 <div class="d-flex align-items-center mt-2 mt-md-0">
-                    <input type="month" id="chonThang" class="form-control form-control-sm mr-2" style="width:auto">
+                    <input type="month" id="chonThang" value="{{ now()->format('Y-m') }}" class="form-control form-control-sm mr-2" style="width:auto">
                     <button type="button" id="btnThang" class="btn btn-sm btn-primary">Xem</button>
                 </div>
             </div>
@@ -106,7 +106,7 @@
             <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center">
                 <strong>Doanh thu theo năm</strong>
                 <div class="d-flex align-items-center mt-2 mt-md-0">
-                    <input type="number" id="chonNam" min="2000" max="2100" class="form-control form-control-sm mr-2" style="width:100px">
+                    <input type="number" id="chonNam" value="{{ now()->format('Y') }}" min="2000" max="2100" class="form-control form-control-sm mr-2" style="width:100px">
                     <button type="button" id="btnNam" class="btn btn-sm btn-primary">Xem</button>
                 </div>
             </div>
