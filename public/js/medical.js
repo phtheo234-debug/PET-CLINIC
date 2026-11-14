@@ -410,7 +410,7 @@ function updateMedicalSections() {
     const action = actionSelect ? actionSelect.value : "OUTPATIENT";
     const isTransfer = action === "TRANSFER";
     const isSurgery = action === "SURGERY";
-    const canRequestStay = ["OUTPATIENT", "INPATIENT", "SURGERY"].includes(action);
+    const canRequestStay = ["INPATIENT", "SURGERY"].includes(action);
     const checkbox = document.getElementById("yeu_cau_cach_ly");
 
     // Dùng đồng thời class d-none và hidden/display để tránh CSS khác ghi đè trạng thái ẩn.
