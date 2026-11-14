@@ -8,20 +8,32 @@ async function loadMedicalInventory() {
             ["THUOC", "VAC_XIN"].includes(item.danhmuc) && Number(item.tong_ton_kho) > 0
         );
         const medicineItems = medicalInventoryItems.filter(item => item.danhmuc === "THUOC");
+        const vaccineItems = medicalInventoryItems.filter(item => item.danhmuc === "VAC_XIN");
+        const vaccineSuggestions = document.getElementById("medicalVaccinationSuggestions");
         select.innerHTML = '<option value="">-- Chọn thuốc --</option>' + medicineItems.map((item) =>
             '<option value="' + Number(item.item_id) + '">' + escapeMedicalHtml(item.ten_sanpham) + '</option>'
         ).join("");
         suggestions.innerHTML = medicineItems.map((item) => {
             const code = item.masanpham ? item.masanpham + " - " : "";
-            const kind = "Thuốc";
             return '<option value="' + escapeMedicalHtml(code + item.ten_sanpham) + '">' +
-                escapeMedicalHtml(kind + " · còn " + Number(item.tong_ton_kho) + " " + (item.donvitinh || "")) + '</option>';
+                escapeMedicalHtml("Thuốc · còn " + Number(item.tong_ton_kho) + " " + (item.donvitinh || "")) + '</option>';
         }).join("");
-        if (!medicineItems.length) {
-            suggestions.innerHTML = '<option value="Kho thuốc chưa có mặt hàng còn hàng"></option>';
+        if (!medicineItems.length) suggestions.innerHTML = '<option value="Kho thuốc chưa có mặt hàng còn hàng"></option>';
+        if (vaccineSuggestions) {
+            const linkedVaccines = vaccineItems.filter(item =>
+                medicalVaccinationTypes.some(type => Number(type.inventory_item_id) === Number(item.item_id))
+            );
+            vaccineSuggestions.innerHTML = linkedVaccines.map(item => {
+                const code = item.masanpham ? item.masanpham + " - " : "";
+                return '<option value="' + escapeMedicalHtml(code + item.ten_sanpham) + '">' +
+                    escapeMedicalHtml("Vắc-xin tiêm phòng · còn " + Number(item.tong_ton_kho) + " " + (item.donvitinh || "")) + '</option>';
+            }).join("");
+            if (!linkedVaccines.length) vaccineSuggestions.innerHTML = '<option value="Kho vắc-xin tiêm phòng chưa có mặt hàng còn hàng"></option>';
         }
         search.value = "";
         select.value = "";
+        const vaccineSearch = document.getElementById("medicalVaccinationSearch");
+        if (vaccineSearch) vaccineSearch.value = "";
     } catch (error) {
         suggestions.innerHTML = '<option value="Không tải được danh mục kho"></option>';
         console.error(error);
@@ -150,7 +162,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         await loadMedicalQueue();
     }
     document.getElementById("btnAddMedicalItem")?.addEventListener("click", addMedicalInventoryItem);
-    document.getElementById("medicalVaccinationType")?.addEventListener("change", selectMedicalVaccination);
+    document.getElementById("medicalVaccinationSearch")?.addEventListener("change", selectMedicalVaccination);
     document.getElementById("medicalInventorySearch")?.addEventListener("input", syncMedicalInventorySearch);
     document.getElementById("medicalInventorySearch")?.addEventListener("change", syncMedicalInventorySearch);
     let lastSavedMedicalRecordId = null;
@@ -171,7 +183,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const removedItem = selectedMedicalItems[Number(button.dataset.removeMedicalItem)];
         if (removedItem?.isVaccination) {
             currentMedicalVaccination = null;
-            document.getElementById("medicalVaccinationType").value = "";
+            document.getElementById("medicalVaccinationSearch").value = "";
         }
         selectedMedicalItems.splice(Number(button.dataset.removeMedicalItem), 1);
         renderSelectedMedicalItems();
@@ -278,7 +290,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
                 selectedMedicalItems = [];
                 currentMedicalVaccination = null;
-                document.getElementById("medicalVaccinationType").value = "";
+                document.getElementById("medicalVaccinationSearch").value = "";
                 document.getElementById("medicalVaccinatedAt").value = "";
                 document.getElementById("medicalNextDueDate").value = "";
                 document.getElementById("medicalVaccinationNote").value = "";
@@ -328,7 +340,7 @@ function updateMedicalSections() {
     if (action === "TRANSFER") {
         selectedMedicalItems = [];
         currentMedicalVaccination = null;
-        const vaccineSelect = document.getElementById("medicalVaccinationType");
+        const vaccineSelect = document.getElementById("medicalVaccinationSearch");
         if (vaccineSelect) vaccineSelect.value = "";
         renderSelectedMedicalItems();
     }
@@ -591,40 +603,69 @@ async function loadMedicalQueue() {
 
 
 async function loadMedicalVaccinationTypes() {
-    const select = document.getElementById("medicalVaccinationType");
-    if (!select) return;
+    const search = document.getElementById("medicalVaccinationSearch");
+    if (!search) return;
     try {
         const response = await apiRequest("/vaccinations/types");
         medicalVaccinationTypes = extractList(response);
-        select.innerHTML = '<option value="">-- Không ghi nhận tiêm --</option>' + medicalVaccinationTypes.map(type =>
-            '<option value="' + Number(type.id) + '">' + escapeMedicalHtml(type.name) + '</option>'
-        ).join("");
+        const vaccineItems = medicalInventoryItems.filter(item => item.danhmuc === "VAC_XIN" && Number(item.tong_ton_kho) > 0);
+        const suggestions = document.getElementById("medicalVaccinationSuggestions");
+        if (suggestions) {
+            const linkedItems = vaccineItems.filter(item =>
+                medicalVaccinationTypes.some(type => Number(type.inventory_item_id) === Number(item.item_id))
+            );
+            suggestions.innerHTML = linkedItems.map(item => {
+                const code = item.masanpham ? item.masanpham + " - " : "";
+                return '<option value="' + escapeMedicalHtml(code + item.ten_sanpham) + '">' +
+                    escapeMedicalHtml("Còn " + Number(item.tong_ton_kho) + " " + (item.donvitinh || "")) + '</option>';
+            }).join("");
+            if (!linkedItems.length) suggestions.innerHTML = '<option value="Kho vắc-xin tiêm phòng chưa có mặt hàng còn hàng"></option>';
+        }
     } catch (error) {
-        select.innerHTML = '<option value="">Không tải được danh mục vắc-xin</option>';
+        const suggestions = document.getElementById("medicalVaccinationSuggestions");
+        if (suggestions) suggestions.innerHTML = '<option value="Không tải được danh mục vắc-xin"></option>';
         console.error(error);
     }
 }
 
 function selectMedicalVaccination() {
-    const select = document.getElementById("medicalVaccinationType");
-    const typeId = Number(select?.value || 0);
+    const search = document.getElementById("medicalVaccinationSearch");
+    const value = search?.value.trim().toLocaleLowerCase("vi") || "";
     if (currentMedicalVaccination?.inventory_item_id) {
-        selectedMedicalItems = selectedMedicalItems.filter(item => !(item.isVaccination && Number(item.item_id) === Number(currentMedicalVaccination.inventory_item_id)));
+        selectedMedicalItems = selectedMedicalItems.filter(item =>
+            !(item.isVaccination && Number(item.item_id) === Number(currentMedicalVaccination.inventory_item_id))
+        );
     }
     currentMedicalVaccination = null;
-    if (!typeId) { renderSelectedMedicalItems(); return; }
-    const type = medicalVaccinationTypes.find(item => Number(item.id) === typeId);
-    const stockItem = medicalInventoryItems.find(item => item.danhmuc === "VAC_XIN" && Number(item.item_id) === Number(type?.inventory_item_id));
-    if (!type || !stockItem || stockItem.danhmuc !== "VAC_XIN" || Number(stockItem.tong_ton_kho) < 1) {
-        alert("Vắc-xin này chưa có lô hàng còn hạn hoặc đã hết tồn. Vui lòng kiểm tra kho.");
-        select.value = "";
+    if (!value) { renderSelectedMedicalItems(); return; }
+
+    const stockItem = medicalInventoryItems.find(item => {
+        if (item.danhmuc !== "VAC_XIN" || Number(item.tong_ton_kho) < 1) return false;
+        const codeName = ((item.masanpham || "") + " - " + (item.ten_sanpham || "")).toLocaleLowerCase("vi");
+        const name = String(item.ten_sanpham || "").toLocaleLowerCase("vi");
+        return value === codeName || value === name;
+    });
+    const type = stockItem && medicalVaccinationTypes.find(item =>
+        Number(item.inventory_item_id) === Number(stockItem.item_id)
+    );
+    if (!stockItem || !type) {
+        if (search) search.value = "";
         renderSelectedMedicalItems();
         return;
     }
-    // Mỗi mũi tiêm tự thêm đúng một liều vào danh sách xuất kho; backend trừ theo FEFO.
+
     selectedMedicalItems = selectedMedicalItems.filter(item => Number(item.item_id) !== Number(stockItem.item_id));
-    selectedMedicalItems.push({item_id:Number(stockItem.item_id), soluong:1, huongdan:"Tiêm phòng: " + type.name, isVaccination:true});
-    currentMedicalVaccination = {vaccination_type_id:typeId, inventory_item_id:Number(stockItem.item_id), name:type.name};
+    selectedMedicalItems.push({
+        item_id:Number(stockItem.item_id),
+        soluong:1,
+        huongdan:"Tiêm phòng: " + type.name,
+        isVaccination:true
+    });
+    currentMedicalVaccination = {
+        vaccination_type_id:Number(type.id),
+        inventory_item_id:Number(stockItem.item_id),
+        name:type.name
+    };
     renderSelectedMedicalItems();
 }
 
