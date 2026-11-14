@@ -238,5 +238,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/inventory.js') }}"></script>
+<script src="{{ asset('js/inventory.js') }}?v={{ filemtime(public_path('js/inventory.js')) }}"></script>
 @endpush
