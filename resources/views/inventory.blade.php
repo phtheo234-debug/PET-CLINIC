@@ -8,15 +8,30 @@
 
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <strong class="text-primary">Kho thuốc & vắc-xin</strong>
-        <button type="button" class="btn btn-primary btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'THUOC')"><i class="fas fa-plus mr-1"></i>Thêm thuốc / vắc-xin</button>
+        <strong class="text-primary"><i class="fas fa-pills mr-1"></i>Kho thuốc</strong>
+        <button type="button" class="btn btn-primary btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'THUOC')"><i class="fas fa-plus mr-1"></i>Thêm thuốc</button>
     </div>
     <div class="card-body table-responsive">
-        <div class="input-group input-group-sm mb-3 inventory-search" data-inventory-search="medical"><input type="text" class="form-control" id="searchInventory_medical" placeholder="Nhập tên hoặc mã thuốc / vắc-xin cần tìm"><div class="input-group-append"><button type="button" class="btn btn-outline-primary" data-search-inventory="medical"><i class="fas fa-search mr-1"></i>Tìm kiếm</button></div></div>
+        <div class="input-group input-group-sm mb-3 inventory-search" data-inventory-search="medical"><input type="text" class="form-control" id="searchInventory_medical" placeholder="Nhập tên hoặc mã thuốc cần tìm"><div class="input-group-append"><button type="button" class="btn btn-outline-primary" data-search-inventory="medical"><i class="fas fa-search mr-1"></i>Tìm kiếm</button></div></div>
         <table class="table table-hover mb-0">
-            <thead class="thead-light"><tr><th>Mã</th><th>Tên thuốc / vắc-xin</th><th class="inventoryLotColumn">Số lô</th><th>Số lượng</th><th>Ngày sản xuất</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
+            <thead class="thead-light"><tr><th>Mã</th><th>Tên thuốc</th><th class="inventoryLotColumn">Số lô</th><th>Số lượng</th><th>Ngày sản xuất</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
             <tbody id="medicalInventoryTableBody"></tbody>
         </table>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong class="text-danger"><i class="fas fa-syringe mr-1"></i>Kho vắc-xin tiêm phòng</strong>
+        <button type="button" class="btn btn-danger btn-sm d-none inventoryAddButton" onclick="openInventoryForm(null, 'VAC_XIN')"><i class="fas fa-plus mr-1"></i>Thêm vắc-xin</button>
+    </div>
+    <div class="card-body table-responsive">
+        <div class="input-group input-group-sm mb-3 inventory-search" data-inventory-search="vaccine"><input type="text" class="form-control" id="searchInventory_vaccine" placeholder="Nhập tên hoặc mã vắc-xin cần tìm"><div class="input-group-append"><button type="button" class="btn btn-outline-danger" data-search-inventory="vaccine"><i class="fas fa-search mr-1"></i>Tìm kiếm</button></div></div>
+        <table class="table table-hover mb-0">
+            <thead class="thead-light"><tr><th>Mã</th><th>Tên vắc-xin</th><th class="inventoryLotColumn">Số lô</th><th>Số lượng</th><th>Ngày sản xuất</th><th>Hạn sử dụng</th><th>Giá</th><th>Trạng thái</th><th class="inventoryActionHeader d-none">Thao tác</th></tr></thead>
+            <tbody id="vaccineInventoryTableBody"></tbody>
+        </table>
+        <small class="form-text text-muted">Kho này chỉ quản lý vắc-xin tiêm phòng. Khi thêm vắc-xin tại đây, tên vắc-xin sẽ tự xuất hiện ở ô “Loại vắc-xin” trong màn hình khám bệnh.</small>
     </div>
 </div>
 
