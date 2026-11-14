@@ -179,6 +179,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td class="number">${Number(row.so_hoa_don || 0).toLocaleString("vi-VN")}</td>
                 <td class="number">${formatCurrency(row.tong_doanh_thu || 0)}</td>
             </tr>`).join("");
+        const dailyHtml = includeSummary ? `
+            <h3>Doanh thu theo ngày</h3>
+            <table><thead><tr><th>Ngày</th><th>Số hóa đơn</th><th>Doanh thu</th></tr></thead>
+            <tbody>${(data.theo_ngay || []).map(day => `
+                <tr><td>${escapeHtml(formatDate(day.ngay))}</td>
+                <td class="number">${Number(day.so_hoa_don || 0).toLocaleString("vi-VN")}</td>
+                <td class="number">${formatCurrency(day.tong_doanh_thu || 0)}</td></tr>`).join("") || '<tr><td colspan="3">Không có dữ liệu</td></tr>'}</tbody></table>` : "";
         const summary = includeSummary ? `
             <p><strong>Tổng doanh thu:</strong> ${formatCurrency(data.tong_doanh_thu || 0)}</p>
             <p><strong>Số hóa đơn đã thanh toán:</strong> ${Number(data.so_hoa_don || 0).toLocaleString("vi-VN")}</p>
@@ -197,6 +204,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ${summary}
             <table><thead><tr><th>Loại doanh thu</th><th>Số hóa đơn</th><th>Doanh thu</th></tr></thead>
             <tbody>${rowHtml || '<tr><td colspan="3">Không có dữ liệu</td></tr>'}</tbody></table>
+            ${dailyHtml}
             <script>window.onload=()=>window.print();<\/script></body></html>`);
         popup.document.close();
     };
