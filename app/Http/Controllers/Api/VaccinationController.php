@@ -14,6 +14,7 @@ class VaccinationController extends Controller
             'status' => 'success',
             'data' => DB::table('vaccination_types')
                 ->where('is_active', true)
+                ->whereNotNull('inventory_item_id')
                 ->orderBy('vaccination_type_id')
                 ->get(['vaccination_type_id as id', 'name', 'inventory_item_id']),
         ]);
