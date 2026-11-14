@@ -116,7 +116,10 @@ function addExtraCharge() {
     const qty=item&&item.danhmuc==="DICH_VU_SPA"?Number(document.getElementById("extraQuantity").value):1;
     if(!item||(item.danhmuc==="DICH_VU_SPA"&&(!Number.isInteger(qty)||qty<1))){alert("Vui lòng chọn sản phẩm/dịch vụ và nhập số lượng dịch vụ hợp lệ.");return;}
     const old=extraChargeLines.find(x=>x.item_id===id);
-    if(old)old.quantity+=qty;else extraChargeLines.push({item_id:id,name:item.ten_sanpham,category:item.danhmuc,quantity:qty,price:Number(item.dongia),unit:item.donvitinh||""});
+    if(old){
+        if(item.danhmuc==="DICH_VU_SPA")old.quantity+=qty;
+        else {alert("Sản phẩm này đã được thêm vào hóa đơn.");return;}
+    }else extraChargeLines.push({item_id:id,name:item.ten_sanpham,category:item.danhmuc,quantity:qty,price:Number(item.dongia),unit:item.donvitinh||""});
     document.getElementById("extraQuantity").value=1; renderExtraCharges(); recalculatePayment();
 }
 function renderExtraCharges() {
