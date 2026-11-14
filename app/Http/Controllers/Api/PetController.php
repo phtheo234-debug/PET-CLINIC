@@ -34,6 +34,8 @@ class PetController extends Controller
                 'pets.*',
                 'owners.ho_ten as owner_name',
                 'owners.phone as owner_phone',
+                'owners.diachi as owner_address',
+                'owners.email as owner_email',
                 'latest_weight.cannang as current_weight', 'latest_exam.record_id as record_id', 'latest_exam.exam_status as trangthai_kham', 'latest_exam.exam_date as ngaykham_gannhat', 'latest_exam.exam_invoice_id as mahoadon_kham', 'latest_queue.queue_status as queue_status', 'latest_queue.queue_note as queue_note'
             );
     }
@@ -69,7 +71,9 @@ class PetController extends Controller
             'owner'          => [
                 'id'    => $p->owner_id,
                 'name'  => $p->owner_name,
-                'phone' => $p->owner_phone
+                'phone' => $p->owner_phone,
+                'address' => $p->owner_address ?? null,
+                'email' => $p->owner_email ?? null
             ],
         ];
     }
@@ -104,8 +108,10 @@ class PetController extends Controller
     public function owners()
     {
         $owners = DB::table('owners')
-            ->select('owner_id', 'ho_ten', 'phone')
-            ->orderByDesc('owner_id')
+            ->leftJoin('pets', 'pets.owner_id', '=', 'owners.owner_id')
+            ->select('owners.owner_id', 'owners.ho_ten', 'owners.phone', 'owners.diachi', 'owners.email', DB::raw('COUNT(pets.pet_id) as pet_count'))
+            ->groupBy('owners.owner_id', 'owners.ho_ten', 'owners.phone', 'owners.diachi', 'owners.email')
+            ->orderByDesc('owners.owner_id')
             ->get();
 
         return response()->json([
