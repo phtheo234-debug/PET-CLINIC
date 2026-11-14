@@ -28,10 +28,7 @@ return new class extends Migration
 
             if (!$item) {
                 do {
-                    $code = 'VX-' . now()->format('Ymd') . '-' . str_pad((string) ($index + 1), 6, '0', STR_PAD_LEFT);
-                    if ($index > 0) {
-                        $code = 'VX-' . now()->format('Ymd') . '-' . str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
-                    }
+                    $code = 'VX-' . now()->format('Ymd') . '-' . str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
                 } while (DB::table('inventory')->where('masanpham', $code)->exists());
 
                 $itemId = DB::table('inventory')->insertGetId([
