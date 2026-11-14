@@ -51,23 +51,55 @@ class DashboardController extends Controller
             ->join('inventory as i', 'i.item_id', '=', 'b.item_id')
             ->whereIn('i.danhmuc', ['THUOC', 'VAC_XIN', 'THUC_AN'])
             ->where('b.soluong', '>', 0)
-            ->select(
-                'b.batch_id', 'i.masanpham', 'i.ten_sanpham', 'i.danhmuc',
-                'b.solo', 'b.soluong', 'b.ngayhethan', 'b.trangthai'
-            );
+            ->select('b.batch_id', 'i.masanpham', 'i.ten_sanpham', 'i.danhmuc',
+                'b.solo', 'b.soluong', 'b.ngayhethan', 'b.trangthai');
 
-        $soonExpiry = (clone $base)
-            ->where('b.trangthai', 'DANG_SU_DUNG')
+        $soonExpiry = (clone $base)->where('b.trangthai', 'DANG_SU_DUNG')
             ->whereDate('b.ngayhethan', '>=', $today->toDateString())
             ->whereDate('b.ngayhethan', '<', $sixMonths->toDateString())
-            ->orderBy('b.ngayhethan')
-            ->get();
+            ->orderBy('b.ngayhethan')->get();
 
-        $expired = (clone $base)
-            ->where('b.trangthai', 'HET_HAN')
+        $expired = (clone $base)->where('b.trangthai', 'HET_HAN')
             ->whereDate('b.ngayhethan', '<', $today->toDateString())
-            ->orderBy('b.ngayhethan')
-            ->get();
+            ->orderBy('b.ngayhethan')->get();
+
+        // Tồn thuốc/vắc-xin/thức ăn được cộng từ các lô còn sử dụng;
+        // đồ dùng lấy trực tiếp từ inventory.soluongton. Không đưa kho dịch vụ vào cảnh báo.
+        $batchStocks = DB::table('inventory_batches')
+            ->where('trangthai', 'DANG_SU_DUNG')
+            ->where(function ($query) use ($today) {
+                $query->whereNull('ngayhethan')
+                    ->orWhereDate('ngayhethan', '>=', $today->toDateString());
+            })
+            ->groupBy('item_id')
+            ->select('item_id', DB::raw('SUM(soluong) as tong_ton'));
+
+        $lowStockRows = DB::table('inventory as i')
+            ->leftJoinSub($batchStocks, 'stock', function ($join) {
+                $join->on('stock.item_id', '=', 'i.item_id');
+            })
+            ->whereIn('i.danhmuc', ['THUOC', 'VAC_XIN', 'THUC_AN', 'DO_DUNG'])
+            ->select('i.item_id', 'i.masanpham', 'i.ten_sanpham', 'i.danhmuc',
+                DB::raw("CASE WHEN i.danhmuc = 'DO_DUNG' THEN COALESCE(i.soluongton, 0) ELSE COALESCE(stock.tong_ton, 0) END as so_luong"))
+            ->having('so_luong', '<', 5)
+            ->orderBy('i.danhmuc')->orderBy('i.ten_sanpham')->get();
+
+        $khoSapHet = [
+            'THUOC' => ['ten_kho' => 'Kho thuốc', 'items' => []],
+            'VAC_XIN' => ['ten_kho' => 'Kho vắc-xin tiêm phòng', 'items' => []],
+            'THUC_AN' => ['ten_kho' => 'Kho thức ăn', 'items' => []],
+            'DO_DUNG' => ['ten_kho' => 'Kho đồ dùng', 'items' => []],
+        ];
+        foreach ($lowStockRows as $item) {
+            $khoSapHet[$item->danhmuc]['items'][] = [
+                'ma' => $item->masanpham,
+                'ten' => $item->ten_sanpham,
+                'so_luong' => (int) $item->so_luong,
+            ];
+        }
+        foreach ($khoSapHet as $key => $store) {
+            $khoSapHet[$key]['so_mat_hang'] = count($store['items']);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -76,64 +108,98 @@ class DashboardController extends Controller
                 'da_het_han' => $expired,
                 'so_sap_het_han' => $soonExpiry->count(),
                 'so_da_het_han' => $expired->count(),
+                'kho_sap_het' => $khoSapHet,
             ],
         ]);
     }
 
     /**
-     * FR-STAT-04: Thống kê doanh thu chi tiết theo khoảng thời gian
+     * Báo cáo doanh thu theo ngày, tuần, tháng và năm.
      */
     public function getRevenueReport(Request $request)
     {
         $validated = $request->validate([
-            'tu_ngay' => 'nullable|date',
-            'den_ngay' => 'nullable|date|after_or_equal:tu_ngay',
+            'ngay' => 'nullable|date',
+            'tuan' => 'nullable|date',
+            'thang' => 'nullable|date_format:Y-m',
+            'nam' => 'nullable|integer|min:2000|max:2100',
         ]);
 
-        $tuNgay = $validated['tu_ngay'] ?? Carbon::now()->startOfMonth()->toDateString();
-        $denNgay = $validated['den_ngay'] ?? Carbon::now()->toDateString();
+        $ngay = Carbon::parse($validated['ngay'] ?? Carbon::today())->startOfDay();
+        $tuan = Carbon::parse($validated['tuan'] ?? Carbon::today())->startOfWeek(Carbon::MONDAY);
+        $thang = Carbon::createFromFormat('Y-m', $validated['thang'] ?? Carbon::today()->format('Y-m'))->startOfMonth();
+        $nam = (int) ($validated['nam'] ?? Carbon::today()->year);
 
-        $invoiceQuery = DB::table('invoices')
-            ->where('trangthai', 'DA_THANH_TOAN')
-            ->whereBetween(DB::raw('DATE(ngaytao)'), [$tuNgay, $denNgay]);
+        $paidInvoices = DB::table('invoices')->where('trangthai', 'DA_THANH_TOAN');
+        $sumInvoices = function (Carbon $from, Carbon $to) use ($paidInvoices) {
+            return (clone $paidInvoices)->whereBetween(DB::raw('DATE(ngaytao)'), [
+                $from->toDateString(), $to->toDateString()
+            ]);
+        };
+        $categoryTotals = function (Carbon $from, Carbon $to) {
+            return DB::table('invoice_details as detail')
+                ->join('invoices as invoice', 'invoice.invoice_id', '=', 'detail.invoice_id')
+                ->where('invoice.trangthai', 'DA_THANH_TOAN')
+                ->whereBetween(DB::raw('DATE(invoice.ngaytao)'), [$from->toDateString(), $to->toDateString()])
+                ->select('detail.loai_chiphi',
+                    DB::raw('SUM(detail.thanhtien) as tong_doanh_thu'),
+                    DB::raw('COUNT(DISTINCT invoice.invoice_id) as so_hoa_don'))
+                ->groupBy('detail.loai_chiphi')->orderByDesc('tong_doanh_thu')->get();
+        };
 
-        $tongDoanhThu = (clone $invoiceQuery)->sum('tongtien');
-        $soHoaDon = (clone $invoiceQuery)->count();
+        $dayInvoices = $sumInvoices($ngay, $ngay);
+        $dayTotal = (float) (clone $dayInvoices)->sum('tongtien');
+        $dayCount = (int) (clone $dayInvoices)->count();
+        $dayCategories = $categoryTotals($ngay, $ngay);
 
-        $doanhThuTheoNgay = (clone $invoiceQuery)
-            ->select(
-                DB::raw('DATE(ngaytao) as ngay'),
-                DB::raw('SUM(tongtien) as tong_doanh_thu'),
-                DB::raw('COUNT(*) as so_hoa_don')
-            )
-            ->groupBy(DB::raw('DATE(ngaytao)'))
-            ->orderBy('ngay', 'asc')
-            ->get();
+        $weekEnd = $tuan->copy()->endOfWeek(Carbon::SUNDAY);
+        $weekInvoices = $sumInvoices($tuan, $weekEnd);
+        $weekTotal = (float) (clone $weekInvoices)->sum('tongtien');
+        $weekCount = (int) (clone $weekInvoices)->count();
+        $weeklyRows = [];
+        for ($date = $tuan->copy(); $date->lte($weekEnd); $date->addDay()) {
+            $row = $sumInvoices($date, $date);
+            $weeklyRows[] = [
+                'ngay' => $date->toDateString(),
+                'tong_doanh_thu' => (float) (clone $row)->sum('tongtien'),
+                'so_hoa_don' => (int) (clone $row)->count(),
+            ];
+        }
 
-        $doanhThuTheoLoai = DB::table('invoice_details as detail')
-            ->join('invoices as invoice', 'invoice.invoice_id', '=', 'detail.invoice_id')
-            ->where('invoice.trangthai', 'DA_THANH_TOAN')
-            ->whereBetween(DB::raw('DATE(invoice.ngaytao)'), [$tuNgay, $denNgay])
-            ->select(
-                'detail.loai_chiphi',
-                DB::raw('SUM(detail.thanhtien) as tong_doanh_thu'),
-                DB::raw('COUNT(DISTINCT invoice.invoice_id) as so_hoa_don')
-            )
-            ->groupBy('detail.loai_chiphi')
-            ->orderByDesc('tong_doanh_thu')
-            ->get();
+        $monthEnd = $thang->copy()->endOfMonth();
+        $monthInvoices = $sumInvoices($thang, $monthEnd);
+        $monthTotal = (float) (clone $monthInvoices)->sum('tongtien');
+        $monthCount = (int) (clone $monthInvoices)->count();
+
+        $yearStart = Carbon::create($nam, 1, 1)->startOfDay();
+        $yearEnd = $yearStart->copy()->endOfYear();
+        $yearInvoices = $sumInvoices($yearStart, $yearEnd);
+        $yearTotal = (float) (clone $yearInvoices)->sum('tongtien');
+        $yearCount = (int) (clone $yearInvoices)->count();
 
         return response()->json([
             'status' => 'success',
             'data' => [
-                'tu_ngay' => $tuNgay,
-                'den_ngay' => $denNgay,
-                'tong_doanh_thu' => (float) $tongDoanhThu,
-                'so_hoa_don' => (int) $soHoaDon,
-                'doanh_thu_trung_binh' => $soHoaDon > 0 ? (float) $tongDoanhThu / $soHoaDon : 0,
-                'theo_ngay' => $doanhThuTheoNgay,
-                'theo_loai_chi_phi' => $doanhThuTheoLoai,
+                'ngay' => $ngay->toDateString(),
+                'tong_doanh_thu_ngay' => $dayTotal,
+                'so_hoa_don_ngay' => $dayCount,
+                'so_ca_kham' => (int) DB::table('medical_records')->whereDate('ngaykham', $ngay->toDateString())->count(),
+                'theo_loai_chi_phi_ngay' => $dayCategories,
+                'tuan_tu_ngay' => $tuan->toDateString(),
+                'tuan_den_ngay' => $weekEnd->toDateString(),
+                'tong_doanh_thu_tuan' => $weekTotal,
+                'so_hoa_don_tuan' => $weekCount,
+                'theo_ngay_trong_tuan' => $weeklyRows,
+                'thang' => $thang->format('Y-m'),
+                'tong_doanh_thu_thang' => $monthTotal,
+                'so_hoa_don_thang' => $monthCount,
+                'theo_loai_chi_phi_thang' => $categoryTotals($thang, $monthEnd),
+                'nam' => $nam,
+                'tong_doanh_thu_nam' => $yearTotal,
+                'so_hoa_don_nam' => $yearCount,
+                'theo_loai_chi_phi_nam' => $categoryTotals($yearStart, $yearEnd),
             ],
         ]);
     }
+}
 }
