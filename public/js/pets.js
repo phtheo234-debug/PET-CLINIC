@@ -123,10 +123,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("editPetForm")?.addEventListener("submit", async event => {
         event.preventDefault();
         const petId = Number(document.getElementById("editPetId").value);
-        const ownerId = Number(document.getElementById("editPetOwnerId").value);
+        const ownerId = Number(document.getElementById("editPetOwnerSelect").value);
+        if (!ownerId) { alert("Vui lòng chọn chủ nuôi."); return; }
         try {
-            await apiRequest("/owners/" + ownerId, { method: "PUT", body: JSON.stringify({ ho_ten: document.getElementById("editPetOwnerName").value.trim(), phone: document.getElementById("editPetOwnerPhone").value.trim(), email: document.getElementById("editPetOwnerEmail").value.trim(), diachi: document.getElementById("editPetOwnerAddress").value.trim() }) });
-            await apiRequest("/pets/" + petId, { method: "PUT", body: JSON.stringify({ name: document.getElementById("editPetName").value.trim(), species: document.getElementById("editPetSpecies").value, breed: document.getElementById("editPetBreed").value.trim() || null, gender: document.getElementById("editPetGender").value, dob: document.getElementById("editPetDob").value || null }) });
+            await apiRequest("/pets/" + petId, { method: "PUT", body: JSON.stringify({ owner_id: ownerId, name: document.getElementById("editPetName").value.trim(), species: document.getElementById("editPetSpecies").value, breed: document.getElementById("editPetBreed").value.trim() || null, gender: document.getElementById("editPetGender").value, dob: document.getElementById("editPetDob").value || null }) });
             $("#editPetModal").modal("hide");
             await Promise.all([loadPets(), loadOwners()]);
             alert("Đã cập nhật hồ sơ thú cưng và thông tin chủ nuôi liên kết.");
@@ -301,12 +301,14 @@ async function loadOwners() {
 
 async function openEditPet(petId) {
     try { const response = await apiRequest("/pets/" + petId); const pet = response?.data?.data || response?.data || {};
-        document.getElementById("editPetId").value = petId; document.getElementById("editPetOwnerId").value = pet.owner_id || pet.owner?.id || "";
+        document.getElementById("editPetId").value = petId;
+        const owners = extractList(await apiRequest("/owners"));
+        const ownerSelect = document.getElementById("editPetOwnerSelect");
+        ownerSelect.innerHTML = owners.map(owner => `<option value="${Number(owner.owner_id)}">${escapePetHtml(owner.ho_ten)} · ${escapePetHtml(owner.phone)}</option>`).join("");
+        ownerSelect.value = String(pet.owner_id || pet.owner?.id || "");
         document.getElementById("editPetName").value = pet.name || ""; document.getElementById("editPetSpecies").value = pet.species || "Khác";
         document.getElementById("editPetBreed").value = pet.breed || ""; document.getElementById("editPetGender").value = pet.gender || "CHUA_XAC_DINH";
-        document.getElementById("editPetDob").value = pet.dob || ""; document.getElementById("editPetOwnerName").value = pet.owner?.name || "";
-        document.getElementById("editPetOwnerPhone").value = pet.owner?.phone || ""; document.getElementById("editPetOwnerEmail").value = pet.owner?.email || "";
-        document.getElementById("editPetOwnerAddress").value = pet.owner?.address || ""; $("#editPetModal").modal("show");
+        document.getElementById("editPetDob").value = pet.dob || ""; $("#editPetModal").modal("show");
     } catch (error) { alert("Không tải được hồ sơ cần sửa: " + error.message); }
 }
 // Tải danh sách thú cưng
