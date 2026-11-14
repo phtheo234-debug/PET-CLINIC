@@ -58,12 +58,7 @@
 <div class="form-group col-md-6"><label>Giống</label><input id="editPetBreed" class="form-control" maxlength="50"></div>
 <div class="form-group col-md-6"><label>Giới tính</label><select id="editPetGender" class="form-control"><option value="DUC">Đực</option><option value="CAI">Cái</option><option value="CHUA_XAC_DINH">Chưa xác định</option></select></div>
 <div class="form-group col-md-6"><label>Ngày sinh</label><input type="date" id="editPetDob" class="form-control"></div></div>
-<hr><h6 class="font-weight-bold text-primary">Thông tin chủ nuôi liên kết</h6>
-<div class="form-row"><div class="form-group col-md-6"><label>Họ tên chủ nuôi</label><input id="editPetOwnerName" class="form-control" maxlength="100" required></div>
-<div class="form-group col-md-6"><label>Số điện thoại</label><input id="editPetOwnerPhone" class="form-control" maxlength="20" required></div>
-<div class="form-group col-md-6"><label>Email</label><input id="editPetOwnerEmail" type="email" class="form-control" maxlength="100"></div>
-<div class="form-group col-md-6"><label>Địa chỉ</label><input id="editPetOwnerAddress" class="form-control" maxlength="255"></div></div>
-<small class="text-muted">Thông tin chủ nuôi sẽ được cập nhật cho tất cả thú cưng cùng thuộc chủ nuôi này.</small></div>
+<hr><h6 class="font-weight-bold text-primary">Chủ nuôi liên kết</h6><div class="form-group"><label>Chọn chủ nuôi</label><select id="editPetOwnerSelect" class="form-control" required></select><small class="form-text text-muted">Có thể chuyển hồ sơ thú cưng sang chủ nuôi khác. Muốn sửa họ tên, số điện thoại hoặc địa chỉ, dùng nút Sửa trong danh sách chủ nuôi.</small></div></div>
 <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button><button class="btn btn-primary">Lưu thay đổi</button></div>
 </form></div></div></div>
 <div class="modal fade" id="addPetModal" tabindex="-1" role="dialog" aria-hidden="true">
