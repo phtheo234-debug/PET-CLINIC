@@ -22,6 +22,12 @@
                 <button type="button" id="btnThangNay" class="btn btn-outline-secondary">
                     Tháng này
                 </button>
+                <button type="button" id="btnXuatTongHop" class="btn btn-outline-success mt-2">
+                    <i class="fas fa-file-csv mr-1"></i> Xuất tổng hợp
+                </button>
+                <button type="button" id="btnInTongHop" class="btn btn-outline-dark mt-2">
+                    <i class="fas fa-print mr-1"></i> In tổng hợp
+                </button>
             </div>
         </div>
         <small id="thongKeError" class="text-danger"></small>
@@ -64,10 +70,10 @@
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="thead-light">
-                        <tr><th>Loại chi phí</th><th class="text-right">Số hóa đơn</th><th class="text-right">Doanh thu</th></tr>
+                        <tr><th>Loại chi phí</th><th class="text-right">Số hóa đơn</th><th class="text-right">Doanh thu</th><th class="text-center">Thao tác</th></tr>
                     </thead>
                     <tbody id="bangTheoLoai">
-                        <tr><td colspan="3" class="text-center text-muted">Đang tải...</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted">Đang tải...</td></tr>
                     </tbody>
                 </table>
             </div>
