@@ -30,7 +30,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     });
     document.getElementById("extraCategory").addEventListener("change",renderExtraItemOptions);
     document.getElementById("extraItem").addEventListener("change",updateExtraUnitPrice);
-    document.getElementById("extraQuantity").addEventListener("input",recalculatePayment);
     document.getElementById("btnAddExtraItem").addEventListener("click",addExtraCharge);
     document.getElementById("btnPaymentSuccess").addEventListener("click",submitUnifiedPayment);
     document.getElementById("btnPrintNewInvoice").addEventListener("click",function(){ const id=Number(this.dataset.invoiceId); if(id) printInvoice(id); });
@@ -98,10 +97,6 @@ function renderMedicalCharges(c) {
 }
 function renderExtraItemOptions() {
     const category=document.getElementById("extraCategory").value;
-    const quantityGroup=document.getElementById("extraQuantityGroup");
-    const isService=category==="DICH_VU_SPA";
-    quantityGroup.classList.toggle("d-none",!isService);
-    document.querySelector("#extraQuantityGroup label").textContent="Số lượng dịch vụ";
     const items=paymentCatalog.filter(x=>x.danhmuc===category);
     document.getElementById("extraItem").innerHTML='<option value="">-- Chọn sản phẩm / dịch vụ --</option>'+items.map(x=>'<option value="'+Number(x.item_id)+'">'+escapeInvoiceHtml(x.masanpham)+' - '+escapeInvoiceHtml(x.ten_sanpham)+' ('+invoiceMoney(x.dongia)+')</option>').join("");
     updateExtraUnitPrice();
@@ -113,14 +108,11 @@ function updateExtraUnitPrice() {
 }
 function addExtraCharge() {
     const id=Number(document.getElementById("extraItem").value), item=paymentCatalog.find(x=>Number(x.item_id)===id);
-    const qty=item&&item.danhmuc==="DICH_VU_SPA"?Number(document.getElementById("extraQuantity").value):1;
-    if(!item||(item.danhmuc==="DICH_VU_SPA"&&(!Number.isInteger(qty)||qty<1))){alert("Vui lòng chọn sản phẩm/dịch vụ và nhập số lượng dịch vụ hợp lệ.");return;}
+    if(!item){alert("Vui lòng chọn sản phẩm/dịch vụ.");return;}
     const old=extraChargeLines.find(x=>x.item_id===id);
-    if(old){
-        if(item.danhmuc==="DICH_VU_SPA")old.quantity+=qty;
-        else {alert("Sản phẩm này đã được thêm vào hóa đơn.");return;}
-    }else extraChargeLines.push({item_id:id,name:item.ten_sanpham,category:item.danhmuc,quantity:qty,price:Number(item.dongia),unit:item.donvitinh||""});
-    document.getElementById("extraQuantity").value=1; renderExtraCharges(); recalculatePayment();
+    if(old){alert("Dịch vụ/sản phẩm này đã được thêm vào hóa đơn, không thể thêm lần nữa.");return;}
+    extraChargeLines.push({item_id:id,name:item.ten_sanpham,category:item.danhmuc,quantity:1,price:Number(item.dongia),unit:item.donvitinh||""});
+    renderExtraCharges(); recalculatePayment();
 }
 function renderExtraCharges() {
     const body=document.getElementById("extraItemsBody");
