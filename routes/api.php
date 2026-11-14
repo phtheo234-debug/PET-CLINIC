@@ -63,11 +63,6 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::post('/spa-services', [AdminSpaServiceController::class, 'store']);
         Route::put('/spa-services/{id}', [AdminSpaServiceController::class, 'update']);
         Route::delete('/spa-services/{id}', [AdminSpaServiceController::class, 'destroy']);
-
-        // Quản lý danh mục vắc-xin: chỉ quản trị viên.
-        Route::post('/vaccination-types', [VaccinationController::class, 'storeType']);
-        Route::put('/vaccination-types/{id}', [VaccinationController::class, 'updateType']);
-        Route::delete('/vaccination-types/{id}', [VaccinationController::class, 'destroyType']);
     });
 
     // Hồ sơ thú cưng: mọi vai trò được xem; nhân viên/quản trị tiếp nhận và xóa;
