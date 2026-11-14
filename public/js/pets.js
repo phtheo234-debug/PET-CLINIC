@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Tải danh sách sau khi xác định vai trò để hiển thị đúng quyền cập nhật.
     await loadPets();
+    await loadOwners();
 
     const canReceivePets = ["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole);
 
@@ -106,6 +107,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("btnSearchPet")?.addEventListener("click", runPetSearch);
     document.getElementById("searchPet")?.addEventListener("keydown", event => { if (event.key === "Enter") runPetSearch(); });
 
+    document.getElementById("petsTableBody").addEventListener("click", async event => {
+        const deleteButton = event.target.closest("[data-delete-pet]");
+        if (deleteButton) {
+            const id = Number(deleteButton.dataset.deletePet);
+            const pet = petsList.find(item => Number(item.pet_id ?? item.id) === id);
+            if (!confirm("Xóa hồ sơ thú cưng " + (pet?.name || pet?.ten_thucung || ("#" + id)) + "? Chỉ xóa được hồ sơ chưa phát sinh dữ liệu khám/hóa đơn.")) return;
+            try { await apiRequest("/pets/" + id, { method: "DELETE" }); await loadPets(); alert("Đã xóa hồ sơ thú cưng."); }
+            catch (error) { alert("Không thể xóa hồ sơ: " + error.message); }
+        }
+    });
+
+    document.getElementById("editPetForm")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const petId = Number(document.getElementById("editPetId").value);
+        const ownerId = Number(document.getElementById("editPetOwnerId").value);
+        try {
+            await apiRequest("/owners/" + ownerId, { method: "PUT", body: JSON.stringify({ ho_ten: document.getElementById("editPetOwnerName").value.trim(), phone: document.getElementById("editPetOwnerPhone").value.trim(), email: document.getElementById("editPetOwnerEmail").value.trim(), diachi: document.getElementById("editPetOwnerAddress").value.trim() }) });
+            await apiRequest("/pets/" + petId, { method: "PUT", body: JSON.stringify({ name: document.getElementById("editPetName").value.trim(), species: document.getElementById("editPetSpecies").value, breed: document.getElementById("editPetBreed").value.trim() || null, gender: document.getElementById("editPetGender").value, dob: document.getElementById("editPetDob").value || null }) });
+            $("#editPetModal").modal("hide");
+            await Promise.all([loadPets(), loadOwners()]);
+            alert("Đã cập nhật hồ sơ thú cưng và thông tin chủ nuôi liên kết.");
+        } catch (error) { alert("Không thể cập nhật: " + error.message); }
+    });
+
+    document.getElementById("editOwnerForm")?.addEventListener("submit", async event => {
+        event.preventDefault(); const id = Number(document.getElementById("editOwnerId").value);
+        try { await apiRequest("/owners/" + id, { method: "PUT", body: JSON.stringify({ ho_ten: document.getElementById("editOwnerName").value.trim(), phone: document.getElementById("editOwnerPhone").value.trim(), email: document.getElementById("editOwnerEmail").value.trim(), diachi: document.getElementById("editOwnerAddress").value.trim() }) });
+            $("#editOwnerModal").modal("hide"); await Promise.all([loadOwners(), loadPets()]); alert("Đã cập nhật chủ nuôi.");
+        } catch (error) { alert("Không thể cập nhật chủ nuôi: " + error.message); }
+    });
+
+    document.getElementById("ownersTableBody")?.addEventListener("click", async event => {
+        const edit = event.target.closest("[data-edit-owner]"); const remove = event.target.closest("[data-delete-owner]");
+        if (edit) { const owner = JSON.parse(decodeURIComponent(edit.dataset.owner));
+            document.getElementById("editOwnerId").value = owner.owner_id; document.getElementById("editOwnerName").value = owner.ho_ten || "";
+            document.getElementById("editOwnerPhone").value = owner.phone || ""; document.getElementById("editOwnerEmail").value = owner.email || "";
+            document.getElementById("editOwnerAddress").value = owner.diachi || ""; $("#editOwnerModal").modal("show");
+        } else if (remove) { const id = Number(remove.dataset.deleteOwner);
+            if (!confirm("Xóa chủ nuôi này? Hệ thống chỉ cho phép xóa khi không còn thú cưng liên kết.")) return;
+            try { await apiRequest("/owners/" + id, { method: "DELETE" }); await loadOwners(); alert("Đã xóa chủ nuôi."); }
+            catch (error) { alert("Không thể xóa chủ nuôi: " + error.message); }
+        }
+    });
     // Mở hộp thoại ghi chú khi yêu cầu đưa thú cưng vào danh sách chờ.
     document.getElementById("petsTableBody").addEventListener("click", event => {
         const button = event.target.closest("[data-add-medical-queue]");
@@ -241,6 +285,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 });
 
+// Quản lý thông tin chủ nuôi.
+async function loadOwners() {
+    const body = document.getElementById("ownersTableBody"); if (!body) return;
+    try { const owners = extractList(await apiRequest("/owners"));
+        body.innerHTML = owners.length ? owners.map(owner => { const encoded = encodeURIComponent(JSON.stringify(owner));
+            return `<tr><td>${escapePetHtml(owner.ho_ten)}</td><td>${escapePetHtml(owner.phone)}</td><td>${escapePetHtml(owner.email || "-")}</td><td>${escapePetHtml(owner.diachi || "-")}</td><td class="text-nowrap"><button type="button" class="btn btn-sm btn-outline-primary" data-edit-owner data-owner="${encoded}">Sửa</button> <button type="button" class="btn btn-sm btn-outline-danger" data-delete-owner="${Number(owner.owner_id)}">Xóa</button> <small class="text-muted ml-1">${Number(owner.pet_count || 0)} thú cưng</small></td></tr>`;
+        }).join("") : '<tr><td colspan="5" class="text-center text-muted">Chưa có chủ nuôi.</td></tr>';
+    } catch (error) { body.innerHTML = `<tr><td colspan="5" class="text-danger text-center">${escapePetHtml(error.message)}</td></tr>`; }
+}
+
+async function openEditPet(petId) {
+    try { const response = await apiRequest("/pets/" + petId); const pet = response?.data?.data || response?.data || {};
+        document.getElementById("editPetId").value = petId; document.getElementById("editPetOwnerId").value = pet.owner_id || pet.owner?.id || "";
+        document.getElementById("editPetName").value = pet.name || ""; document.getElementById("editPetSpecies").value = pet.species || "Khác";
+        document.getElementById("editPetBreed").value = pet.breed || ""; document.getElementById("editPetGender").value = pet.gender || "CHUA_XAC_DINH";
+        document.getElementById("editPetDob").value = pet.dob || ""; document.getElementById("editPetOwnerName").value = pet.owner?.name || "";
+        document.getElementById("editPetOwnerPhone").value = pet.owner?.phone || ""; document.getElementById("editPetOwnerEmail").value = pet.owner?.email || "";
+        document.getElementById("editPetOwnerAddress").value = pet.owner?.address || ""; $("#editPetModal").modal("show");
+    } catch (error) { alert("Không tải được hồ sơ cần sửa: " + error.message); }
+}
 // Tải danh sách thú cưng
 async function loadPets() {
     try {
@@ -336,6 +400,7 @@ function renderPetsTable(items) {
                     ${["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole) && !p.trangthai_hangdoi && (!p.trangthai_kham || p.trangthai_kham === "CHUA_KHAM") ? '<button type="button" class="btn btn-sm btn-outline-danger mr-1" data-add-medical-queue data-pet-id="' + Number(petId) + '" data-queue-note="' + escapePetHtml(p.ghi_chu_cho_kham || "") + '"><i class="fas fa-user-clock mr-1"></i>Đưa vào chờ khám</button>' : p.trangthai_hangdoi === "CHO_KHAM" ? '<span class="badge badge-secondary mr-1">Đang chờ khám</span>' : p.trangthai_hangdoi === "DANG_KHAM" ? '<span class="badge badge-warning mr-1">Đang khám</span>' : ""}
                     <button type="button" class="btn btn-sm btn-outline-primary mr-1" onclick="openPetDetail(${Number(petId)})"><i class="fas fa-eye"></i> Chi tiết</button>
                     <button type="button" class="btn btn-sm btn-outline-success" onclick="printPetProfile(${Number(petId)})"><i class="fas fa-print"></i> In hồ sơ</button>
+                    ${["QUAN_TRI", "NHAN_VIEN"].includes(currentUserRole) ? '<button type="button" class="btn btn-sm btn-outline-warning ml-1" onclick="openEditPet(\' + Number(petId) + \')"><i class="fas fa-edit"></i> Sửa</button><button type="button" class="btn btn-sm btn-outline-danger ml-1" data-delete-pet="\' + Number(petId) + \'"><i class="fas fa-trash"></i> Xóa</button>' : ""}
                 </td>
             </tr>
         `;
