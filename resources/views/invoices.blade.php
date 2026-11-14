@@ -3,11 +3,21 @@
 @section('page_title', 'Thanh toán & Lập hóa đơn')
 @section('content')
 <div class="card shadow-sm mb-3">
- <div class="card-header bg-white font-weight-bold text-primary">BẢNG 1. TÌM KIẾM HỒ SƠ THÚ CƯNG</div>
- <div class="card-body"><div class="form-row align-items-end">
-  <div class="form-group col-md-8"><label for="paymentPetSearch">Tìm theo mã hoặc tên thú cưng</label><input id="paymentPetSearch" class="form-control" list="paymentPetSuggestions" placeholder="Nhập mã TC hoặc tên thú cưng..." autocomplete="off"><datalist id="paymentPetSuggestions"></datalist><small class="form-text text-muted">Chọn một gợi ý trong danh sách.</small></div>
-  <div class="form-group col-md-4"><label for="paymentOwnerName">Tên chủ nuôi</label><input id="paymentOwnerName" class="form-control bg-light" readonly placeholder="Tự động hiển thị"></div>
- </div><div id="paymentPetInfo" class="text-muted small">Chưa chọn hồ sơ thú cưng.</div></div>
+ <div class="card-header bg-white font-weight-bold text-primary">BẢNG 1. DANH SÁCH THÚ CƯNG ĐỦ ĐIỀU KIỆN THANH TOÁN</div>
+ <div class="card-body">
+  <div class="form-group mb-3">
+   <label for="paymentPetSearch">Tìm kiếm theo mã thú cưng, tên thú, chủ nuôi hoặc số điện thoại</label>
+   <input id="paymentPetSearch" class="form-control" placeholder="Nhập thông tin cần tìm..." autocomplete="off">
+   <small class="form-text text-muted">Danh sách chỉ hiển thị thú cưng có khoản cần thanh toán và không ở trạng thái chờ khám/đang khám.</small>
+  </div>
+  <div class="table-responsive">
+   <table class="table table-bordered table-hover table-sm mb-0">
+    <thead class="thead-light"><tr><th>Mã - Tên thú cưng</th><th>Tên chủ nuôi</th><th>Số điện thoại</th><th class="text-center">Thao tác</th></tr></thead>
+    <tbody id="eligiblePaymentPetsBody"><tr><td colspan="4" class="text-center text-muted">Đang tải danh sách...</td></tr></tbody>
+   </table>
+  </div>
+  <div id="paymentPetInfo" class="text-muted small mt-3">Chưa chọn thú cưng để thanh toán.</div>
+ </div>
 </div>
 <div class="card shadow-sm mb-3 d-none" id="medicalChargesSection">
  <div class="card-header bg-white font-weight-bold text-info">BẢNG 2. CHI PHÍ KHÁM VÀ ĐIỀU TRỊ</div>
