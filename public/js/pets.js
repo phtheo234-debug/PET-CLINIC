@@ -572,45 +572,6 @@ async function loadVaccineTypes(showInactive = false) {
     }
 }
 
-// Tải và hiển thị lịch tiêm của một thú cưng.
-async function loadPetVaccinations(petId) {
-    const section = document.getElementById("petVaccinationSection");
-    if (!section) return;
-    try {
-        const [typeResponse, recordResponse] = await Promise.all([
-            apiRequest("/vaccinations/types"),
-            apiRequest("/pets/" + petId + "/vaccinations")
-        ]);
-        const types = extractList(typeResponse);
-        const records = extractList(recordResponse);
-        const canWrite = ["QUAN_TRI", "BAC_SI", "NHAN_VIEN"].includes(currentUserRole);
-        const rows = records.length ? records.map(item => `
-            <tr><td>${escapePetHtml(item.vaccine_name)}</td><td>${escapePetHtml(item.vaccinated_at)}</td>
-            <td>${escapePetHtml(item.next_due_date || "Chưa hẹn")}</td><td>${escapePetHtml(item.notes || "-")}</td>
-            <td>${canWrite ? '<button type="button" class="btn btn-sm btn-outline-danger" data-delete-vaccination="' + Number(item.id) + '" title="Xóa bản ghi"><i class="fas fa-trash"></i></button>' : ""}</td></tr>`).join("") : '<tr><td colspan="5" class="text-center text-muted">Chưa có lịch sử tiêm chủng.</td></tr>';
-        section.innerHTML = `
-            <div class="card-body">
-                <h6 class="font-weight-bold text-primary"><i class="fas fa-syringe mr-1"></i>Lịch sử tiêm chủng</h6>
-                <div class="table-responsive mb-3"><table class="table table-sm table-bordered bg-white mb-0">
-                    <thead class="thead-light"><tr><th>Loại vắc-xin</th><th>Ngày tiêm</th><th>Hẹn tiêm tiếp</th><th>Ghi chú</th><th></th></tr></thead>
-                    <tbody>${rows}</tbody>
-                </table></div>
-                ${canWrite ? `
-                <form id="petVaccinationForm">
-                    <div class="form-row">
-                        <div class="form-group col-md-4"><label>Loại vắc-xin</label><select class="form-control" name="vaccination_type_id" required><option value="">-- Chọn vắc-xin --</option>${types.map(type => '<option value="' + Number(type.id) + '">' + escapePetHtml(type.name) + '</option>').join("")}</select></div>
-                        <div class="form-group col-md-3"><label>Ngày tiêm</label><input type="date" class="form-control" name="vaccinated_at" required></div>
-                        <div class="form-group col-md-3"><label>Ngày hẹn tiếp</label><input type="date" class="form-control" name="next_due_date"></div>
-                        <div class="form-group col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save mr-1"></i>Lưu</button></div>
-                    </div>
-                    <div class="form-group mb-0"><label>Ghi chú</label><input type="text" class="form-control" name="notes" maxlength="2000" placeholder="Số lô, phản ứng sau tiêm..."></div>
-                </form>` : ""}
-            </div>`;
-    } catch (error) {
-        section.innerHTML = '<div class="card-body"><div class="text-danger">Không tải được lịch tiêm: ' + escapePetHtml(error.message) + '</div></div>';
-    }
-}
-
 // Lịch tiêm toàn phòng khám, đánh dấu quá hạn và sắp đến hạn.
 async function loadVaccinationSchedule() {
     const tbody = document.getElementById("vaccinationScheduleTable");
