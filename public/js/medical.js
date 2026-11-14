@@ -411,7 +411,7 @@ function updateMedicalSections() {
     const isTransfer = action === "TRANSFER";
     const canRequestStay = ["OUTPATIENT", "INPATIENT", "SURGERY"].includes(action);
     document.getElementById("isolationOption")?.classList.toggle("d-none", !canRequestStay);
-    document.getElementById("medicalInventorySection")?.classList.toggle("d-none", isTransfer || action === "SURGERY");
+    document.getElementById("medicalInventorySection")?.classList.toggle("d-none", isTransfer);
     document.getElementById("medicalVaccinationSection")?.classList.toggle("d-none", isTransfer);
     document.getElementById("medicalSurgerySection")?.classList.toggle("d-none", action !== "SURGERY");
     if (!canRequestStay && checkbox) checkbox.checked = false;
