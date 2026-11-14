@@ -92,6 +92,11 @@ class AdminInventoryController extends Controller
             ], 422);
         }
 
+        $linkedVaccine = DB::table('vaccination_types')->where('inventory_item_id', $id)->first();
+        if ($linkedVaccine && $fields['danhmuc'] !== 'VAC_XIN') {
+            return response()->json(['status' => 'error', 'message' => 'Mặt hàng đang liên kết với danh mục tiêm chủng nên không thể đổi khỏi loại Vắc-xin.'], 422);
+        }
+
         if ($item->danhmuc === 'THUOC' && $fields['danhmuc'] !== 'THUOC'
             && DB::table('prescriptions')->where('item_id', $id)->exists()) {
             return response()->json([
@@ -109,6 +114,12 @@ class AdminInventoryController extends Controller
         }
 
         DB::table('inventory')->where('item_id', $id)->update($values);
+        if ($linkedVaccine) {
+            DB::table('vaccination_types')->where('inventory_item_id', $id)->update([
+                'name' => $fields['ten_sanpham'],
+                'updated_at' => now(),
+            ]);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -123,6 +134,13 @@ class AdminInventoryController extends Controller
             $item = DB::table('inventory')->where('item_id', $id)->lockForUpdate()->first();
             if (!$item || !in_array($item->danhmuc, self::CATEGORIES, true)) {
                 return response()->json(['status' => 'error', 'message' => 'Không tìm thấy mặt hàng.'], 404);
+            }
+
+            if (DB::table('vaccination_types')->where('inventory_item_id', $id)->exists()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Mặt hàng đang được liên kết với danh mục vắc-xin. Hãy xóa/ngừng loại vắc-xin trong quản lý danh mục trước.',
+                ], 422);
             }
 
             if (DB::table('inventory_batches')->where('item_id', $id)->exists()) {
