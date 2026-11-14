@@ -48,9 +48,11 @@ function selectPaymentPetFromSearch() {
 }
 async function choosePaymentPet(id) {
     if(Number(selectedPaymentPetId)===Number(id)&&paymentPreview)return;
-    selectedPaymentPetId=Number(id); extraChargeLines=[];
+    selectedPaymentPetId=Number(id); paymentPreview=null; extraChargeLines=[];
     document.getElementById("unifiedPaymentResult").innerHTML="";
     document.getElementById("invoicePrintAction").classList.add("d-none");
+    ["medicalChargesSection","extraServicesSection","finalPaymentSection"].forEach(id=>document.getElementById(id).classList.add("d-none"));
+    document.getElementById("btnPaymentSuccess").disabled=true;
     try {
         paymentPreview=invoiceUnwrap(await apiRequest("/payment/pets/"+selectedPaymentPetId+"/preview"));
         const p=paymentPreview.pet||{};
