@@ -67,24 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         addPetButton.classList.remove("d-none");
     }
     $("#vaccinationScheduleModal").on("show.bs.modal", loadVaccinationSchedule);
-                await loadVaccineTypes(true);
-                alert("Đã cập nhật tên loại vắc-xin.");
-            } catch (error) {
-                alert("Không sửa được loại vắc-xin: " + error.message);
-            }
-        }
-        if (deleteButton) {
-            const id = Number(deleteButton.dataset.deleteVaccine);
-            if (!confirm("Bạn có chắc muốn xóa/ngừng sử dụng loại vắc-xin này?")) return;
-            try {
-                const result = await apiRequest("/admin/vaccination-types/" + id, { method: "DELETE" });
-                await loadVaccineTypes(true);
-                alert(result?.message || "Đã xóa loại vắc-xin.");
-            } catch (error) {
-                alert("Không xóa được loại vắc-xin: " + error.message);
-            }
-        }
-    });
+
 
     // Tự động điền mã thú cưng khi mở modal tiếp nhận
     $("#addPetModal").on("show.bs.modal", function () {
