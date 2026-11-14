@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const role = { QUAN_TRI: "Quản trị viên", BAC_SI: "Bác sĩ", NHAN_VIEN: "Nhân viên" }[item.vaitro] || item.vaitro;
                 const actions = isAdmin
                     ? '<span class="text-muted">Tài khoản quản trị hệ thống</span>'
-                    : `<button class="btn btn-sm btn-outline-warning mb-1" data-action="reset" data-id="${item.user_id}">Cấp lại MK</button>
+                    : `<button class="btn btn-sm btn-outline-primary mb-1" data-action="edit" data-id="${item.user_id}" data-user="${encodeURIComponent(JSON.stringify(item))}">Sửa</button>\n                       <button class="btn btn-sm btn-outline-danger mb-1" data-action="delete" data-id="${item.user_id}">Xóa</button>\n                       <button class="btn btn-sm btn-outline-warning mb-1" data-action="reset" data-id="${item.user_id}">Cấp lại MK</button>
                        <div class="input-group input-group-sm mt-1" style="min-width: 190px;">
                            <select class="form-control" id="status-${item.user_id}" aria-label="Trạng thái tài khoản">
                                <option value="HOAT_DONG" ${item.trangthai === "HOAT_DONG" ? "selected" : ""}>Hoạt động</option>
@@ -58,7 +58,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!button) return;
         const id = button.dataset.id;
         try {
-            if (button.dataset.action === "reset") {
+            if (button.dataset.action === "edit") {
+                const item = JSON.parse(decodeURIComponent(button.dataset.user));
+                document.getElementById("editUserId").value = item.user_id;
+                document.getElementById("editUsername").value = item.username || "";
+                document.getElementById("editName").value = item.ho_ten || "";
+                document.getElementById("editEmail").value = item.email || "";
+                document.getElementById("editPhone").value = item.phone || "";
+                document.getElementById("editRole").value = item.vaitro || "NHAN_VIEN";
+                $("#editUserModal").modal("show");
+            } else if (button.dataset.action === "delete") {
+                const username = button.closest("tr")?.children[1]?.textContent || ("#" + id);
+                if (!confirm("Xóa tài khoản " + username + "? Thao tác này không thể hoàn tác.")) return;
+                await apiRequest("/admin/users/" + id, { method: "DELETE" });
+                notify("Đã xóa tài khoản thành công.", true);
+                await loadUsers();
+            } else if (button.dataset.action === "reset") {
                 document.getElementById("resetUserId").value = id;
                 document.getElementById("temporaryPassword").value = "";
                 document.getElementById("resetPasswordAlert").classList.add("d-none");
@@ -80,6 +95,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (error) { notify(error.message); }
     });
 
+    document.getElementById("editUserForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const id = document.getElementById("editUserId").value;
+        try {
+            await apiRequest("/admin/users/" + id, {
+                method: "PUT",
+                body: JSON.stringify({
+                    username: document.getElementById("editUsername").value.trim(),
+                    ho_ten: document.getElementById("editName").value.trim(),
+                    email: document.getElementById("editEmail").value.trim(),
+                    phone: document.getElementById("editPhone").value.trim(),
+                    vaitro: document.getElementById("editRole").value
+                })
+            });
+            $("#editUserModal").modal("hide");
+            notify("Cập nhật tài khoản thành công.", true);
+            await loadUsers();
+        } catch (error) { notify(error.message); }
+    });
     document.getElementById("resetPasswordForm").addEventListener("submit", async (event) => {
         event.preventDefault();
         const id = document.getElementById("resetUserId").value;
