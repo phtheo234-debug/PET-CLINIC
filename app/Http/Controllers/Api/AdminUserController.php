@@ -167,7 +167,7 @@ class AdminUserController extends Controller
         }
         try {
             $user->delete();
-        } catch (\\Illuminate\\Database\\QueryException $e) {
+        } catch (\Illuminate\Database\QueryException $e) {
             return response()->json(['status' => 'error', 'message' => 'Không thể xóa tài khoản vì đã phát sinh dữ liệu nghiệp vụ liên quan. Hãy khóa tài khoản thay thế.'], 409);
         }
         return response()->json(['status' => 'success', 'message' => 'Đã xóa tài khoản thành công.']);
