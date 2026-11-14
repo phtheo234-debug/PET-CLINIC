@@ -53,9 +53,6 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
         Route::put('/cages/{id}', [AdminCageController::class, 'update']);
         Route::delete('/cages/{id}', [AdminCageController::class, 'destroy']);
 
-        Route::post('/surgeries', [SurgeryController::class, 'store']);
-        Route::put('/surgeries/{id}', [SurgeryController::class, 'update']);
-        Route::delete('/surgeries/{id}', [SurgeryController::class, 'destroy']);
 
         Route::post('/inventory', [AdminInventoryController::class, 'store']);
         Route::put('/inventory/{id}', [AdminInventoryController::class, 'update']);
