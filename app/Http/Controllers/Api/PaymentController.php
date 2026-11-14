@@ -206,6 +206,12 @@ class PaymentController extends Controller
             ->whereNull('mr.invoice_id')
             ->whereIn('mr.trangthai', ['CHUA_KHAM', 'DANG_DIEU_TRI'])
             ->where('p.trangthai', '!=', 'NOI_TRU')
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('medical_queue as mq')
+                    ->whereColumn('mq.pet_id', 'mr.pet_id')
+                    ->whereIn('mq.trangthai', ['CHO_KHAM', 'DANG_KHAM']);
+            })
             ->select('mr.record_id', 'mr.pet_id', 'mr.ngaykham', 'mr.chandoan', 'p.mathucung', 'p.ten_thucung', 'o.ho_ten as ten_chu_nuoi')
             ->orderByDesc('mr.ngaykham')
             ->get();
@@ -231,6 +237,14 @@ class PaymentController extends Controller
             $pet = DB::table('pets')->where('pet_id', $record->pet_id)->lockForUpdate()->first();
             if (!$pet || $pet->trangthai === 'NOI_TRU') {
                 return response()->json(['status' => 'error', 'message' => 'Thú cưng đang nội trú phải thanh toán tại mục xuất viện.'], 422);
+            }
+            $activeQueue = DB::table('medical_queue')
+                ->where('pet_id', $pet->pet_id)
+                ->whereIn('trangthai', ['CHO_KHAM', 'DANG_KHAM'])
+                ->lockForUpdate()
+                ->exists();
+            if ($activeQueue) {
+                return response()->json(['status' => 'error', 'message' => 'Thú cưng đang Chờ khám hoặc Đang khám. Chỉ được thanh toán sau khi bác sĩ hoàn tất lượt khám.'], 422);
             }
             $items = DB::table('prescriptions as rx')
                 ->join('inventory as i', 'i.item_id', '=', 'rx.item_id')
@@ -626,6 +640,14 @@ class PaymentController extends Controller
             ->first();
         abort_if(!$pet, 404, 'Không tìm thấy hồ sơ thú cưng.');
 
+        $activeQueue = DB::table('medical_queue')
+            ->where('pet_id', $petId)
+            ->whereIn('trangthai', ['CHO_KHAM', 'DANG_KHAM'])
+            ->exists();
+        if ($activeQueue) {
+            return response()->json(['status' => 'error', 'message' => 'Thú cưng đang Chờ khám hoặc Đang khám. Vui lòng hoàn tất lượt khám trước khi thanh toán.'], 422);
+        }
+
         $records = DB::table('medical_records as mr')
             ->leftJoin('surgeries as s', 's.surgery_id', '=', 'mr.surgery_id')
             ->where('mr.pet_id', $petId)->whereNull('mr.invoice_id')
@@ -723,6 +745,14 @@ class PaymentController extends Controller
                 }
                 if (in_array($pet->trangthai, ['DA_XUAT_VIEN', 'CHUYEN_VIEN'], true)) {
                     throw new Exception('Thú cưng đã xuất viện hoặc chuyển viện, không thể lập hóa đơn điều trị mới.');
+                }
+                $activeQueue = DB::table('medical_queue')
+                    ->where('pet_id', $pet->pet_id)
+                    ->whereIn('trangthai', ['CHO_KHAM', 'DANG_KHAM'])
+                    ->lockForUpdate()
+                    ->exists();
+                if ($activeQueue) {
+                    throw new Exception('Thú cưng đang Chờ khám hoặc Đang khám. Chỉ được thanh toán sau khi bác sĩ hoàn tất lượt khám.');
                 }
 
                 $records = DB::table('medical_records as mr')
