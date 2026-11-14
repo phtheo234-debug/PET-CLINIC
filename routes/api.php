@@ -113,6 +113,7 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::middleware('role:QUAN_TRI,NHAN_VIEN')->group(function () {
         Route::post('/medical/queue', [MedicalController::class, 'addToQueue']);
         Route::put('/medical/queue/{id}/note', [MedicalController::class, 'updateQueueNote']);
+        Route::get('/payment/eligible-pets', [PaymentController::class, 'eligiblePets']);
         Route::get('/payment/invoices', [PaymentController::class, 'index']);
         Route::get('/payment/pets/{petId}/preview', [PaymentController::class, 'previewPetCharges']);
         Route::post('/payment/checkout', [PaymentController::class, 'createUnifiedInvoice']);
