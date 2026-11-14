@@ -483,10 +483,6 @@ async function openPetDetail(petId) {
                 ${examStatusControl}
             </div>
 
-            <div id="petVaccinationSection" class="card border-0 bg-light mb-4">
-                <div class="card-body"><h6 class="font-weight-bold text-primary"><i class="fas fa-syringe mr-1"></i>Lịch sử tiêm chủng</h6><div class="text-muted small">Đang tải lịch tiêm...</div></div>
-            </div>
-
             <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-history mr-1"></i>Lịch sử khám bệnh</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
@@ -495,50 +491,6 @@ async function openPetDetail(petId) {
                 </table>
             </div>
         `;
-
-        await loadPetVaccinations(petId);
-
-        content.querySelector("#petVaccinationSection")?.addEventListener("submit", async event => {
-            if (event.target.id !== "petVaccinationForm") return;
-            event.preventDefault();
-            const form = event.target;
-            const payload = {
-                vaccination_type_id: Number(form.querySelector("[name=vaccination_type_id]").value),
-                vaccinated_at: form.querySelector("[name=vaccinated_at]").value,
-                next_due_date: form.querySelector("[name=next_due_date]").value || null,
-                notes: form.querySelector("[name=notes]").value.trim() || null
-            };
-            if (!payload.vaccination_type_id || !payload.vaccinated_at) {
-                alert("Vui lòng chọn vắc-xin và nhập ngày tiêm.");
-                return;
-            }
-            const submit = form.querySelector("button[type=submit]");
-            submit.disabled = true;
-            try {
-                await apiRequest("/pets/" + petId + "/vaccinations", {
-                    method: "POST",
-                    body: JSON.stringify(payload)
-                });
-                await loadPetVaccinations(petId);
-                alert("Đã lưu lịch sử tiêm chủng.");
-            } catch (error) {
-                alert("Không lưu được lịch tiêm: " + error.message);
-            } finally {
-                submit.disabled = false;
-            }
-        });
-
-        content.querySelector("#petVaccinationSection")?.addEventListener("click", async event => {
-            const button = event.target.closest("[data-delete-vaccination]");
-            if (!button) return;
-            if (!confirm("Xóa lần ghi nhận tiêm chủng này?")) return;
-            try {
-                await apiRequest("/pets/" + petId + "/vaccinations/" + button.dataset.deleteVaccination, { method: "DELETE" });
-                await loadPetVaccinations(petId);
-            } catch (error) {
-                alert("Không xóa được bản ghi: " + error.message);
-            }
-        });
 
         document.getElementById("btnUpdatePetWeight").addEventListener("click", async () => {
             const input = document.getElementById("detailPetWeight");
