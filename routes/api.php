@@ -80,12 +80,10 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::delete('/pets/{pet}', [PetController::class, 'destroy'])->middleware('role:QUAN_TRI,NHAN_VIEN');
     Route::get('/owners', [PetController::class, 'owners']);
 
-    // Lịch tiêm chủng: xem lịch/danh mục; ghi nhận và xóa lần tiêm dành cho nhân viên, bác sĩ, quản trị.
+    // Lịch tiêm chủng: xem lịch và lịch sử; ghi nhận tiêm được thực hiện cùng phiếu khám.
     Route::get('/vaccinations/types', [VaccinationController::class, 'types']);
     Route::get('/vaccinations/schedule', [VaccinationController::class, 'schedule']);
     Route::get('/pets/{pet}/vaccinations', [VaccinationController::class, 'petIndex']);
-    Route::post('/pets/{pet}/vaccinations', [VaccinationController::class, 'storeForPet'])->middleware('role:QUAN_TRI,BAC_SI,NHAN_VIEN');
-    Route::delete('/pets/{pet}/vaccinations/{id}', [VaccinationController::class, 'destroyForPet'])->middleware('role:QUAN_TRI,BAC_SI,NHAN_VIEN');
 
     // Lồng: tất cả được xem; hệ thống đề xuất, nhân viên/quản trị xác nhận xếp lồng.
     Route::get('/boarding/cages', [BoardingController::class, 'index']);

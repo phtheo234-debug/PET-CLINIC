@@ -483,10 +483,6 @@ async function openPetDetail(petId) {
                 ${examStatusControl}
             </div>
 
-            <div id="petVaccinationSection" class="card border-0 bg-light mb-4">
-                <div class="card-body"><h6 class="font-weight-bold text-primary"><i class="fas fa-syringe mr-1"></i>Lịch sử tiêm chủng</h6><div class="text-muted small">Đang tải lịch tiêm...</div></div>
-            </div>
-
             <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-history mr-1"></i>Lịch sử khám bệnh</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
@@ -495,50 +491,6 @@ async function openPetDetail(petId) {
                 </table>
             </div>
         `;
-
-        await loadPetVaccinations(petId);
-
-        content.querySelector("#petVaccinationSection")?.addEventListener("submit", async event => {
-            if (event.target.id !== "petVaccinationForm") return;
-            event.preventDefault();
-            const form = event.target;
-            const payload = {
-                vaccination_type_id: Number(form.querySelector("[name=vaccination_type_id]").value),
-                vaccinated_at: form.querySelector("[name=vaccinated_at]").value,
-                next_due_date: form.querySelector("[name=next_due_date]").value || null,
-                notes: form.querySelector("[name=notes]").value.trim() || null
-            };
-            if (!payload.vaccination_type_id || !payload.vaccinated_at) {
-                alert("Vui lòng chọn vắc-xin và nhập ngày tiêm.");
-                return;
-            }
-            const submit = form.querySelector("button[type=submit]");
-            submit.disabled = true;
-            try {
-                await apiRequest("/pets/" + petId + "/vaccinations", {
-                    method: "POST",
-                    body: JSON.stringify(payload)
-                });
-                await loadPetVaccinations(petId);
-                alert("Đã lưu lịch sử tiêm chủng.");
-            } catch (error) {
-                alert("Không lưu được lịch tiêm: " + error.message);
-            } finally {
-                submit.disabled = false;
-            }
-        });
-
-        content.querySelector("#petVaccinationSection")?.addEventListener("click", async event => {
-            const button = event.target.closest("[data-delete-vaccination]");
-            if (!button) return;
-            if (!confirm("Xóa lần ghi nhận tiêm chủng này?")) return;
-            try {
-                await apiRequest("/pets/" + petId + "/vaccinations/" + button.dataset.deleteVaccination, { method: "DELETE" });
-                await loadPetVaccinations(petId);
-            } catch (error) {
-                alert("Không xóa được bản ghi: " + error.message);
-            }
-        });
 
         document.getElementById("btnUpdatePetWeight").addEventListener("click", async () => {
             const input = document.getElementById("detailPetWeight");
@@ -617,45 +569,6 @@ async function loadVaccineTypes(showInactive = false) {
     } catch (error) {
         if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-danger text-center">' + escapePetHtml(error.message) + '</td></tr>';
         return [];
-    }
-}
-
-// Tải và hiển thị lịch tiêm của một thú cưng.
-async function loadPetVaccinations(petId) {
-    const section = document.getElementById("petVaccinationSection");
-    if (!section) return;
-    try {
-        const [typeResponse, recordResponse] = await Promise.all([
-            apiRequest("/vaccinations/types"),
-            apiRequest("/pets/" + petId + "/vaccinations")
-        ]);
-        const types = extractList(typeResponse);
-        const records = extractList(recordResponse);
-        const canWrite = ["QUAN_TRI", "BAC_SI", "NHAN_VIEN"].includes(currentUserRole);
-        const rows = records.length ? records.map(item => `
-            <tr><td>${escapePetHtml(item.vaccine_name)}</td><td>${escapePetHtml(item.vaccinated_at)}</td>
-            <td>${escapePetHtml(item.next_due_date || "Chưa hẹn")}</td><td>${escapePetHtml(item.notes || "-")}</td>
-            <td>${canWrite ? '<button type="button" class="btn btn-sm btn-outline-danger" data-delete-vaccination="' + Number(item.id) + '" title="Xóa bản ghi"><i class="fas fa-trash"></i></button>' : ""}</td></tr>`).join("") : '<tr><td colspan="5" class="text-center text-muted">Chưa có lịch sử tiêm chủng.</td></tr>';
-        section.innerHTML = `
-            <div class="card-body">
-                <h6 class="font-weight-bold text-primary"><i class="fas fa-syringe mr-1"></i>Lịch sử tiêm chủng</h6>
-                <div class="table-responsive mb-3"><table class="table table-sm table-bordered bg-white mb-0">
-                    <thead class="thead-light"><tr><th>Loại vắc-xin</th><th>Ngày tiêm</th><th>Hẹn tiêm tiếp</th><th>Ghi chú</th><th></th></tr></thead>
-                    <tbody>${rows}</tbody>
-                </table></div>
-                ${canWrite ? `
-                <form id="petVaccinationForm">
-                    <div class="form-row">
-                        <div class="form-group col-md-4"><label>Loại vắc-xin</label><select class="form-control" name="vaccination_type_id" required><option value="">-- Chọn vắc-xin --</option>${types.map(type => '<option value="' + Number(type.id) + '">' + escapePetHtml(type.name) + '</option>').join("")}</select></div>
-                        <div class="form-group col-md-3"><label>Ngày tiêm</label><input type="date" class="form-control" name="vaccinated_at" required></div>
-                        <div class="form-group col-md-3"><label>Ngày hẹn tiếp</label><input type="date" class="form-control" name="next_due_date"></div>
-                        <div class="form-group col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save mr-1"></i>Lưu</button></div>
-                    </div>
-                    <div class="form-group mb-0"><label>Ghi chú</label><input type="text" class="form-control" name="notes" maxlength="2000" placeholder="Số lô, phản ứng sau tiêm..."></div>
-                </form>` : ""}
-            </div>`;
-    } catch (error) {
-        section.innerHTML = '<div class="card-body"><div class="text-danger">Không tải được lịch tiêm: ' + escapePetHtml(error.message) + '</div></div>';
     }
 }
 
