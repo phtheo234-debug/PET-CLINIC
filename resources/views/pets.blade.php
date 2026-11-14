@@ -16,9 +16,17 @@
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
         <div class="input-group w-50"><input type="text" id="searchPet" class="form-control" placeholder="Tìm theo mã thú cưng, tên, SĐT chủ nuôi..."><div class="input-group-append"><button type="button" id="btnSearchPet" class="btn btn-outline-primary"><i class="fas fa-search mr-1"></i>Tìm</button></div></div>
-        <button type="button" id="btnOpenAddPet" class="btn btn-primary d-none" data-toggle="modal" data-target="#addPetModal">
-            <i class="fas fa-plus mr-1"></i> Tiếp nhận Thú cưng
-        </button>
+        <div class="d-flex align-items-center">
+            <button type="button" id="btnOpenVaccinationSchedule" class="btn btn-outline-info mr-2" data-toggle="modal" data-target="#vaccinationScheduleModal">
+                <i class="fas fa-syringe mr-1"></i> Lịch tiêm chủng
+            </button>
+            <button type="button" id="btnManageVaccines" class="btn btn-outline-primary mr-2 d-none" data-toggle="modal" data-target="#manageVaccinesModal">
+                <i class="fas fa-list mr-1"></i> Quản lý vắc-xin
+            </button>
+            <button type="button" id="btnOpenAddPet" class="btn btn-primary d-none" data-toggle="modal" data-target="#addPetModal">
+                <i class="fas fa-plus mr-1"></i> Tiếp nhận Thú cưng
+            </button>
+        </div>
     </div>
     <div class="card-body table-responsive">
         <table class="table table-hover mb-0">
@@ -92,6 +100,35 @@
                 <button type="submit" id="btnSavePet" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Lưu Hồ sơ</button>
             </div>
         </form>
+    </div>
+</div>
+
+
+<div class="modal fade" id="manageVaccinesModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title font-weight-bold">Quản lý danh mục vắc-xin</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+            <div class="modal-body">
+                <form id="vaccineTypeForm" class="form-row mb-3">
+                    <div class="col-md-9"><input id="newVaccineTypeName" class="form-control" maxlength="100" placeholder="Tên loại vắc-xin mới" required></div>
+                    <div class="col-md-3"><button class="btn btn-primary btn-block" type="submit"><i class="fas fa-plus mr-1"></i>Thêm mới</button></div>
+                </form>
+                <div class="table-responsive"><table class="table table-sm table-bordered"><thead class="thead-light"><tr><th style="width:60px">#</th><th>Tên loại vắc-xin</th><th style="width:170px">Thao tác</th></tr></thead><tbody id="vaccineTypesTable"><tr><td colspan="3" class="text-center text-muted">Đang tải...</td></tr></tbody></table></div>
+                <small class="text-muted">Nếu loại vắc-xin đã có lịch sử tiêm, thao tác xóa sẽ ngừng sử dụng loại đó và giữ nguyên lịch sử cũ.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="vaccinationScheduleModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title font-weight-bold">Lịch tiêm chủng toàn phòng khám</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+            <div class="modal-body">
+                <div class="table-responsive"><table class="table table-sm table-bordered"><thead class="thead-light"><tr><th>Mã thú cưng</th><th>Thú cưng</th><th>Chủ nuôi</th><th>Vắc-xin</th><th>Ngày đã tiêm</th><th>Ngày hẹn tiếp</th><th>Trạng thái</th></tr></thead><tbody id="vaccinationScheduleTable"><tr><td colspan="7" class="text-center text-muted">Đang tải lịch...</td></tr></tbody></table></div>
+                <small class="text-muted">Trạng thái sắp đến hạn được tính trong 30 ngày tiếp theo. Ngày hẹn do nhân viên/bác sĩ nhập, hệ thống không tự đặt chu kỳ tiêm.</small>
+            </div>
+        </div>
     </div>
 </div>
 
