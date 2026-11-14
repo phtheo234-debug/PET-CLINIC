@@ -27,6 +27,11 @@ class AdminInventoryController extends Controller
             'solo' => 'nullable|string|max:50|regex:/^LO-[0-9]{8}-[0-9]{6}$/',
         ]);
 
+        if ($fields['danhmuc'] === 'VAC_XIN'
+            && DB::table('vaccination_types')->where('name', $fields['ten_sanpham'])->whereNotNull('inventory_item_id')->exists()) {
+            return response()->json(['status' => 'error', 'message' => 'Tên vắc-xin này đã có trong kho. Hãy mở mặt hàng hiện có để cập nhật hoặc nhập thêm lô.'], 422);
+        }
+
         if (in_array($fields['danhmuc'], self::BATCH_CATEGORIES, true) && (int) $fields['soluong'] > 0 && (empty($fields['ngaysanxuat']) || empty($fields['ngayhethan']))) {
             return response()->json(['status' => 'error', 'message' => 'Khi thêm số lượng thuốc, vắc-xin hoặc thức ăn, cần nhập ngày sản xuất và hạn sử dụng.'], 422);
         }
