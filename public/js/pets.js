@@ -205,6 +205,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const ownerName = document.getElementById("ho_ten_chu").value.trim();
         const ownerPhone = document.getElementById("phone").value.trim();
+        const ownerEmail = document.getElementById("owner_email").value.trim();
+        const ownerAddress = document.getElementById("owner_address").value.trim();
         const petName = document.getElementById("ten_thucung").value.trim();
         const species = document.getElementById("loai").value;
         const breed = document.getElementById("giong").value.trim() || null;
@@ -258,6 +260,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 owner_id: ownerId,
                 ho_ten: ownerName,
                 phone: ownerPhone,
+                email: ownerEmail || null,
+                diachi: ownerAddress || null,
                 name: petName,
                 species: species,
                 breed: breed,
