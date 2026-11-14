@@ -406,20 +406,37 @@ async function loadSurgeryTypes() {
 }
 
 function updateMedicalSections() {
-    const action = document.getElementById("huong_xuly")?.value;
-    const checkbox = document.getElementById("yeu_cau_cach_ly");
+    const actionSelect = document.getElementById("huong_xuly");
+    const action = actionSelect ? actionSelect.value : "OUTPATIENT";
     const isTransfer = action === "TRANSFER";
+    const isSurgery = action === "SURGERY";
     const canRequestStay = ["OUTPATIENT", "INPATIENT", "SURGERY"].includes(action);
-    document.getElementById("isolationOption")?.classList.toggle("d-none", !canRequestStay);
-    document.getElementById("medicalInventorySection")?.classList.toggle("d-none", isTransfer);
-    document.getElementById("medicalVaccinationSection")?.classList.toggle("d-none", isTransfer);
-    document.getElementById("medicalSurgerySection")?.classList.toggle("d-none", action !== "SURGERY");
+    const checkbox = document.getElementById("yeu_cau_cach_ly");
+
+    // Dùng đồng thời class d-none và hidden/display để tránh CSS khác ghi đè trạng thái ẩn.
+    const setSectionVisible = (id, visible) => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        element.classList.toggle("d-none", !visible);
+        element.hidden = !visible;
+        element.style.display = visible ? "" : "none";
+    };
+
+    setSectionVisible("isolationOption", canRequestStay);
+    setSectionVisible("medicalSurgerySection", isSurgery);
+    setSectionVisible("medicalInventorySection", !isTransfer);
+    setSectionVisible("medicalVaccinationSection", !isTransfer);
+
     if (!canRequestStay && checkbox) checkbox.checked = false;
+
     if (isTransfer) {
         selectedMedicalItems = [];
         currentMedicalVaccination = null;
-        const vaccineSelect = document.getElementById("medicalVaccinationSearch");
-        if (vaccineSelect) vaccineSelect.value = "";
+        ["medicalVaccinationSearch", "medicalVaccinatedAt", "medicalNextDueDate", "medicalVaccinationNote",
+         "medicalInventorySearch", "medicalInventoryQty", "medicalInventoryNote"].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.value = "";
+        });
         renderSelectedMedicalItems();
     }
 }
