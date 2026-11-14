@@ -79,7 +79,7 @@ Route::middleware(['auth:sanctum', 'force.password.change'])->prefix('v1')->grou
     Route::delete('/pets/{pet}', [PetController::class, 'destroy'])->middleware('role:QUAN_TRI,NHAN_VIEN');
     Route::get('/owners', [PetController::class, 'owners']);
     Route::put('/owners/{id}', [PetController::class, 'updateOwner'])->middleware('role:QUAN_TRI,NHAN_VIEN');
-    Route::delete('/owners/{id}', [PetController::class, 'destroyOwner'])->middleware('role:QUAN_TRI,NHAN_VIEN');
+    Route::delete('/owners/{id}', [PetController::class, 'destroyOwner'])->middleware('role:QUAN_TRI');
 
     // Lịch tiêm chủng: xem lịch và lịch sử; ghi nhận tiêm được thực hiện cùng phiếu khám.
     Route::get('/vaccinations/types', [VaccinationController::class, 'types']);
