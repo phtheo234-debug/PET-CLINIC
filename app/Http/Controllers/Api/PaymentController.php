@@ -212,6 +212,13 @@ class PaymentController extends Controller
                     ->whereColumn('mq.pet_id', 'p.pet_id')
                     ->whereIn('mq.trangthai', ['CHO_KHAM', 'DANG_KHAM']);
             })
+            // Không hiển thị thú đã được bác sĩ chỉ định lưu trú nhưng nhân viên chưa xác nhận xếp lồng.
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('boarding_requests as br')
+                    ->whereColumn('br.pet_id', 'p.pet_id')
+                    ->where('br.status', 'pending');
+            })
             ->where(function ($query) {
                 $query->whereExists(function ($sub) {
                     $sub->select(DB::raw(1))
