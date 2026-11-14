@@ -37,6 +37,35 @@
     </div>
 </div>
 
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-white font-weight-bold">Danh sách chủ nuôi</div>
+    <div class="card-body table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr><th>Họ tên</th><th>Số điện thoại</th><th>Email</th><th>Địa chỉ</th><th>Thao tác</th></tr></thead><tbody id="ownersTableBody"><tr><td colspan="5" class="text-center text-muted">Đang tải...</td></tr></tbody></table></div>
+</div>
+<div class="modal fade" id="editOwnerModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form id="editOwnerForm">
+<div class="modal-header"><h5 class="modal-title">Cập nhật chủ nuôi</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
+<div class="modal-body"><input type="hidden" id="editOwnerId"><div class="form-group"><label>Họ tên</label><input id="editOwnerName" class="form-control" maxlength="100" required></div>
+<div class="form-group"><label>Số điện thoại</label><input id="editOwnerPhone" class="form-control" maxlength="20" required></div>
+<div class="form-group"><label>Email</label><input id="editOwnerEmail" type="email" class="form-control" maxlength="100"></div>
+<div class="form-group"><label>Địa chỉ</label><input id="editOwnerAddress" class="form-control" maxlength="255"></div></div>
+<div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button><button class="btn btn-primary">Lưu thay đổi</button></div>
+</form></div></div></div>
+<div class="modal fade" id="editPetModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><form id="editPetForm">
+<div class="modal-header"><h5 class="modal-title">Cập nhật hồ sơ thú cưng</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
+<div class="modal-body"><input type="hidden" id="editPetId"><input type="hidden" id="editPetOwnerId">
+<h6 class="font-weight-bold text-primary">Thông tin thú cưng</h6><div class="form-row">
+<div class="form-group col-md-6"><label>Tên thú cưng</label><input id="editPetName" class="form-control" maxlength="50" required></div>
+<div class="form-group col-md-6"><label>Loài</label><select id="editPetSpecies" class="form-control"><option>Chó</option><option>Mèo</option><option>Khác</option></select></div>
+<div class="form-group col-md-6"><label>Giống</label><input id="editPetBreed" class="form-control" maxlength="50"></div>
+<div class="form-group col-md-6"><label>Giới tính</label><select id="editPetGender" class="form-control"><option value="DUC">Đực</option><option value="CAI">Cái</option><option value="CHUA_XAC_DINH">Chưa xác định</option></select></div>
+<div class="form-group col-md-6"><label>Ngày sinh</label><input type="date" id="editPetDob" class="form-control"></div></div>
+<hr><h6 class="font-weight-bold text-primary">Thông tin chủ nuôi liên kết</h6>
+<div class="form-row"><div class="form-group col-md-6"><label>Họ tên chủ nuôi</label><input id="editPetOwnerName" class="form-control" maxlength="100" required></div>
+<div class="form-group col-md-6"><label>Số điện thoại</label><input id="editPetOwnerPhone" class="form-control" maxlength="20" required></div>
+<div class="form-group col-md-6"><label>Email</label><input id="editPetOwnerEmail" type="email" class="form-control" maxlength="100"></div>
+<div class="form-group col-md-6"><label>Địa chỉ</label><input id="editPetOwnerAddress" class="form-control" maxlength="255"></div></div>
+<small class="text-muted">Thông tin chủ nuôi sẽ được cập nhật cho tất cả thú cưng cùng thuộc chủ nuôi này.</small></div>
+<div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button><button class="btn btn-primary">Lưu thay đổi</button></div>
+</form></div></div></div>
 <div class="modal fade" id="addPetModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <form id="petForm" class="modal-content">
