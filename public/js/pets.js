@@ -66,46 +66,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (addPetButton && canReceivePets) {
         addPetButton.classList.remove("d-none");
     }
-
-    const manageVaccinesButton = document.getElementById("btnManageVaccines");
-    if (manageVaccinesButton && currentUserRole === "QUAN_TRI") {
-        manageVaccinesButton.classList.remove("d-none");
-    }
-
-    $("#manageVaccinesModal").on("show.bs.modal", () => loadVaccineTypes(true));
     $("#vaccinationScheduleModal").on("show.bs.modal", loadVaccinationSchedule);
-
-    document.getElementById("vaccineTypeForm")?.addEventListener("submit", async event => {
-        event.preventDefault();
-        const input = document.getElementById("newVaccineTypeName");
-        const name = input.value.trim();
-        if (!name) return;
-        try {
-            await apiRequest("/admin/vaccination-types", {
-                method: "POST",
-                body: JSON.stringify({ name })
-            });
-            input.value = "";
-            await loadVaccineTypes(true);
-            alert("Đã thêm loại vắc-xin.");
-        } catch (error) {
-            alert("Không thêm được loại vắc-xin: " + error.message);
-        }
-    });
-
-    document.getElementById("vaccineTypesTable")?.addEventListener("click", async event => {
-        const editButton = event.target.closest("[data-edit-vaccine]");
-        const deleteButton = event.target.closest("[data-delete-vaccine]");
-        if (editButton) {
-            const id = Number(editButton.dataset.editVaccine);
-            const oldName = editButton.dataset.name || "";
-            const name = prompt("Nhập tên mới cho loại vắc-xin:", oldName);
-            if (name === null || !name.trim()) return;
-            try {
-                await apiRequest("/admin/vaccination-types/" + id, {
-                    method: "PUT",
-                    body: JSON.stringify({ name: name.trim() })
-                });
                 await loadVaccineTypes(true);
                 alert("Đã cập nhật tên loại vắc-xin.");
             } catch (error) {
@@ -550,27 +511,6 @@ async function printPetProfile(petId) {
     } catch (error) { alert("Không thể in hồ sơ thú cưng: " + error.message); }
 }
 
-
-// Danh mục vắc-xin: quản trị viên có quyền thêm, sửa, xóa.
-async function loadVaccineTypes(showInactive = false) {
-    const tbody = document.getElementById("vaccineTypesTable");
-    try {
-        const response = await apiRequest("/vaccinations/types");
-        const types = extractList(response);
-        if (tbody) {
-            tbody.innerHTML = types.length ? types.map((item, index) => `
-                <tr><td>${index + 1}</td><td>${escapePetHtml(item.name)}</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-outline-primary mr-1" data-edit-vaccine="${Number(item.id)}" data-name="${escapePetHtml(item.name)}"><i class="fas fa-edit"></i> Sửa</button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" data-delete-vaccine="${Number(item.id)}"><i class="fas fa-trash"></i> Xóa</button>
-                </td></tr>`).join("") : '<tr><td colspan="3" class="text-center text-muted">Chưa có loại vắc-xin đang hoạt động.</td></tr>';
-        }
-        return types;
-    } catch (error) {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-danger text-center">' + escapePetHtml(error.message) + '</td></tr>';
-        return [];
-    }
-}
 
 // Lịch tiêm toàn phòng khám, đánh dấu quá hạn và sắp đến hạn.
 async function loadVaccinationSchedule() {
