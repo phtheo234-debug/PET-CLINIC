@@ -78,6 +78,14 @@
                         <label>Số điện thoại <span class="text-danger">*</span></label>
                         <input type="tel" id="phone" class="form-control" pattern="[0-9]{10,11}" placeholder="VD: 0987654321" required>
                     </div>
+                    <div class="form-group col-md-6">
+                        <label>Email Chủ nuôi <span class="text-muted">(không bắt buộc)</span></label>
+                        <input type="email" id="owner_email" class="form-control" maxlength="100" placeholder="VD: nguyenvana@email.com">
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label>Địa chỉ Chủ nuôi <span class="text-muted">(không bắt buộc)</span></label>
+                        <input type="text" id="owner_address" class="form-control" maxlength="255" placeholder="VD: Số nhà, đường, phường/xã, tỉnh/thành phố">
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
