@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const role = { QUAN_TRI: "Quản trị viên", BAC_SI: "Bác sĩ", NHAN_VIEN: "Nhân viên" }[item.vaitro] || item.vaitro;
                 const actions = isAdmin
                     ? '<span class="text-muted">Tài khoản quản trị hệ thống</span>'
-                    : `<button class="btn btn-sm btn-outline-primary mb-1" data-action="edit" data-id="${item.user_id}" data-user="${encodeURIComponent(JSON.stringify(item))}">Sửa</button>\n                       <button class="btn btn-sm btn-outline-danger mb-1" data-action="delete" data-id="${item.user_id}">Xóa</button>\n                       <button class="btn btn-sm btn-outline-warning mb-1" data-action="reset" data-id="${item.user_id}">Cấp lại MK</button>
+                    : `<button class="btn btn-sm btn-outline-primary mb-1" data-action="edit" data-id="${item.user_id}" data-user="${encodeURIComponent(JSON.stringify(item))}">Sửa</button>                        <button class="btn btn-sm btn-outline-danger mb-1" data-action="delete" data-id="${item.user_id}">Xóa</button>                        <button class="btn btn-sm btn-outline-warning mb-1" data-action="reset" data-id="${item.user_id}">Cấp lại MK</button>
                        <div class="input-group input-group-sm mt-1" style="min-width: 190px;">
                            <select class="form-control" id="status-${item.user_id}" aria-label="Trạng thái tài khoản">
                                <option value="HOAT_DONG" ${item.trangthai === "HOAT_DONG" ? "selected" : ""}>Hoạt động</option>
