@@ -197,6 +197,69 @@ class PaymentController extends Controller
         }
     }
 
+    /**
+     * Danh sách thú cưng có khoản chưa thanh toán và đủ điều kiện vào màn hình thanh toán.
+     * Loại thú đang chờ/đang khám, đã xuất viện hoặc đã chuyển viện.
+     */
+    public function eligiblePets()
+    {
+        $pets = DB::table('pets as p')
+            ->join('owners as o', 'o.owner_id', '=', 'p.owner_id')
+            ->whereNotIn('p.trangthai', ['DA_XUAT_VIEN', 'CHUYEN_VIEN'])
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('medical_queue as mq')
+                    ->whereColumn('mq.pet_id', 'p.pet_id')
+                    ->whereIn('mq.trangthai', ['CHO_KHAM', 'DANG_KHAM']);
+            })
+            ->where(function ($query) {
+                $query->whereExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('medical_records as mr')
+                        ->whereColumn('mr.pet_id', 'p.pet_id')
+                        ->whereNull('mr.invoice_id')
+                        ->where('mr.trangthai', '!=', 'CHUYEN_VIEN');
+                })->orWhereExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('prescriptions as rx')
+                        ->join('medical_records as mr', 'mr.record_id', '=', 'rx.record_id')
+                        ->whereColumn('mr.pet_id', 'p.pet_id')
+                        ->whereNull('rx.invoice_id');
+                })->orWhereExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('pet_boardings as pb')
+                        ->whereColumn('pb.pet_id', 'p.pet_id')
+                        ->whereNull('pb.invoice_id')
+                        ->whereNotNull('pb.check_in');
+                })->orWhereExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('spa_usages as su')
+                        ->whereColumn('su.pet_id', 'p.pet_id')
+                        ->whereNull('su.invoice_id');
+                });
+            })
+            ->select(
+                'p.pet_id as id',
+                'p.mathucung',
+                'p.ten_thucung as name',
+                'o.ho_ten as owner_name',
+                'o.phone as owner_phone'
+            )
+            ->orderBy('p.mathucung')
+            ->get()
+            ->map(fn ($pet) => [
+                'id' => $pet->id,
+                'mathucung' => $pet->mathucung,
+                'name' => $pet->name,
+                'owner' => [
+                    'name' => $pet->owner_name,
+                    'phone' => $pet->owner_phone,
+                ],
+            ]);
+
+        return response()->json(['status' => 'success', 'data' => $pets]);
+    }
+
     /** Danh sách các phiếu khám ngoại trú chưa lập hóa đơn. */
     public function pendingVisits()
     {
